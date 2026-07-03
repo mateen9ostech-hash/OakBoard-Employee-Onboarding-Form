@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onboarding Plan Generator</title>
+<style>
+/* ── RESET ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+/* ══════════════════════════════════════════
+   FORM UI (DM Sans)
+══════════════════════════════════════════ */
+:root{
+  --g:#24B34B;--g-dk:#01621C;--g-lt:#F0FDF4;--g-md:#b8dfc8;
+  --ink:#101727;--ink2:#354152;--ink3:#697282;--body:#495565;
+  --line:#e4e8e3;--surf:#f8faf7;--white:#fff;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--surf);color:var(--ink);min-height:100vh;font-size:14px;}
+
+/* HDR */
+.hdr{background:var(--white);border-bottom:1px solid var(--line);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 32px;position:sticky;top:0;z-index:200;}
+.hdr-brand{display:flex;align-items:center;gap:16px;font-weight:700;font-size:17px;color:var(--ink);}
+.hdr-icon{width:42px;height:42px;background:transparent;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.hdr-icon img{width:42px;height:42px;object-fit:contain;display:block;}
+.hdr-steps{display:flex;align-items:center;gap:6px;}
+.hdr-step{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--ink3);}
+.hdr-sn{width:24px;height:24px;border-radius:50%;background:#e4e8e3;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--ink3);transition:all .25s;}
+.hdr-step.active .hdr-sn{background:var(--g);color:white;}
+.hdr-step.done .hdr-sn{background:var(--g-lt);color:var(--g);}
+.hdr-step.active .hdr-sl{color:var(--ink);}
+.hdr-sep{width:28px;height:1px;background:#cdd5c9;}
+
+/* PAGES */
+.pg{display:none;} .pg.on{display:block;}
+#pg-load{display:none;} #pg-load.on{display:flex;}
+
+/* FORM */
+.fo{max-width:860px;margin:0 auto;padding:36px 20px 80px;}
+.fi h1{font-size:22px;font-weight:600;margin-bottom:6px;}
+.fi p{color:var(--ink3);font-size:14px;margin-bottom:32px;}
+
+.sec{background:var(--white);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:20px;box-shadow:0 1px 6px rgba(0,0,0,.04);}
+.sec-h{padding:13px 20px;background:var(--g-lt);border-bottom:1px solid var(--g-md);display:flex;align-items:center;gap:10px;}
+.sec-ic{width:26px;height:26px;background:var(--g);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sec-ic svg{width:13px;height:13px;fill:white;}
+.sec-t{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--g-dk);}
+.sec-b{padding:20px;}
+
+.row{display:grid;gap:14px;} .r2{grid-template-columns:1fr 1fr;} .r3{grid-template-columns:1fr 1fr 1fr;}
+.fld{display:flex;flex-direction:column;gap:5px;}
+.fld label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--ink2);}
+.fld input,.fld textarea{font-family:inherit;font-size:13.5px;padding:9px 12px;border:1.5px solid var(--line);border-radius:8px;color:var(--ink);background:var(--white);outline:none;transition:border .15s,box-shadow .15s;resize:vertical;}
+.fld input:focus,.fld textarea:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(36,179,75,.10);}
+.fld textarea{min-height:72px;}
+.fld input::placeholder,.fld textarea::placeholder{color:var(--ink3);opacity:0.5;}
+
+.dur-row{display:flex;gap:12px;}
+.dur-opt{flex:1;border:2px solid var(--line);border-radius:10px;padding:14px 18px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px;background:var(--white);}
+.dur-opt:hover{border-color:var(--g-md);}
+.dur-opt.sel{border-color:var(--g);background:var(--g-lt);}
+.dur-opt input[type=radio]{display:none;}
+.dur-rd{width:18px;height:18px;border:2px solid #cdd5c9;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
+.dur-opt.sel .dur-rd{border-color:var(--g);}
+.dur-dot{width:8px;height:8px;background:var(--g);border-radius:50%;display:none;}
+.dur-opt.sel .dur-dot{display:block;}
+.dur-txt strong{display:block;font-size:14px;font-weight:600;color:var(--ink);}
+.dur-txt span{font-size:12px;color:var(--ink3);}
+
+.wb{border:1.5px solid var(--line);border-radius:10px;margin-bottom:14px;overflow:hidden;background:var(--white);}
+.wt{width:100%;display:flex;align-items:center;gap:12px;padding:14px 18px;background:none;border:none;cursor:pointer;font-family:inherit;text-align:left;transition:background .15s;}
+.wt:hover{background:var(--surf);}
+.wbg{background:var(--g);color:white;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.4px;text-transform:uppercase;flex-shrink:0;}
+.wp{flex:1;font-size:13px;color:var(--ink3);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wa{width:18px;height:18px;color:var(--ink3);flex-shrink:0;transition:transform .25s;}
+.wa.open{transform:rotate(180deg);}
+.wi{padding:0 18px 18px;display:none;border-top:1px solid var(--line);}
+.wi.open{display:block;padding-top:16px;}
+.wtr{margin-bottom:16px;}
+
+.db{border:1px solid var(--line);border-radius:8px;margin-bottom:10px;overflow:hidden;}
+.dt{width:100%;display:flex;align-items:center;gap:10px;padding:11px 14px;background:none;border:none;cursor:pointer;font-family:inherit;text-align:left;transition:background .15s;}
+.dt:hover{background:var(--surf);}
+.dnb{background:var(--g);color:white;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;flex-shrink:0;}
+.ddl{font-size:11px;color:var(--ink3);flex-shrink:0;}
+.dtp{flex:1;font-size:12px;color:var(--ink3);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dcd{width:8px;height:8px;border-radius:50%;background:#cdd5c9;flex-shrink:0;transition:background .2s;}
+.dcd.filled{background:var(--g);}
+.da{width:16px;height:16px;color:var(--ink3);flex-shrink:0;transition:transform .2s;}
+.da.open{transform:rotate(180deg);}
+.din{display:none;padding:14px 14px 16px;border-top:1px solid var(--line);background:var(--surf);}
+.din.open{display:block;}
+
+.tl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--ink2);margin-bottom:8px;margin-top:12px;}
+.tr2{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.tn{width:20px;height:20px;background:var(--g-lt);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--g);flex-shrink:0;}
+.tr2 input{flex:1;font-family:inherit;font-size:13px;padding:8px 11px;border:1.5px solid var(--line);border-radius:7px;color:var(--ink);background:var(--white);outline:none;transition:border .15s;}
+.tr2 input:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(36,179,75,.09);}
+.tr2 input::placeholder{color:var(--ink3);font-style:italic;font-size:12px;opacity:0.5;}
+.btn-at{display:flex;align-items:center;gap:6px;font-family:inherit;font-size:12px;font-weight:500;color:var(--g);background:none;border:1.5px dashed var(--g-md);border-radius:7px;padding:7px 12px;cursor:pointer;transition:all .15s;width:100%;justify-content:center;margin-top:4px;}
+.btn-at:hover{background:var(--g-lt);border-color:var(--g);}
+.btn-del-task{width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:none;background:none;border-radius:5px;cursor:pointer;color:var(--ink3);flex-shrink:0;transition:all .15s;padding:0;}
+.btn-del-task:hover{background:#fff0f0;color:#c03030;}
+
+.ow{margin-top:12px;}
+.ow .fld textarea{min-height:64px;background:#fffef5;border-color:#d4cc88;}
+.ow .fld textarea:focus{border-color:#a09030;box-shadow:0 0 0 3px rgba(160,144,48,.09);}
+
+.btn-gen{width:100%;padding:15px;background:var(--g);color:white;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s;margin-top:6px;}
+.btn-gen:hover{background:var(--g-dk);transform:translateY(-1px);box-shadow:0 5px 18px rgba(36,179,75,.25);}
+
+/* LOADING */
+#pg-load{min-height:calc(100vh - 56px);align-items:center;justify-content:center;flex-direction:column;gap:20px;text-align:center;padding:40px;}
+.spin{width:52px;height:52px;border:3.5px solid var(--g-lt);border-top-color:var(--g);border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.lm{font-size:15px;font-weight:500;color:var(--ink2);}
+
+/* TOOLBAR */
+.tbr{background:var(--white);border-bottom:1px solid var(--line);padding:10px 32px;display:flex;align-items:center;justify-content:space-between;}
+.btn-tb{display:flex;align-items:center;gap:6px;font-family:inherit;font-size:13px;font-weight:500;padding:8px 16px;border-radius:7px;border:1.5px solid var(--line);background:var(--white);color:var(--ink2);cursor:pointer;transition:all .15s;}
+.btn-tb:hover{border-color:#cdd5c9;color:var(--ink);}
+.btn-tb.pri{background:var(--g);color:white;border-color:var(--g);}
+.btn-tb.pri:hover{background:var(--g-dk);}
+.tbr-r{display:flex;gap:8px;}
+
+/* ══════════════════════════════════════════
+   PDF PREVIEW — exact match to uploaded design
+   Font: Inter | Base proportions from CSS analysis
+══════════════════════════════════════════ */
+.plan-wrap{
+  width:100%;
+  background:#e8e8e8;
+  overflow:hidden;
+  position:relative;
+}
+
+/* The printed document */
+.plan-doc{
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  background:#FFFFFF;
+  width:1920px;
+  height:1080px;
+  padding:36px;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:9px;
+  overflow:hidden;
+  position:absolute;
+  top:0;
+  left:0;
+  transform-origin:top left;
+  box-sizing:border-box;
+  box-shadow:0 4px 32px rgba(0,0,0,0.13);
+}
+
+/* ── HEADER CARD ── */
+.ph{
+  display:flex;
+  align-items:stretch;
+  background:white;
+  border-radius:10px;
+  box-shadow:0px 10px 15px rgba(0,0,0,0.10);
+  padding:16px 22px;
+  width:100%;
+  flex-shrink:0;
+}
+.ph-logo{
+  width:140px;
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding-right:18px;
+  border-right:1px solid #f0f0f0;
+  margin-right:20px;
+}
+.ph-logo svg{width:139px;height:auto;}
+
+.ph-right{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+.ph-title{
+  font-size:26px;
+  font-weight:700;
+  color:#101727;
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  line-height:1.2;
+  margin-bottom:10px;
+}
+.ph-chips{
+  display:flex;
+  gap:8px;
+}
+.ph-chip{
+  flex:1;
+  background:linear-gradient(rgba(248,250,251,1),rgba(255,255,255,1));
+  border-radius:10px;
+  padding:10px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.ph-chip-lbl{
+  font-size:12px;
+  color:rgba(105,114,130,1);
+  font-weight:400;
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+}
+.ph-chip-val{
+  font-size:16px;
+  color:rgba(16,23,39,1);
+  font-weight:500;
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+}
+
+/* ── WEEK HEADER BAR ── */
+.pw{
+  background:rgba(249,249,249,1);
+  border-radius:10px;
+  box-shadow:0 1px 2px rgba(0,0,0,0.10);
+  padding:10px 20px 8px;
+  width:100%;
+  flex-shrink:0;
+}
+.pw-pill{
+  display:inline-block;
+  background:rgba(36,179,75,1);
+  color:white;
+  font-size:14px;
+  font-weight:700;
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  padding:4px 10px;
+  border-radius:4px;
+  margin-bottom:6px;
+}
+.pw-sub{
+  font-size:14px;
+  color:rgba(53,65,82,1);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  font-weight:400;
+}
+
+/* ── DAYS GRID ── */
+.pd{
+  display:flex;
+  flex-wrap:nowrap;
+  gap:12px;
+  width:1848px;
+  flex-shrink:0;
+  height:306px;
+  align-items:flex-start;
+}
+
+/* ── DAY CARD ── */
+.pdc{
+  background:white;
+  border-radius:14px;
+  width:360px;
+  height:306px;
+  flex-shrink:0;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  gap:0;
+  box-shadow:0 1px 4px rgba(0,0,0,0.06);
+  overflow:hidden;
+  box-sizing:border-box;
+}
+
+/* Day header row: badge + date */
+.pdc-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:8px;
+}
+.pdc-badge{
+  background:rgba(36,179,75,1);
+  color:white;
+  font-size:12px;
+  font-weight:500;
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  padding:2px 8px;
+  border-radius:8px;
+  display:inline-block;
+}
+.pdc-date{
+  font-size:12px;
+  color:rgba(105,114,130,1);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  font-weight:400;
+}
+
+/* Topic row: icon + title */
+.pdc-topic-row{
+  display:flex;
+  align-items:flex-start;
+  gap:6px;
+  margin-bottom:7px;
+}
+.icon-tgt,.icon-chk,.icon-title,.icon-tasks,.icon-outcome{
+  width:16px;height:16px;flex-shrink:0;margin-top:1px;
+}
+.pdc-topic-txt{
+  font-size:12px;
+  font-weight:600;
+  color:rgba(16,23,39,1);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  line-height:1.4;
+}
+
+/* Tasks area: icon + bullet list */
+.pdc-tasks-area{
+  display:flex;
+  align-items:flex-start;
+  gap:6px;
+  margin-bottom:8px;
+  flex:1;
+}
+.pdc-tasks-list{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.pdc-task{
+  display:flex;
+  gap:4px;
+  align-items:flex-start;
+}
+.ptb{
+  color:rgba(36,179,75,1);
+  font-size:12px;
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  line-height:1.5;
+  flex-shrink:0;
+}
+.ptt{
+  font-size:12px;
+  color:rgba(73,85,101,1);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  font-weight:400;
+  line-height:1.45;
+}
+
+/* Outcome box */
+.pdc-out{
+  background:rgba(240,253,244,1);
+  border-radius:4px;
+  padding:7px 9px;
+  display:flex;
+  align-items:flex-start;
+  gap:6px;
+  margin-top:auto;
+}
+.pot{
+  font-size:12px;
+  color:rgba(53,65,82,1);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  font-weight:400;
+  line-height:1.45;
+}
+
+/* ── ERROR ── */
+.err{background:#fff2f2;border:1.5px solid #ffc5c5;border-radius:8px;padding:11px 15px;font-size:13px;color:#b02020;margin-top:10px;display:none;}
+.err.on{display:block;}
+
+/* ── CHAR COUNTER ── */
+.cc{display:flex;justify-content:flex-end;font-size:10px;color:var(--ink3);margin-top:3px;font-family:inherit;}
+.cc.warn{color:#c07000;}
+.cc.over{color:#b02020;font-weight:600;}
+.fld-wrap{display:flex;flex-direction:column;}
+
+/* ── RESET BUTTON ── */
+.btn-reset{display:flex;align-items:center;gap:6px;font-family:inherit;font-size:13px;font-weight:500;padding:8px 16px;border-radius:7px;border:1.5px solid #ffc5c5;background:#fff2f2;color:#b02020;cursor:pointer;transition:all .15s;}
+.btn-reset:hover{background:#ffe0e0;border-color:#f09090;}
+
+/* ══════════════════════════════════════════
+   PRINT
+══════════════════════════════════════════ */
+@media print {
+  .hdr,.tbr{display:none!important;}
+  body,html{background:white;margin:0;padding:0;}
+  .plan-wrap{
+    display:block!important;
+    padding:0!important;
+    background:white!important;
+    min-height:unset!important;
+  }
+  .plan-doc{
+    transform:none!important;
+    width:1920px!important;
+    min-height:1080px!important;
+    padding:36px!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:flex-start!important;
+    gap:9px!important;
+    overflow:visible!important;
+    box-shadow:none!important;
+    margin:0!important;
+    border-radius:0!important;
+  }
+  .pg,#pg-preview{display:block!important;}
+  #pg-form,#pg-load{display:none!important;}
+  @page{size:1920px 1080px;margin:0;}
+  .pdc{box-shadow:none;border:1px solid #e8e8e8;}
+  .ph{box-shadow:0 2px 6px rgba(0,0,0,.08);}
+}
+
+@media (max-width:700px){.r2,.r3{grid-template-columns:1fr;}.dur-row{flex-direction:column;}.pd{grid-template-columns:repeat(2,1fr);}}
+</style>
+<!-- SUPABASE SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ── SUPABASE AUTH GUARD ──
+const SUPABASE_URL = 'https://avdwwlwxmnuqphxlpgrn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2ZHd3bHd4bW51cXBoeGxwZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMzgxMjksImV4cCI6MjA5MDYxNDEyOX0.3Ka_rAeRYciF3CNagRFYl78LUpJPJLkC7qtQFiK1iqE';
+const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+(async () => {
+  const { data: { session } } = await sbClient.auth.getSession();
+  if (!session) {
+    window.location.href = 'Login.html';
+    return;
+  }
+  // Show user email in header
+  const emailEl = document.getElementById('user-email');
+  if (emailEl) emailEl.textContent = session.user.email;
+})();
+
+async function signOut() {
+  await sbClient.auth.signOut();
+  window.location.href = 'Login.html';
+}
+</script>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header class="hdr">
+  <div class="hdr-brand">
+    <div class="hdr-icon">
+    <img src="Logo.svg" alt="Oak Street Technologies logo">
+    </div>
+        New Joiner Onboarding
+  </div> 
+  
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span id="user-email" style="font-size:12px;color:#697282;font-weight:500;"></span>
+      <button onclick="signOut()" style="font-family:inherit;font-size:12px;font-weight:600;padding:7px 14px;border-radius:7px;border:1.5px solid #e4e8e3;background:#fff;color:#354152;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;" onmouseover="this.style.background='#fff2f2';this.style.borderColor='#ffc5c5';this.style.color='#b02020'" onmouseout="this.style.background='#fff';this.style.borderColor='#e4e8e3';this.style.color='#354152'">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="width:13px;height:13px"><path d="M5 7h7M9 5l3 2-3 2"/><path d="M9 2H2v10h7"/></svg>
+        Sign Out
+      </button>
+    </div>
+    <div class="hdr-steps">
+    <div class="hdr-step active" id="s1"><div class="hdr-sn">1</div><span class="hdr-sl">Fill Details</span></div>
+    <div class="hdr-sep"></div>
+    <div class="hdr-step" id="s2"><div class="hdr-sn">2</div><span class="hdr-sl">Preview &amp; Export</span></div>
+  </div>
+</header>
+
+<!-- ══ FORM ══ -->
+<div class="pg on" id="pg-form">
+<div class="fo">
+  <div class="fi">
+    <h1>New Onboarding Plan</h1>
+    <p>Fill in role details and expand each day to add topic, tasks and outcome. The PDF output matches your exact template design.</p>
+  </div>
+
+  <!-- DURATION -->
+  <div class="sec">
+    <div class="sec-h"><div class="sec-ic"><svg viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" rx="2"/><path d="M5 7h4M7 5v4" stroke="white" stroke-width="1.2" stroke-linecap="round" fill="none"/></svg></div><span class="sec-t">Plan Duration</span></div>
+    <div class="sec-b">
+      <div class="dur-row">
+        <label class="dur-opt sel" id="dur2" onclick="setDur(2)">
+          <input type="radio" name="dur" value="2" checked>
+          <div class="dur-rd"><div class="dur-dot"></div></div>
+          <div class="dur-txt"><strong>2-Week Plan</strong><span>10 working days</span></div>
+        </label>
+        <label class="dur-opt" id="dur4" onclick="setDur(4)">
+          <input type="radio" name="dur" value="4">
+          <div class="dur-rd"><div class="dur-dot"></div></div>
+          <div class="dur-txt"><strong>4-Week Plan</strong><span>20 working days</span></div>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROLE INFO -->
+  <div class="sec">
+    <div class="sec-h"><div class="sec-ic"><svg viewBox="0 0 14 14"><path d="M7 7a3 3 0 100-6 3 3 0 000 6zm-4 5s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H3z"/></svg></div><span class="sec-t">Role Information</span></div>
+    <div class="sec-b">
+      <div class="row r3">
+        <div class="fld"><label>Job Title / Role *</label><input type="text" id="f-role" placeholder="Job title"></div>
+        <div class="fld">
+          <label>Start Date</label>
+          <input type="date" id="f-start" onchange="validateDateInput(this)">
+          <span id="date-err" style="display:none;font-size:12px;color:#b02020;margin-top:3px;font-weight:500;">Weekends are not valid start dates</span>
+        </div>
+        <div class="fld"><label>Reports To</label><input type="text" id="f-rep" placeholder="Manager name"></div>
+        <div class="fld"><label>Collaborates With</label><input type="text" id="f-col" placeholder="Team or person"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WEEKS -->
+  <div class="sec">
+    <div class="sec-h"><div class="sec-ic"><svg viewBox="0 0 14 14"><path d="M2 2h10a1 1 0 011 1v8a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1zm1 3h8v1H3V5zm0 2.5h5v1H3v-1z"/></svg></div><span class="sec-t">Weeks &amp; Daily Plans</span></div>
+    <div class="sec-b"><div id="wc"></div></div>
+  </div>
+
+  <div class="err" id="ferr"></div>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px;">
+    <div style="display:flex;gap:10px;">
+      <button class="btn-reset" style="padding:15px 20px;font-size:14px;font-weight:600;border-radius:10px;" onclick="resetAll()">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="width:15px;height:15px"><path d="M1 2v4h4"/><path d="M1.5 9A6 6 0 1 0 3 4.5L1 6"/></svg>
+        Reset All
+      </button>
+      <button class="btn-tb" onclick="fillDemoData()" style="padding:15px 20px;font-size:14px;font-weight:600;border-radius:10px;display:flex;align-items:center;gap:8px;font-family:inherit;background:#f0fdf4;color:#01621C;border:1.5px solid #b8dfc8;cursor:pointer;transition:all .15s;flex-shrink:0;">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="width:15px;height:15px"><path d="M2 7h10M7 2l5 5-5 5"/></svg>
+        Fill Sample Plan
+      </button>
+      <button class="btn-gen" id="btn-gen" style="margin-top:0;flex:1;" onclick="buildPreview()">
+        <svg viewBox="0 0 18 18" fill="currentColor" style="width:17px;height:17px"><path d="M15 3H3a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1V4a1 1 0 00-1-1zM6 11H4V9h2v2zm0-3H4V6h2v2zm3 3H7V9h2v2zm0-3H7V6h2v2zm3 3h-2V9h2v2zm0-3h-2V6h2v2zm2 3h-1V9h1v2zm0-3h-1V6h1v2z"/></svg>
+        Generate Onboarding Plan
+      </button>
+    </div>
+  </div>
+</div>
+
+</div>
+<!-- ══ LOADING ══ -->
+<div class="pg" id="pg-load">
+  <div class="spin"></div>
+  <div class="lm">Building your onboarding plan…</div>
+</div>
+
+<!-- ══ PREVIEW ══ -->
+<div class="pg" id="pg-preview">
+  <div class="tbr">
+    <button class="btn-tb" onclick="goBack()">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="width:14px;height:14px"><path d="M9 2L4 7l5 5"/></svg>
+      Back &amp; Edit
+    </button>
+    <div class="tbr-r">
+      <button class="btn-tb" onclick="window.print()">
+        <svg viewBox="0 0 14 14" fill="currentColor" style="width:14px;height:14px"><path d="M4 1h6v3H4V1zM1 5h12a1 1 0 011 1v4a1 1 0 01-1 1h-1v2H2v-2H1a1 1 0 01-1-1V6a1 1 0 011-1zm3 7h6v-2H4v2z"/></svg>
+        Print / Save PDF
+      </button>
+      <button class="btn-tb pri" onclick="goBack()">+ New Plan</button>
+    </div>
+  </div>
+  <div class="plan-wrap" id="plan-wrap">
+    <div class="plan-doc" id="plan-doc"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// STATE & INIT
+// ══════════════════════════════════════════
+let nWeeks = 2;
+const DPW  = 5;
+
+document.addEventListener('DOMContentLoaded', init);
+if (document.readyState !== 'loading') init(); // srcdoc: already loaded
+
+function init() {
+  const d = new Date();
+  const dow = d.getDay();
+  if (dow === 6) d.setDate(d.getDate() + 2);
+  else if (dow === 0) d.setDate(d.getDate() + 1);
+  const startEl = document.getElementById('f-start');
+  startEl.value = d.toISOString().split('T')[0];
+  // Set min to today so past dates can't be picked
+  startEl.min = new Date().toISOString().split('T')[0];
+  buildWeeks();
+  startEl.addEventListener('change', buildWeeks);
+}
+
+// Prevent weekends from being selected in the date picker
+function validateDateInput(input) {
+  if (!input.value) return;
+  const errEl = document.getElementById('date-err');
+  const genBtn = document.getElementById('btn-gen');
+  const picked = new Date(input.value + 'T00:00:00');
+  const day = picked.getDay();
+  if (day === 0 || day === 6) {
+    input.style.borderColor = '#b02020';
+    input.style.boxShadow = '0 0 0 3px rgba(176,32,32,0.10)';
+    if (errEl) errEl.style.display = 'block';
+    if (genBtn) {
+      genBtn.disabled = true;
+      genBtn.style.opacity = '0.45';
+      genBtn.style.cursor = 'not-allowed';
+      genBtn.style.transform = 'none';
+      genBtn.style.boxShadow = 'none';
+    }
+  } else {
+    input.style.borderColor = '';
+    input.style.boxShadow = '';
+    if (errEl) errEl.style.display = 'none';
+    if (genBtn) {
+      genBtn.disabled = false;
+      genBtn.style.opacity = '1';
+      genBtn.style.cursor = 'pointer';
+      genBtn.style.transform = '';
+      genBtn.style.boxShadow = '';
+    }
+  }
+  buildWeeks();
+}
+
+// ── DURATION ──
+function setDur(n) {
+  nWeeks = n;
+  document.getElementById('dur2').classList.toggle('sel', n === 2);
+  document.getElementById('dur4').classList.toggle('sel', n === 4);
+  buildWeeks();
+}
+
+// ── DATES ──
+function workdays(startStr, count) {
+  const arr = [], d = startStr ? new Date(startStr + 'T00:00:00') : new Date();
+  while (arr.length < count) {
+    if (d.getDay() !== 0 && d.getDay() !== 6) arr.push(new Date(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return arr;
+}
+const MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function fmtS(d){ return `${DN[d.getDay()]} ${d.getDate()} ${MN[d.getMonth()]}`; }
+function fmtF(d){ return `${String(d.getDate()).padStart(2,'0')} ${MN[d.getMonth()]} ${d.getFullYear()} (${DN[d.getDay()].slice(0,3)})`; }
+
+// ── BUILD FORM ──
+function buildWeeks() {
+  const c = document.getElementById('wc');
+  c.innerHTML = '';
+  const total = nWeeks * DPW;
+  const dates = workdays(document.getElementById('f-start').value, total);
+  for (let w = 1; w <= nWeeks; w++) {
+    const wb = document.createElement('div');
+    wb.className = 'wb';
+    const wt = document.createElement('button');
+    wt.type = 'button'; wt.className = 'wt';
+    wt.innerHTML = `<span class="wbg">Week ${w}</span><span class="wp" id="wpv-${w}">Expand to fill week details</span><svg class="wa ${w===1?'open':''}" id="wa-${w}" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>`;
+    wt.onclick = () => tgW(w);
+    wb.appendChild(wt);
+    const wi = document.createElement('div');
+    wi.id = `wi-${w}`; wi.className = `wi ${w===1?'open':''}`;
+    wi.innerHTML = `
+      <div class="wtr"><div class="row r2">
+        <div class="fld"><label>Week ${w} Title *</label><input type="text" id="wt-${w}" placeholder="Section title" oninput="upWP(${w})"></div>
+        <div class="fld"><label>Week ${w} Goal</label><input type="text" id="wg-${w}" placeholder="Week goal"></div>
+      </div></div>
+      <div id="dw-${w}"></div>`;
+    wb.appendChild(wi);
+    c.appendChild(wb);
+    const dd = wi.querySelector(`#dw-${w}`);
+    for (let d = 1; d <= DPW; d++) {
+      const g = (w-1)*DPW + d;
+      dd.appendChild(mkDay(g, d, dates[g-1]));
+      /* init add-task button state */
+      updAddBtn(g);
+    }
+  }
+}
+
+function mkDay(g, ld, dateObj) {
+  const ds = dateObj ? fmtS(dateObj) : '';
+  const div = document.createElement('div');
+  div.className = 'db'; div.id = `db-${g}`;
+  div.innerHTML = `
+    <button type="button" class="dt" onclick="tgD(${g})">
+      <span class="dnb">Day ${g}</span>
+      <span class="ddl">${ds}</span>
+      <span class="dtp" id="dpv-${g}">Click to fill day details</span>
+      <span class="dcd" id="dcd-${g}"></span>
+      <svg class="da" id="da-${g}" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 4l4 4 4-4"/></svg>
+    </button>
+    <div class="din" id="din-${g}">
+      <div class="fld">
+        <label>Day ${g} Title *</label>
+        <input type="text" id="dtit-${g}" maxlength="90" placeholder="Day title" oninput="upDP(${g});updCC('dtit-${g}','cc-t-${g}',90)">
+        <span class="cc" id="cc-t-${g}">0 / 90</span>
+      </div>
+      <div class="tl">Tasks / Activities</div>
+      <div id="tc-${g}">${[1,2,3,4].map(i => mkTask(g,i)).join('')}</div>
+      <button type="button" class="btn-at" id="btn-at-${g}" onclick="addTask(${g})">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 2v8M2 6h8"/></svg>
+        Add another task
+      </button>
+      <div class="ow"><div class="fld">
+        <label>Day Outcome *</label>
+        <textarea id="dout-${g}" maxlength="120" placeholder="Success criteria" oninput="upDP(${g});updCC('dout-${g}','cc-o-${g}',120)"></textarea>
+        <span class="cc" id="cc-o-${g}">0 / 120</span>
+      </div></div>
+    </div>`;
+  return div;
+}
+
+function mkTask(g, i) {
+  return `<div class="tr2" id="trow-${g}-${i}">
+    <span class="tn">${i}</span>
+    <input type="text" id="tsk-${g}-${i}" maxlength="90" placeholder="Type here" oninput="updAddBtn(${g})">
+    <button type="button" class="btn-del-task" onclick="delTask(${g}, 'trow-${g}-${i}')" title="Remove task">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 2l8 8M10 2l-8 8"/></svg>
+    </button>
+  </div>`;
+}
+
+function addTask(g) {
+  const c = document.getElementById(`tc-${g}`);
+  const inputs = c.querySelectorAll('input[type=text]');
+  const current = inputs.length;
+  /* smart limit: max 4 tasks if any task >50 chars; up to 6 if all ≤50 */
+  const allShort = Array.from(inputs).every(inp => inp.value.length <= 50);
+  const maxAllowed = allShort ? 6 : 4;
+  if (current >= maxAllowed) return;
+  const n = current + 1;
+  const d = document.createElement('div');
+  d.innerHTML = mkTask(g, n, '');
+  c.appendChild(d.firstElementChild);
+  updAddBtn(g);
+}
+
+function delTask(g, rowId) {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  const c = document.getElementById(`tc-${g}`);
+  /* don't allow deleting below 1 task */
+  if (c.querySelectorAll('.tr2').length <= 1) return;
+  row.remove();
+  /* re-number remaining tasks */
+  c.querySelectorAll('.tr2').forEach((row, idx) => {
+    const n = idx + 1;
+    const numEl = row.querySelector('.tn');
+    if (numEl) numEl.textContent = n;
+    const inp = row.querySelector('input');
+    if (inp) inp.id = `tsk-${g}-${n}`;
+    row.id = `trow-${g}-${n}`;
+    const btn = row.querySelector('.btn-del-task');
+    if (btn) btn.setAttribute('onclick', `delTask(${g}, 'trow-${g}-${n}')`);
+  });
+  updAddBtn(g);
+}
+
+function updAddBtn(g) {
+  const c = document.getElementById(`tc-${g}`);
+  const btn = document.getElementById(`btn-at-${g}`);
+  if (!c || !btn) return;
+  const inputs = c.querySelectorAll('input[type=text]');
+  const current = inputs.length;
+  const allShort = Array.from(inputs).every(inp => inp.value.length <= 50);
+  const maxAllowed = allShort ? 6 : 4;
+  if (current >= maxAllowed) {
+    btn.disabled = true;
+    btn.style.opacity = '0.4';
+    btn.style.cursor = 'not-allowed';
+    btn.title = allShort ? 'Maximum 6 tasks reached' : 'Add more tasks by keeping each task under 50 characters';
+  } else {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+    btn.title = '';
+  }
+}
+
+function tgW(w) {
+  const el = document.getElementById(`wi-${w}`), ar = document.getElementById(`wa-${w}`);
+  el.classList.toggle('open'); ar.classList.toggle('open');
+}
+function tgD(g) {
+  const el = document.getElementById(`din-${g}`), ar = document.getElementById(`da-${g}`);
+  el.classList.toggle('open'); ar.classList.toggle('open');
+}
+function upWP(w) {
+  const v = document.getElementById(`wt-${w}`).value.trim();
+  document.getElementById(`wpv-${w}`).textContent = v || 'Expand to fill week details';
+}
+function upDP(g) {
+  const t = document.getElementById(`dtit-${g}`).value.trim();
+  const o = document.getElementById(`dout-${g}`).value.trim();
+  document.getElementById(`dpv-${g}`).textContent = t || 'Click to fill day details';
+  document.getElementById(`dcd-${g}`).classList.toggle('filled', !!(t && o));
+}
+
+
+// ── FAKE FILL ──
+function fillDemoData() {
+  // Role Info
+  document.getElementById('f-role').value = 'Graphics Designer';
+  document.getElementById('f-rep').value = 'Muhammad Mateen Shahid';
+  document.getElementById('f-col').value = 'Web & Design Team';
+
+  // Weeks
+  for (let w = 1; w <= nWeeks; w++) {
+    const wtEl = document.getElementById(`wt-${w}`);
+    const wgEl = document.getElementById(`wg-${w}`);
+    if (wtEl) { wtEl.value = `Week ${w} - Learning & Execution`; upWP(w); }
+    if (wgEl) wgEl.value = `Understand workflows and contribute`;
+
+    for (let d = 1; d <= 5; d++) {
+      const g = (w - 1) * 5 + d;
+      const title = document.getElementById(`dtit-${g}`);
+      const outcome = document.getElementById(`dout-${g}`);
+      if (title) { title.value = `Day ${g} - Task Execution`; updCC(`dtit-${g}`, `cc-t-${g}`, 90); }
+      if (outcome) { outcome.value = `Complete assigned tasks successfully`; updCC(`dout-${g}`, `cc-o-${g}`, 120); }
+
+      const tasksContainer = document.getElementById(`tc-${g}`);
+      if (tasksContainer) {
+        const inputs = tasksContainer.querySelectorAll('input[type=text]');
+        inputs.forEach((inp, i) => {
+          inp.value = `Task ${i + 1} for Day ${g}`;
+        });
+        updAddBtn(g);
+      }
+
+      upDP(g);
+    }
+  }
+}
+
+// ── COLLECT ──
+function collect() {
+  const startStr = document.getElementById('f-start').value;
+  const dates = workdays(startStr, nWeeks * DPW);
+  const data = {
+    company: 'Oak Street Technologies',
+    role:    document.getElementById('f-role').value.trim(),
+    reports: document.getElementById('f-rep').value.trim(),
+    collab:  document.getElementById('f-col').value.trim(),
+    nWeeks, weeks: []
+  };
+  for (let w = 1; w <= nWeeks; w++) {
+    const wk = {
+      title: document.getElementById(`wt-${w}`).value.trim() || `Week ${w} — Training Plan`,
+      goal:  document.getElementById(`wg-${w}`).value.trim(),
+      days:  []
+    };
+    for (let d = 1; d <= DPW; d++) {
+      const g = (w-1)*DPW + d;
+      const tc = document.getElementById(`tc-${g}`);
+      const tasks = tc ? Array.from(tc.querySelectorAll('input')).map(i=>i.value.trim()).filter(Boolean) : [];
+      wk.days.push({
+        g, localD: d,
+        date: dates[g-1],
+        title: document.getElementById(`dtit-${g}`)?.value.trim() || '',
+        tasks,
+        outcome: document.getElementById(`dout-${g}`)?.value.trim() || ''
+      });
+    }
+    data.weeks.push(wk);
+  }
+  return data;
+}
+
+function validate(data) {
+  if (!data.role) return 'Please enter the Job Title / Role.';
+  for (const wk of data.weeks)
+    for (const day of wk.days)
+      if (!day.title) return `Please fill in the title for Day ${day.g}.`;
+  return null;
+}
+
+// ── PREVIEW ── save to localStorage and navigate to GenerateForm.html
+function buildPreview() {
+  const data = collect();
+  const err = validate(data);
+  if (err) {
+    const el = document.getElementById('ferr');
+    el.textContent = err; el.classList.add('on');
+    el.scrollIntoView({ behavior:'smooth', block:'center' }); return;
+  }
+  document.getElementById('ferr').classList.remove('on');
+
+  // Save plan data to localStorage then navigate
+  try {
+    localStorage.setItem('obf_plan_data', JSON.stringify(data));
+  } catch(e) {
+    console.error('localStorage error:', e);
+  }
+  window.location.href = 'GenerateForm.html';
+}
+
+// ══════════════════════════════════════════
+// RENDER — pixel-perfect match to uploaded CSS design
+// ══════════════════════════════════════════
+function renderDoc(data) {
+  const doc  = document.getElementById('plan-doc');
+  const plan = data.nWeeks === 4 ? 'Four' : 'Two';
+
+  /* ── SVG ICONS — exact uploaded files, clipPaths removed (full-size rects clip nothing) ── */
+  // DayTitleIcon: concentric circles (target/crosshair)
+  const iconTitle = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;">
+    <path d="M8.00016 14.6663C11.6821 14.6663 14.6668 11.6816 14.6668 7.99967C14.6668 4.31778 11.6821 1.33301 8.00016 1.33301C4.31826 1.33301 1.3335 4.31778 1.3335 7.99967C1.3335 11.6816 4.31826 14.6663 8.00016 14.6663Z" stroke="#02621C" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M8 12C10.2091 12 12 10.2091 12 8C12 5.79086 10.2091 4 8 4C5.79086 4 4 5.79086 4 8C4 10.2091 5.79086 12 8 12Z" stroke="#02621C" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M7.99984 9.33366C8.73622 9.33366 9.33317 8.73671 9.33317 8.00033C9.33317 7.26395 8.73622 6.66699 7.99984 6.66699C7.26346 6.66699 6.6665 7.26395 6.6665 8.00033C6.6665 8.73671 7.26346 9.33366 7.99984 9.33366Z" stroke="#02621C" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+
+  // DayTasksIcon: gear/settings cog
+  const iconTasks = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;">
+    <path d="M10.2602 2.9264C10.344 3.01029 10.4487 3.0703 10.5634 3.10027C10.6781 3.13023 10.7988 3.12905 10.9129 3.09685C11.027 3.06465 11.1305 3.0026 11.2126 2.91709C11.2948 2.83159 11.3526 2.72572 11.3802 2.6104C11.4494 2.32233 11.5942 2.05792 11.7995 1.84438C12.0049 1.63085 12.2635 1.47592 12.5486 1.39555C12.8338 1.31517 13.1352 1.31226 13.4219 1.38711C13.7085 1.46196 13.97 1.61187 14.1795 1.8214C14.389 2.03092 14.5388 2.29249 14.6135 2.57917C14.6883 2.86585 14.6853 3.16727 14.6048 3.45239C14.5243 3.73752 14.3693 3.99604 14.1557 4.20134C13.9421 4.40664 13.6777 4.55129 13.3896 4.6204C13.2743 4.648 13.1684 4.70585 13.0829 4.788C12.9974 4.87015 12.9353 4.97361 12.9031 5.08773C12.8709 5.20185 12.8697 5.32249 12.8997 5.43721C12.9297 5.55194 12.9897 5.6566 13.0736 5.7404L14.1956 6.86173C14.345 7.01118 14.4636 7.18859 14.5444 7.38385C14.6253 7.57911 14.667 7.78839 14.667 7.99973C14.667 8.21108 14.6253 8.42036 14.5444 8.61562C14.4636 8.81088 14.345 8.98829 14.1956 9.13773L13.0736 10.2597C12.9898 10.3436 12.8851 10.4036 12.7704 10.4336C12.6557 10.4636 12.535 10.4624 12.4209 10.4302C12.3068 10.398 12.2033 10.3359 12.1212 10.2504C12.039 10.1649 11.9812 10.0591 11.9536 9.94373C11.8844 9.65567 11.7396 9.39125 11.5343 9.17772C11.3289 8.96419 11.0703 8.80926 10.7852 8.72888C10.5 8.64851 10.1986 8.6456 9.91193 8.72045C9.62528 8.7953 9.36376 8.9452 9.1543 9.15473C8.94485 9.36425 8.79503 9.62582 8.72027 9.9125C8.64552 10.1992 8.64853 10.5006 8.729 10.7857C8.80946 11.0709 8.96448 11.3294 9.17808 11.5347C9.39168 11.74 9.65614 11.8846 9.94424 11.9537C10.0596 11.9813 10.1654 12.0392 10.2509 12.1213C10.3364 12.2035 10.3985 12.3069 10.4307 12.4211C10.4629 12.5352 10.4641 12.6558 10.4341 12.7705C10.4041 12.8853 10.3441 12.9899 10.2602 13.0737L9.13823 14.1951C8.98879 14.3445 8.81138 14.4631 8.61612 14.5439C8.42086 14.6248 8.21158 14.6665 8.00023 14.6665C7.78889 14.6665 7.57961 14.6248 7.38435 14.5439C7.18909 14.4631 7.01168 14.3445 6.86223 14.1951L5.74023 13.0731C5.65643 12.9892 5.55177 12.9292 5.43705 12.8992C5.32232 12.8692 5.20168 12.8704 5.08756 12.9026C4.97345 12.9348 4.86998 12.9969 4.78783 13.0824C4.70569 13.1679 4.64783 13.2737 4.62023 13.3891C4.55103 13.6771 4.40629 13.9415 4.20092 14.1551C3.99555 14.3686 3.73698 14.5235 3.45183 14.6039C3.16667 14.6843 2.86525 14.6872 2.5786 14.6124C2.29194 14.5375 2.03042 14.3876 1.82097 14.1781C1.61151 13.9685 1.46169 13.707 1.38694 13.4203C1.31218 13.1336 1.31519 12.8322 1.39566 12.5471C1.47613 12.2619 1.63115 12.0034 1.84475 11.7981C2.05835 11.5928 2.32281 11.4482 2.6109 11.3791C2.72622 11.3515 2.83209 11.2936 2.9176 11.2115C3.0031 11.1293 3.06515 11.0259 3.09735 10.9117C3.12955 10.7976 3.13073 10.677 3.10077 10.5623C3.07081 10.4475 3.01079 10.3429 2.9269 10.2591L1.8049 9.13773C1.65545 8.98829 1.5369 8.81088 1.45602 8.61562C1.37514 8.42036 1.33351 8.21108 1.33351 7.99973C1.33351 7.78839 1.37514 7.57911 1.45602 7.38385C1.5369 7.18859 1.65545 7.01118 1.8049 6.86173L2.9269 5.73973C3.0107 5.65585 3.11536 5.59583 3.23009 5.56587C3.34481 5.53591 3.46545 5.53709 3.57957 5.56928C3.69369 5.60148 3.79716 5.66353 3.8793 5.74904C3.96145 5.83455 4.0193 5.94042 4.0469 6.05573C4.1161 6.3438 4.26084 6.60822 4.46621 6.82175C4.67158 7.03528 4.93016 7.19021 5.21531 7.27059C5.50046 7.35096 5.80189 7.35387 6.08854 7.27902C6.37519 7.20417 6.63671 7.05426 6.84617 6.84474C7.05562 6.63521 7.20544 6.37364 7.2802 6.08697C7.35495 5.80029 7.35194 5.49887 7.27147 5.21374C7.19101 4.92861 7.03599 4.67009 6.82239 4.46479C6.60879 4.25949 6.34433 4.11484 6.05623 4.04573C5.94092 4.01814 5.83505 3.96028 5.74954 3.87813C5.66403 3.79599 5.60198 3.69252 5.56978 3.5784C5.53759 3.46429 5.53641 3.34364 5.56637 3.22892C5.59633 3.11419 5.65635 3.00954 5.74023 2.92573L6.86223 1.8044C7.01168 1.65495 7.18909 1.5364 7.38435 1.45552C7.57961 1.37464 7.78889 1.33301 8.00023 1.33301C8.21158 1.33301 8.42086 1.37464 8.61612 1.45552C8.81138 1.5364 8.98879 1.65495 9.13823 1.8044L10.2602 2.9264Z" stroke="#02621C" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+
+  // DayOutcomeIcon: circle with checkmark
+  const iconOutcome = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;">
+    <path d="M8.00016 14.6663C11.6821 14.6663 14.6668 11.6816 14.6668 7.99967C14.6668 4.31778 11.6821 1.33301 8.00016 1.33301C4.31826 1.33301 1.3335 4.31778 1.3335 7.99967C1.3335 11.6816 4.31826 14.6663 8.00016 14.6663Z" stroke="#02621C" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M6 8.00033L7.33333 9.33366L10 6.66699" stroke="#02621C" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+
+  /* ── LOGO SVG — actual uploaded Logo.svg ── */
+  const logo = `<svg width="139" height="135" viewBox="0 0 139 135" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M64.4334 103.543C63.7835 103.543 63.3403 103.752 63.3403 104.287C63.3403 106.549 72.6169 105.151 72.6169 111.669C72.6169 115.687 69.1308 117.472 65.0834 117.472C61.9814 117.472 58.4953 116.431 56.1318 114.585L58.318 110.121C60.1497 111.669 63.3108 112.919 65.1425 112.919C65.9992 112.919 66.5605 112.621 66.5605 111.996C66.5605 109.645 57.284 111.192 57.284 104.883C57.284 101.281 60.2974 99.0195 64.9357 99.0195C67.7718 99.0195 70.6966 99.8826 72.735 101.162L70.5784 105.686C68.7763 104.674 65.9697 103.573 64.4334 103.573" fill="#595A5C"/>
+<path d="M84.2273 116.668C83.3115 117.204 81.7162 117.532 80.239 117.532C77.0484 117.532 74.9804 115.686 74.9804 112.74V107.621H73.0601V103.96H74.9804V100.031H80.7117V103.96H83.991V107.621H80.7117V111.877C80.7117 112.621 81.1549 113.097 81.8344 113.067C82.1593 113.067 82.7206 112.918 83.2524 112.71L84.2273 116.668V116.668Z" fill="#595A5C"/>
+<path d="M96.0151 102.949V108.157C93.4448 107.77 91.7609 108.693 91.7609 110.538V117.264H86V103.187H91.7609V105.24C92.7358 103.782 94.213 102.919 96.0151 102.919" fill="#595A5C"/>
+<path d="M111.555 111.519H102.455C102.84 112.62 103.667 113.186 104.789 113.186C105.764 113.186 106.769 112.739 107.626 111.936L110.609 114.882C109.132 116.519 106.976 117.442 104.287 117.442C99.5012 117.442 96.665 114.614 96.665 110.269C96.665 105.924 99.6193 102.947 104.11 102.947C108.984 102.947 111.85 106.281 111.555 111.489V111.519ZM104.169 106.816C103.165 106.816 102.574 107.65 102.337 108.81H105.823C105.912 107.65 105.173 106.816 104.199 106.816" fill="#595A5C"/>
+<path d="M127.242 111.519H118.142C118.527 112.62 119.354 113.186 120.476 113.186C121.451 113.186 122.456 112.739 123.313 111.936L126.296 114.882C124.819 116.519 122.663 117.442 119.974 117.442C115.188 117.442 112.352 114.614 112.352 110.269C112.352 105.924 115.306 102.947 119.797 102.947C124.672 102.947 127.537 106.281 127.242 111.489V111.519ZM119.856 106.816C118.852 106.816 118.261 107.65 118.024 108.81H121.51C121.599 107.65 120.86 106.816 119.886 106.816" fill="#595A5C"/>
+<path d="M139 116.668C138.084 117.204 136.489 117.532 135.011 117.532C131.821 117.532 129.753 115.686 129.753 112.74V107.621H127.833V103.96H129.753V100.031H135.484V103.96H138.763V107.621H135.484V111.877C135.484 112.621 135.927 113.097 136.607 113.067C136.932 113.067 137.493 112.918 138.025 112.71L139 116.668V116.668Z" fill="#595A5C"/>
+<path d="M19.6757 108.395C19.6757 113.752 15.5397 117.681 9.83784 117.681C4.13603 117.681 0 113.782 0 108.395C0 103.008 4.13603 99.1982 9.83784 99.1982C15.5397 99.1982 19.6757 103.067 19.6757 108.395ZM6.08587 108.395C6.08587 110.865 7.888 112.681 9.92647 112.681C11.9649 112.681 13.6194 110.865 13.6194 108.395C13.6194 105.925 11.9945 104.139 9.92647 104.139C7.85846 104.139 6.08587 105.925 6.08587 108.395Z" fill="#595A5C"/>
+<path d="M34.6831 108.306V117.413H29.0404V115.895C28.2132 117.026 26.8837 117.681 25.1112 117.681C22.1569 117.681 20.4434 115.925 20.4434 113.246C20.4434 110.568 22.3046 108.99 25.8497 108.96H29.0404C29.0404 107.978 28.2723 107.413 26.8837 107.413C25.8497 107.413 24.2249 107.71 22.6295 108.306L21.3592 104.436C23.7226 103.573 26.1747 103.067 28.2427 103.067C32.2901 103.067 34.6831 104.972 34.6831 108.276V108.306ZM29.0404 112.889V111.609H27.061C26.2633 111.609 25.8497 111.996 25.8497 112.74C25.8497 113.484 26.3224 113.96 27.1201 113.96C27.8587 113.96 28.5972 113.574 29.0699 112.889" fill="#595A5C"/>
+<path d="M47.6238 108.782L52.6461 117.413H45.8216L43.665 112.978L42.9855 113.722V117.413H37.2246V98.335H42.9855V106.996L46.2352 103.335H52.7052L47.6238 108.782Z" fill="#595A5C"/>
+<path d="M121.896 28.1255L114.54 20.7147V1.9048H78.1727C77.5819 0.773824 76.3706 0 75.0116 0C73.6526 0 72.4414 0.773824 71.821 1.93456C71.5551 2.44052 71.4074 3.03577 71.4074 3.63102C71.4074 4.22627 71.5551 4.762 71.7914 5.23819C72.3823 6.42869 73.5935 7.26204 75.0116 7.26204C76.4297 7.26204 77.6409 6.45846 78.2318 5.26796H111.202V22.1135L118.617 29.5839V89.9422H76.4297C75.632 88.7219 74.7457 86.7576 74.3912 86.2814C73.9481 85.6564 73.2686 71.3109 73.4754 70.418C73.6822 69.5251 74.5094 67.9775 75.2775 67.6799C76.0456 67.412 79.7976 66.5489 80.8611 65.9239C81.9542 65.2989 82.2201 63.3941 82.4269 62.7095C82.486 62.531 82.6928 62.3821 82.9882 62.2631C82.9882 62.3226 83.0178 62.3524 83.0473 62.4119C83.0473 62.4119 83.3723 62.2631 83.7268 61.9655C83.8745 61.9059 84.0222 61.8464 84.17 61.7869C84.17 61.8167 84.17 61.8464 84.17 61.9059C84.4358 61.8166 84.7608 61.6083 85.1153 61.2512C85.2926 61.0726 85.4403 60.894 85.5585 60.7452C85.6471 60.6262 85.7357 60.5071 85.8244 60.3583C85.8835 60.4178 85.913 60.5071 86.0016 60.5964C86.0903 60.6857 86.1789 60.775 86.2675 60.8345C86.4448 61.2809 86.7993 61.7571 87.3606 62.2036C87.3606 62.2036 87.9515 61.4595 87.8628 60.4476C88.0106 60.4476 88.1878 60.4773 88.306 60.5071C88.69 61.1619 89.4582 61.9059 90.8762 62.1143C90.8762 62.1143 90.8762 61.9059 90.8467 61.5786C91.1717 61.7274 91.5853 61.8167 92.0284 61.8762C92.0284 61.8762 92.0284 61.1916 91.6148 60.5071C91.7034 60.4476 91.9102 60.3285 92.117 60.15C92.442 60.4773 92.8556 60.8047 93.4169 61.0131C92.8852 61.4297 92.4125 62.1143 92.2943 63.2155C92.2943 63.2155 93.1215 63.156 93.9192 62.65C94.0373 63.1857 94.2737 63.7512 94.8055 64.3762C94.8055 64.3762 96.1053 63.0667 95.16 61.2214C95.16 61.1619 95.2191 61.1321 95.2191 61.0726C95.3372 61.1916 95.5145 61.3107 95.6917 61.4297C95.6917 61.7869 95.6918 64.0191 98.1438 64.9417C98.1438 64.9417 98.4983 63.0369 96.7848 61.9059C96.903 61.9059 96.9916 61.9357 97.1394 61.9655C97.4939 62.5012 98.0552 63.0072 98.9119 63.275C98.9119 63.3345 98.9415 63.3941 98.971 63.4536C98.971 63.4536 100.182 63.0964 100.566 61.8464C100.596 62.5012 100.862 63.2453 101.512 64.0191C101.512 64.0191 101.778 63.7512 101.984 63.275C102.221 63.6322 102.546 63.9893 102.989 64.2869C102.989 64.2869 103.255 63.7512 103.255 63.0072C103.58 63.275 103.993 63.5429 104.496 63.7214C104.496 63.7214 104.702 62.5905 104.023 61.5488C104.436 61.7869 104.968 61.9655 105.589 61.9952C105.589 61.9952 105.589 61.7571 105.471 61.4297C105.766 61.6083 106.061 61.7571 106.445 61.8762C106.445 61.8762 106.652 60.1202 105.146 59.0487C105.234 58.9595 105.323 58.8404 105.411 58.7214C105.411 58.7214 105.234 58.6023 104.968 58.4833C105.057 57.9178 104.968 57.2035 104.466 56.3999H104.496C104.673 56.5487 104.909 56.757 105.205 56.9654C105.205 57.2928 105.205 59.5547 107.657 60.4773C107.657 60.4773 108.011 58.5725 106.298 57.4416C106.829 57.5606 107.42 57.5606 108.129 57.2928C108.129 57.2928 107.627 56.3106 106.564 55.8642C106.977 55.7749 107.391 55.5665 107.775 55.2391C107.863 55.3582 107.982 55.4475 108.1 55.5665C108.1 55.5665 108.573 54.9713 108.691 54.1677C109.104 54.6737 109.754 55.1201 110.847 55.2689C110.847 55.2689 110.995 53.9891 110.02 53.126C110.611 53.3343 111.409 53.4236 112.384 53.126C112.384 53.126 111.97 52.1141 110.847 51.7272C111.379 51.5486 111.94 51.251 112.472 50.6855C112.472 50.6855 110.847 49.5843 109.104 50.745H108.986C109.459 50.0605 109.902 48.8105 109.134 47.4116C109.725 47.233 110.345 46.8759 110.906 46.2211C110.906 46.2211 109.311 45.2985 107.716 46.3699C107.627 46.1616 107.45 45.864 107.214 45.5663C107.745 45.6259 108.395 45.5663 109.104 45.1497C109.104 45.1497 108.838 44.7032 108.307 44.3163C108.573 44.1377 108.838 43.9294 109.104 43.602C109.104 43.602 107.627 42.471 106.209 43.2449C106.386 42.9472 107.509 41.1913 105.677 39.3162C105.677 39.3162 105.5 39.4948 105.323 39.8222C105.293 39.4055 105.146 38.9591 104.88 38.4531C104.88 38.4531 103.993 38.9293 103.698 39.8817C103.284 39.9412 102.959 40.09 102.723 40.3281H102.693C102.693 40.3281 102.693 40.1198 102.634 40.0305C102.664 39.971 102.693 39.9115 102.723 39.8817C102.723 39.8817 102.546 39.7924 102.25 39.7329C102.162 39.6734 102.073 39.6436 102.044 39.6138C102.044 39.6138 102.044 39.6734 102.014 39.7031C101.807 39.6734 101.571 39.6436 101.305 39.6734C101.246 39.6138 101.157 39.5841 101.098 39.5841H101.039V39.5246C101.039 39.5246 101.305 39.4055 101.394 39.3162C101.512 39.2269 101.63 39.0781 101.778 38.9293C101.571 38.8995 101.423 38.8698 101.305 38.8698C101.364 38.6615 101.364 38.4531 101.394 38.215C101.423 38.1555 101.453 38.1257 101.453 38.0662V37.9174C101.453 37.9174 101.305 37.9174 101.039 37.9472C100.95 37.9472 100.566 38.0662 99.9164 38.2745C99.9459 38.215 99.9755 38.1257 100.005 38.0364C100.035 37.8281 99.946 37.59 99.7392 37.3221C99.5914 37.4114 99.4437 37.5007 99.296 37.59C99.1778 37.6793 99.0892 37.7983 99.0301 37.8876C98.9415 37.8876 98.8529 37.8876 98.7642 37.8579C98.7642 37.8579 98.7347 37.8281 98.7051 37.7983C98.4983 37.6198 98.3506 37.5305 98.1734 37.471C98.3211 37.1436 98.3802 36.7269 98.3802 36.2507C98.3802 36.2507 97.4052 36.2507 96.6667 36.9352C96.7553 36.8459 96.8439 36.7567 96.903 36.6376C96.7258 36.6376 96.5485 36.6078 96.4303 36.6078C96.194 36.6376 96.0167 36.6674 95.8985 36.6971V36.6376C95.8985 36.6376 95.9872 36.5186 96.0463 36.459H96.1349C96.1349 36.459 96.1349 36.4293 96.1349 36.3697C96.3417 36.1019 96.4894 35.8935 96.6076 35.715C96.519 35.6852 96.4008 35.6852 96.2531 35.6852C96.1644 35.6852 96.0758 35.6852 95.9872 35.715C95.8986 35.4471 95.7804 35.1792 95.6031 34.9114C95.6031 34.6733 95.6031 34.4054 95.544 34.1376C96.1349 34.1376 96.8144 33.9887 97.5825 33.6018C97.5825 33.6018 96.903 32.4709 95.4849 32.203C96.0758 31.9054 96.6962 31.4292 97.228 30.6553C97.228 30.6553 95.0713 29.6434 93.2101 31.3994C93.151 31.3994 93.1215 31.3994 93.0624 31.3994C93.5056 30.5065 93.801 28.9291 92.6193 27.3815C93.2988 27.0541 93.9487 26.5184 94.51 25.6255C94.51 25.6255 92.4125 24.7921 90.699 26.4291C90.5513 26.191 90.2854 25.8636 89.9309 25.5362C90.6103 25.5362 91.3489 25.2981 92.1466 24.7029C92.1466 24.7029 91.733 24.1969 91.0239 23.8695C91.3194 23.6314 91.5853 23.304 91.8216 22.8873C91.8216 22.8873 89.8422 21.8159 88.306 23.0064C88.306 23.0064 88.306 23.0064 88.2764 22.9766C88.4537 22.6195 89.4582 20.298 86.9175 18.3932C86.9175 18.3932 86.7402 18.6313 86.5925 19.048C86.4743 18.542 86.238 18.0361 85.7948 17.4706C85.7948 17.4706 84.8199 18.2146 84.6426 19.4349C84.17 19.5837 83.8154 19.8218 83.5791 20.179C83.5791 20.179 83.5791 20.179 83.5496 20.179C83.5496 20.0599 83.52 19.9706 83.4314 19.8516L83.4905 19.6432C83.4905 19.6432 83.2541 19.5837 82.8996 19.5539C82.7814 19.4944 82.6928 19.4647 82.6337 19.4349C82.6337 19.4647 82.6337 19.4944 82.6042 19.5539C82.3383 19.5539 82.0724 19.5539 81.777 19.6432C81.6883 19.5837 81.5997 19.5539 81.5111 19.5837H81.452C81.452 19.5837 81.6883 19.3754 81.8065 19.2266C81.9247 19.0777 82.0724 18.8992 82.1906 18.6611C81.9542 18.6611 81.777 18.6611 81.6293 18.6908C81.6293 18.4527 81.6293 18.1849 81.6293 17.8872C81.6293 17.8277 81.6588 17.7682 81.6588 17.7087V17.5301C81.6588 17.5301 81.452 17.5896 81.1566 17.6491C81.0384 17.6491 80.5952 17.8575 79.8567 18.2444C79.8862 18.1551 79.9158 18.0658 79.9158 17.9468C79.9158 17.6789 79.768 17.411 79.4726 17.1432C79.2954 17.2622 79.1476 17.411 78.9999 17.5599C78.8522 17.7087 78.7636 17.8277 78.7045 17.9765C78.6159 17.9765 78.4977 17.9765 78.3795 17.9765C78.35 17.9765 78.3204 17.917 78.2909 17.917C78.025 17.7384 77.7887 17.6491 77.5819 17.6194C77.6705 17.2027 77.7 16.6967 77.6114 16.1015C77.6114 16.1015 76.3706 16.3098 75.6025 17.3218C75.7206 17.1729 75.8093 17.0241 75.9274 16.8456C75.6911 16.8456 75.4843 16.8456 75.3661 16.9051C75.1002 16.9944 74.8934 17.0539 74.7753 17.1134C74.7753 17.1134 74.7457 17.0837 74.7457 17.0539C74.8048 16.9646 74.8934 16.8456 74.9525 16.7265C75.1593 16.3694 75.307 16.0717 75.4252 15.8039C75.307 15.8039 75.1889 15.8039 74.9821 15.8039C74.6571 15.8634 74.3912 15.9824 74.1253 16.1313C74.0662 16.161 74.0367 16.1908 73.9776 16.2205L73.9185 16.161C74.1549 15.3574 74.1253 14.3157 73.3572 13.0955C73.3572 13.0955 72.4709 13.661 72.1459 14.7027C71.8505 14.1669 71.3483 13.6014 70.5801 13.1252C70.5801 13.1252 70.0188 14.0776 70.3143 15.2681C70.0779 15.4765 69.6939 15.8634 69.4575 16.4289H69.1621C68.8371 16.0122 68.4235 15.5658 67.7736 15.1789C67.7736 15.1789 67.36 15.9527 67.4486 16.9646C67.3304 17.0837 67.1827 17.292 67.035 17.5599C66.4441 17.5301 65.9419 17.5599 65.5283 17.6194C65.5283 17.6194 65.5283 17.6491 65.4987 17.6491C65.4987 17.6491 65.3806 17.5896 65.3215 17.5599C64.7897 16.9646 63.992 16.4289 62.7512 16.2205C62.7512 16.2205 62.6921 17.2622 63.3421 18.2146C62.7217 18.0658 61.9831 18.0658 61.1264 18.3039C61.1264 18.3039 61.3036 18.7504 61.7468 19.1968C61.4809 19.3754 61.1855 19.6135 60.9491 19.9111C60.8605 19.3158 60.5946 18.6611 60.0333 17.9468C60.0333 17.9468 58.6448 19.1075 59.0288 20.8933C58.5561 20.4171 57.8766 20.0004 56.9313 19.792C56.7244 18.9587 56.1631 18.0361 54.8632 17.292C54.8632 17.292 54.4201 18.2146 54.686 19.3456C54.1542 19.0182 53.4747 18.7504 52.5589 18.6908C52.5589 18.6908 52.6475 20.8337 54.7746 21.6373C54.6564 21.6671 54.5383 21.7266 54.4201 21.7861C54.2724 21.8159 54.0951 21.8754 53.9474 21.9349C53.8883 21.7564 53.7701 21.5778 53.6224 21.3992C53.2679 20.8933 52.7952 20.5956 52.2339 20.5361C52.1157 20.7742 52.0271 20.9825 51.9385 21.1611C51.584 21.2504 51.1408 21.429 50.7272 21.7564C50.3136 21.6968 49.7818 21.6968 49.1319 21.7564C48.9546 21.5183 48.7183 21.2504 48.4524 21.0123C48.4524 21.0123 47.8024 21.8159 47.7729 22.9469C47.3298 22.5004 46.7094 22.1135 45.8526 21.8457C45.8526 21.8457 45.5867 23.1552 46.4139 24.3457C46.148 24.1969 46.0299 24.1671 46.0003 24.2267C46.0003 24.2862 46.0003 24.5243 45.9412 24.8814C45.9412 24.9409 45.9412 25.0302 45.9412 25.1195C45.0254 25.0005 43.755 25.1195 42.6029 26.2803C42.4847 26.191 42.3961 26.1017 42.2483 26.0422C42.2483 26.0422 41.3621 27.6196 42.337 29.2267C41.7461 28.9291 40.978 28.7505 40.0031 28.8398C39.5304 28.1255 38.6736 27.4112 37.2556 27.1434C37.2556 27.1434 37.1669 28.1851 37.7873 29.1672C37.1669 29.0184 36.4579 28.9886 35.6012 29.2267C35.6012 29.2267 36.4579 31.4292 38.8804 31.3399C38.2896 31.6077 37.6987 32.0542 37.1669 32.828C37.1669 32.828 38.3191 33.453 39.6486 33.1554C39.5599 33.2744 39.4713 33.3637 39.3827 33.5125C39.2645 33.5423 39.1759 33.5721 39.0872 33.6316C39.1463 33.6614 39.1759 33.7209 39.235 33.7506C38.9691 34.2268 38.7623 34.8221 38.7327 35.5662C38.7327 35.5662 39.0282 35.5662 39.4418 35.4471C39.619 36.0126 39.7963 36.5781 39.944 37.084V37.1436C39.944 37.1436 39.7372 37.2329 39.6486 37.2924C39.2054 36.965 38.6736 36.7269 37.9646 36.5483C37.9646 36.5483 37.8169 37.5305 38.3191 38.5126C38.2009 38.6912 38.0828 38.8698 37.9646 39.0781C37.9646 39.0781 38.3191 39.2269 38.8804 39.2865C39.0577 39.465 39.294 39.6436 39.5304 39.7924C39.5304 39.8222 39.5599 39.8817 39.5895 39.9412C38.9986 39.9412 38.2896 40.0603 37.5215 40.4472C37.5215 40.4472 37.876 41.0127 38.585 41.4591C38.4077 41.5484 38.26 41.6675 38.0828 41.846C37.7283 41.846 37.2851 41.9056 36.7829 41.9948C36.6056 41.8163 36.3988 41.6079 36.1625 41.4294C36.1625 41.4294 35.6898 42.1437 35.7784 43.0663C35.3648 42.7389 34.833 42.471 34.124 42.3222C34.124 42.3222 34.0058 43.4234 34.8035 44.3163C34.5967 44.227 34.4785 44.1973 34.4785 44.2568C34.4785 44.3163 34.4785 44.4949 34.4785 44.7925C34.4785 44.852 34.4785 44.9116 34.4785 45.0009C33.7399 45.0009 32.6764 45.2092 31.8787 46.2509C31.7901 46.1914 31.6719 46.1318 31.5833 46.0723C31.5833 46.0723 30.9924 47.4414 31.9378 48.6616C31.406 48.4831 30.7856 48.3938 29.988 48.5724C29.5448 48.0069 28.7767 47.5009 27.5654 47.4414C27.5654 47.4414 27.5654 48.3045 28.1858 49.0486C27.6836 48.989 27.0632 49.0486 26.3837 49.3164C26.3837 49.3164 27.27 51.0426 29.2494 50.745C28.8063 51.0129 28.3336 51.4593 27.979 52.1141C27.979 52.1141 28.9835 52.5308 30.0471 52.1439C29.988 52.2331 29.8993 52.3522 29.8403 52.4712C29.7516 52.501 29.663 52.5308 29.6039 52.5903C29.6335 52.5903 29.6925 52.6498 29.7221 52.6796C29.5448 53.0963 29.4267 53.6022 29.4562 54.1975C29.4562 54.1975 29.6925 54.1677 30.0175 54.0486C30.2243 54.4951 30.4016 54.9415 30.5788 55.3284C30.5788 55.3284 30.4311 55.4475 30.3425 55.507C29.9584 55.2987 29.4857 55.1201 28.8949 55.0606C28.8949 55.0606 28.8653 55.8642 29.3676 56.638C29.2789 56.7868 29.1903 56.9654 29.1312 57.1439C29.1312 57.1439 29.4562 57.2332 29.8993 57.2035C30.1061 57.382 30.4016 57.5309 30.7266 57.6499C30.1652 57.6499 29.5744 57.8285 28.9244 58.2452C28.9244 58.2452 29.5744 59.0785 30.697 59.2273C30.1357 59.5249 29.6039 59.9714 29.1903 60.8047C29.1903 60.8047 31.0811 61.519 32.381 59.9416C32.4696 59.9416 32.5582 59.9714 32.6469 60.0011C32.6469 60.0904 32.6173 60.1797 32.5878 60.269C30.9334 60.8345 30.697 62.5905 30.697 62.5905C31.9083 62.5905 32.7355 62.1143 33.2377 61.5786V61.6678C32.7355 62.4417 32.7059 63.275 32.7059 63.3345C33.0605 63.3048 33.3854 63.2155 33.6809 63.0667C33.7399 63.156 33.799 63.275 33.8581 63.3643C33.8581 63.3643 34.1831 63.0964 34.4785 62.5905C34.5672 62.531 34.6262 62.4714 34.6853 62.3821C34.6853 62.3821 35.2466 62.5012 35.9261 62.2929C35.9261 62.531 35.9261 62.7988 35.9261 63.0667C35.9261 63.0667 36.4875 62.9179 37.0488 62.5012C37.0192 62.65 36.9897 62.7988 36.9897 62.9476C36.9897 62.9476 37.7873 62.8881 38.5555 62.3821C38.3487 62.7988 38.2009 63.3643 38.2009 64.0488C38.2009 64.0488 39.619 63.8107 40.4167 62.5012C40.4758 62.9179 40.653 63.3941 41.0075 63.9C41.0075 63.9 41.687 63.3345 41.9825 62.3821C42.4847 62.2036 43.1642 61.8762 43.6664 61.1916C43.6664 61.1916 43.6664 61.1916 43.696 61.1916C43.6369 61.2809 43.5482 61.4 43.4596 61.519C43.3119 61.7274 43.2233 61.9357 43.1937 62.0845C42.5438 62.3821 41.8643 63.0072 41.5098 64.2572C41.5098 64.2572 43.3414 64.4357 44.4641 62.8881C44.6118 62.7393 44.7595 62.5905 44.9072 62.4119C44.9368 62.4417 44.9663 62.4714 45.0254 62.5012L45.0845 62.4417C45.0845 62.4417 45.1731 62.65 45.2322 62.7691C44.7595 63.1262 44.3164 63.7214 44.0505 64.6738C44.0505 64.6738 45.5867 64.7929 46.6798 63.6619C46.9752 63.9298 47.3593 64.2274 47.8615 64.4655C47.8615 64.4655 48.1274 63.7215 47.9206 62.8286C48.0979 62.9179 48.3047 62.9774 48.541 63.0369C48.541 63.0964 48.5115 63.156 48.4819 63.2155C48.5706 63.2155 48.6887 63.2155 48.8365 63.156C48.8955 63.156 48.9251 63.1262 48.9546 63.0964C49.2501 63.0964 49.575 63.0964 49.9295 63.0667V63.156C49.9295 63.3643 49.9886 63.4536 50.1068 63.4833L50.4318 63.3643C50.609 63.3048 50.7863 63.1857 50.9931 63.0369C51.1113 63.3048 51.259 63.6024 51.4658 63.9C51.4658 63.9 52.0271 63.4536 52.293 62.7393C52.3521 62.8583 52.3816 62.9774 52.4112 63.0964C52.6475 62.9476 52.8839 62.65 53.1497 62.2333C53.4156 61.8167 53.5338 61.4297 53.5338 61.1321C53.5929 61.1916 53.7111 61.2809 53.8292 61.3702C53.9474 61.4297 54.036 61.4893 54.1542 61.519C54.4496 61.9059 54.8928 62.2631 55.5723 62.5607C55.5723 62.5607 55.6904 62.2929 55.72 61.8762C56.3404 62.1143 56.8426 62.2631 56.9313 62.5607C57.1381 63.275 57.4039 65.15 58.497 65.7751C59.5901 66.4001 63.3126 67.2334 64.0807 67.531C64.8488 67.7989 65.676 69.3466 65.8828 70.2692C66.0896 71.1918 65.4101 85.5076 64.967 86.1326C64.6125 86.6088 63.7557 88.5731 62.9285 89.7934H38.0828L20.1501 71.7276V38.5722L29.8107 28.8398V5.29772H59.7674C60.3582 6.48822 61.5695 7.29181 62.9876 7.29181C64.4056 7.29181 65.6169 6.48822 66.2078 5.26796C66.4441 4.79176 66.5918 4.22627 66.5918 3.66078C66.5918 3.03577 66.4441 2.47029 66.1782 1.96432C65.5874 0.803587 64.3761 0.0297625 62.9876 0.0297625C61.5991 0.0297625 60.4173 0.803587 59.8265 1.93456H26.4724V27.441L20.1797 33.7804L16.7822 37.2031V73.1859L36.7829 93.3351H50.934V93.2458H121.926V38.6317H121.985V28.2148L121.926 28.1553L121.896 28.1255ZM74.9821 4.91081C74.273 4.91081 73.7117 4.34532 73.7117 3.63102C73.7117 2.91672 74.273 2.35124 74.9821 2.35124C75.6911 2.35124 76.2524 2.91672 76.2524 3.63102C76.2524 4.34532 75.6911 4.91081 74.9821 4.91081Z" fill="#24B34B"/>
+</svg>`;
+
+  /* ── RENDER ── */
+  let h = `
+  <div class="ph">
+    <div class="ph-logo">${logo}</div>
+    <div class="ph-right">
+      <div class="ph-title">${plan}-Week Onboarding Plan</div>
+      <div class="ph-chips">
+        <div class="ph-chip"><div class="ph-chip-lbl">Role</div><div class="ph-chip-val">${x(data.role)||'—'}</div></div>
+        <div class="ph-chip"><div class="ph-chip-lbl">Reports To</div><div class="ph-chip-val">${x(data.reports)||'—'}</div></div>
+        <div class="ph-chip"><div class="ph-chip-lbl">Collaborates With</div><div class="ph-chip-val">${x(data.collab)||'—'}</div></div>
+      </div>
+    </div>
+  </div>`;
+
+  data.weeks.forEach((wk, wi) => {
+    h += `
+  <div class="pw">
+    <div class="pw-pill">Week ${wi+1} — ${x(wk.title)}</div>
+    ${wk.goal ? `<div class="pw-sub">${x(wk.goal)}</div>` : ''}
+  </div>
+  <div class="pd">`;
+
+    wk.days.forEach(day => {
+      const dateStr = day.date ? fmtF(day.date) : '';
+      h += `
+    <div class="pdc">
+      <div class="pdc-top">
+        <span class="pdc-badge">Day ${day.g}</span>
+        <span class="pdc-date">${dateStr}</span>
+      </div>
+      <div class="pdc-topic-row">
+        ${iconTitle}
+        <span class="pdc-topic-txt">${x(day.title)}</span>
+      </div>
+      <div class="pdc-tasks-area">
+        ${iconTasks}
+        <div class="pdc-tasks-list">
+          ${day.tasks.map(t => `<div class="pdc-task"><span class="ptb">•</span><span class="ptt">${x(t)}</span></div>`).join('')}
+        </div>
+      </div>
+      ${day.outcome ? `
+      <div class="pdc-out">
+        ${iconOutcome}
+        <span class="pot">${x(day.outcome)}</span>
+      </div>` : ''}
+    </div>`;
+    });
+
+    h += `</div>`;
+  });
+
+  doc.innerHTML = h;
+}
+
+// ── UTILS ──
+function x(s){ return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+
+function showPg(id) {
+  ['pg-form','pg-load','pg-preview'].forEach(p => {
+    const el = document.getElementById(p);
+    el.classList.remove('on');
+    el.style.display = 'none';
+  });
+  const t = document.getElementById(id);
+  t.style.display = id === 'pg-load' ? 'flex' : 'block';
+  t.classList.add('on');
+}
+function setStep(n) {
+  [1,2].forEach(i => {
+    const el = document.getElementById(`s${i}`);
+    el.classList.remove('active','done');
+    if (i < n) el.classList.add('done');
+    else if (i === n) el.classList.add('active');
+  });
+}
+function scalePlan() {
+  const wrap = document.getElementById('plan-wrap');
+  const doc  = document.getElementById('plan-doc');
+  if (!wrap || !doc) return;
+
+  const pad = 20;
+  const ww = wrap.offsetWidth || window.innerWidth;
+  const s  = Math.max(Math.min((ww - pad * 2) / 1920, 1), 0.1);
+
+  // Centre horizontally: offset = (ww - scaled_width) / 2
+  const ox = Math.max((ww - 1920 * s) / 2, pad);
+  const oy = pad;
+
+  doc.style.transform        = `translate(${ox}px, ${oy}px) scale(${s})`;
+  doc.style.transformOrigin  = 'top left';
+
+  // Set wrap height so it contains the scaled doc
+  wrap.style.height = (1080 * s + oy * 2) + 'px';
+}
+
+/* ── CHAR COUNTER HELPER ── */
+function updCC(inputId, counterId, max) {
+  const inp = document.getElementById(inputId);
+  const ctr = document.getElementById(counterId);
+  if (!inp || !ctr) return;
+  const len = inp.value.length;
+  ctr.textContent = `${len} / ${max}`;
+  ctr.className = 'cc' + (len >= max ? ' over' : len >= max * 0.85 ? ' warn' : '');
+}
+
+/* ── RESET ALL ── */
+function resetAll() {
+  // Clear role/meta fields
+  ['f-role','f-rep','f-col'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+
+  // Reset date to today/next workday
+  const d = new Date();
+  const dow = d.getDay();
+  if (dow === 6) d.setDate(d.getDate()+2);
+  else if (dow === 0) d.setDate(d.getDate()+1);
+  const startEl = document.getElementById('f-start');
+  if (startEl) startEl.value = d.toISOString().split('T')[0];
+
+  // Reset duration to 2-week
+  nWeeks = 2;
+  document.getElementById('dur2').classList.add('sel');
+  document.getElementById('dur4').classList.remove('sel');
+
+  // Rebuild week/day DOM fresh (all inputs are new and empty)
+  buildWeeks();
+
+  // Clear error banner
+  const errEl = document.getElementById('ferr');
+  if (errEl) { errEl.textContent = ''; errEl.classList.remove('on'); }
+
+  // Return to form page
+  setStep(1);
+  showPg('pg-form');
+}
+
+function goBack(){ setStep(1); showPg('pg-form'); }
+
+window.addEventListener('resize', scalePlan);
+</script>
+</body>
+</html>

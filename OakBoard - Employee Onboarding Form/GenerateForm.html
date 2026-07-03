@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OakBoard — Generate Plan</title>
+
+<!-- SUPABASE SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- IMPORTANT: this must load before the page script because GenerateForm uses requireAuth() -->
+<script src="auth-guard.js"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --g:#24B34B;--g-dk:#01621C;--g-lt:#F0FDF4;--g-md:#b8dfc8;
+  --ink:#101727;--ink2:#354152;--ink3:#697282;
+  --line:#e4e8e3;--surf:#f8faf7;--white:#fff;
+  --red:#b02020;--red-lt:#fff2f2;--red-bd:#ffc5c5;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--surf);color:var(--ink);min-height:100vh;font-size:14px;}
+
+/* ── AUTH LOADER ── */
+#auth-loader{position:fixed;inset:0;background:var(--white);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999;}
+#auth-loader.hidden{display:none;}
+.auth-spin{width:40px;height:40px;border:3px solid var(--g-lt);border-top-color:var(--g);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── HEADER ── */
+.hdr{background:var(--white);border-bottom:1px solid var(--line);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:200;}
+.hdr-brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;color:var(--ink);text-decoration:none;}
+.hdr-brand img{width:28px;height:28px;border-radius:6px;}
+.hdr-logo-fallback{width:28px;height:28px;border-radius:6px;background:var(--g-lt);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--g-dk);}
+.hdr-right{display:flex;align-items:center;gap:10px;}
+.hdr-user{font-size:12px;color:var(--ink3);font-weight:500;}
+.btn-signout{font-family:inherit;font-size:12px;font-weight:600;padding:6px 12px;border-radius:7px;border:1.5px solid var(--line);background:var(--white);color:var(--ink2);cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;}
+.btn-signout:hover{background:var(--red-lt);border-color:var(--red-bd);color:var(--red);}
+
+/* ── TOOLBAR ── */
+.tbr{background:var(--white);border-bottom:1px solid var(--line);padding:10px 28px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.tbr-left{display:flex;align-items:center;gap:10px;}
+.tbr-right{display:flex;align-items:center;gap:8px;}
+.btn-tb{display:flex;align-items:center;gap:6px;font-family:inherit;font-size:13px;font-weight:500;padding:8px 16px;border-radius:7px;border:1.5px solid var(--line);background:var(--white);color:var(--ink2);cursor:pointer;transition:all .15s;text-decoration:none;}
+.btn-tb:hover{border-color:#cdd5c9;color:var(--ink);}
+.btn-tb.green{background:var(--g);color:white;border-color:var(--g);}
+.btn-tb.green:hover{background:var(--g-dk);}
+.btn-tb.outline-green{border-color:var(--g-md);color:var(--g-dk);background:var(--g-lt);}
+.btn-tb.outline-green:hover{background:#d4f0de;border-color:var(--g);}
+.btn-tb svg{width:14px;height:14px;flex-shrink:0;}
+.plan-badge{font-size:12px;color:var(--ink3);font-weight:500;border-left:1px solid var(--line);padding-left:12px;margin-left:4px;}
+
+/* ── PLAN WRAP ── */
+.plan-wrap{
+  width:100%;
+  background:#d4d4d4;
+  overflow:hidden;
+  position:relative;
+}
+.plan-doc{
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  background:#FFFFFF;
+  width:1920px;
+  height:1080px;
+  padding:36px;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:9px;
+  overflow:hidden;
+  position:absolute;
+  top:0;left:0;
+  transform-origin:top left;
+  box-shadow:0 4px 32px rgba(0,0,0,0.18);
+}
+
+/* ── PLAN DOC STYLES ── */
+.ph{display:flex;align-items:stretch;background:white;border-radius:10px;box-shadow:0px 10px 15px rgba(0,0,0,0.10);padding:16px 22px;width:100%;flex-shrink:0;}
+.ph-logo{width:140px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding-right:18px;border-right:1px solid #f0f0f0;margin-right:20px;}
+.ph-logo svg{width:139px;height:auto;}
+.ph-logo img{width:100px;height:97px;object-fit:contain;display:block;}
+.ph-right{flex:1;display:flex;flex-direction:column;justify-content:space-between;}
+.ph-title{font-size:26px;font-weight:700;color:#101727;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;line-height:1.2;margin-bottom:10px;}
+.ph-chips{display:flex;gap:8px;}
+.ph-chip{flex:1;background:linear-gradient(rgba(248,250,251,1),rgba(255,255,255,1));border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:4px;}
+.ph-chip-lbl{font-size:12px;color:rgba(105,114,130,1);font-weight:400;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;}
+.ph-chip-val{font-size:16px;color:rgba(16,23,39,1);font-weight:500;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;}
+
+.pw{background:rgba(249,249,249,1);border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,0.10);padding:10px 20px 8px;width:100%;flex-shrink:0;}
+.pw-pill{display:inline-block;background:rgba(36,179,75,1);color:white;font-size:14px;font-weight:700;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;padding:4px 10px;border-radius:4px;margin-bottom:6px;}
+.pw-sub{font-size:14px;color:rgba(53,65,82,1);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-weight:400;}
+
+.pd{display:flex;flex-wrap:wrap;gap:12px;width:1848px;flex-shrink:0;align-items:flex-start;}
+.pdc{background:white;border-radius:14px;width:360px;height:306px;flex-shrink:0;padding:16px;display:flex;flex-direction:column;gap:0;box-shadow:0 1px 4px rgba(0,0,0,0.06);overflow:hidden;box-sizing:border-box;}
+.pdc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.pdc-badge{background:rgba(36,179,75,1);color:white;font-size:12px;font-weight:500;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;padding:2px 8px;border-radius:8px;display:inline-block;}
+.pdc-date{font-size:12px;color:rgba(105,114,130,1);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-weight:400;}
+.pdc-topic-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:7px;}
+.pdc-topic-txt{font-size:12px;font-weight:600;color:rgba(16,23,39,1);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;line-height:1.4;}
+.pdc-tasks-area{display:flex;align-items:flex-start;gap:6px;margin-bottom:8px;flex:1;}
+.pdc-tasks-list{flex:1;display:flex;flex-direction:column;gap:3px;}
+.pdc-task{display:flex;gap:4px;align-items:flex-start;}
+.ptb{color:rgba(36,179,75,1);font-size:12px;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;line-height:1.5;flex-shrink:0;}
+.ptt{font-size:12px;color:rgba(73,85,101,1);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-weight:400;line-height:1.45;}
+.pdc-out{background:rgba(240,253,244,1);border-radius:4px;padding:7px 9px;display:flex;align-items:flex-start;gap:6px;margin-top:auto;}
+.pot{font-size:12px;color:rgba(53,65,82,1);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-weight:400;line-height:1.45;}
+
+/* ── PRINT ── */
+@media print {
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  #auth-loader,.hdr,.tbr,.email-modal-overlay,.toast-wrap{display:none!important;}
+  body,html{background:white;margin:0;padding:0;}
+  .plan-wrap{width:1920px!important;height:1080px!important;background:white!important;overflow:visible!important;position:static!important;}
+  .plan-doc{position:static!important;transform:none!important;width:1920px!important;height:1080px!important;box-shadow:none!important;}
+  @page{size:1920px 1080px landscape;margin:0;}
+}
+
+/* ── NO DATA SCREEN ── */
+.no-data{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px;text-align:center;padding:40px;}
+.no-data-icon{width:64px;height:64px;background:var(--g-lt);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--g-md);}
+.no-data h2{font-size:20px;font-weight:700;color:var(--ink);}
+.no-data p{font-size:14px;color:var(--ink3);max-width:380px;line-height:1.6;}
+.btn-back-big{display:inline-flex;align-items:center;gap:8px;padding:13px 24px;background:var(--g);color:white;border:none;border-radius:9px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;transition:all .2s;}
+.btn-back-big:hover{background:var(--g-dk);}
+
+/* ── EMAIL MODAL ── */
+.email-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:500;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s;}
+.email-modal-overlay.open{opacity:1;pointer-events:all;}
+.email-modal{background:white;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.2);width:100%;max-width:520px;overflow:hidden;transform:translateY(12px);transition:transform .25s;}
+.email-modal-overlay.open .email-modal{transform:translateY(0);}
+.modal-hdr{background:var(--g-lt);border-bottom:1px solid var(--g-md);padding:20px 24px;display:flex;align-items:center;gap:12px;}
+.modal-hdr-ic{width:36px;height:36px;background:var(--g);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.modal-hdr-ic svg{width:18px;height:18px;color:white;stroke:white;fill:none;}
+.modal-hdr-text h3{font-size:15px;font-weight:700;color:var(--g-dk);margin-bottom:2px;}
+.modal-hdr-text p{font-size:12px;color:var(--ink3);}
+.modal-body{padding:24px;}
+.mfld{display:flex;flex-direction:column;gap:5px;margin-bottom:16px;}
+.mfld label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--ink2);}
+.mfld input,.mfld textarea{font-family:inherit;font-size:13.5px;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;color:var(--ink);background:white;outline:none;transition:border .15s,box-shadow .15s;resize:vertical;}
+.mfld input:focus,.mfld textarea:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(36,179,75,.10);}
+.mfld input::placeholder,.mfld textarea::placeholder{color:var(--ink3);opacity:.5;}
+.mfld textarea{min-height:80px;}
+.modal-preview-box{background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--ink3);line-height:1.5;}
+.modal-preview-box strong{color:var(--ink2);}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:16px 24px;border-top:1px solid var(--line);background:var(--surf);}
+.btn-cancel{font-family:inherit;font-size:13px;font-weight:500;padding:9px 18px;border-radius:7px;border:1.5px solid var(--line);background:white;color:var(--ink2);cursor:pointer;transition:all .15s;}
+.btn-cancel:hover{border-color:#cdd5c9;}
+.btn-send{font-family:inherit;font-size:13px;font-weight:600;padding:9px 20px;border-radius:7px;border:none;background:var(--g);color:white;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .2s;}
+.btn-send:hover{background:var(--g-dk);}
+.btn-send:disabled{opacity:.5;cursor:not-allowed;}
+.btn-send-spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .8s linear infinite;display:none;}
+.btn-send.loading .btn-send-spin{display:block;}
+.btn-send.loading .btn-send-txt{display:none;}
+.modal-err{display:none;background:var(--red-lt);border:1px solid var(--red-bd);border-radius:7px;padding:9px 12px;font-size:12.5px;color:var(--red);margin-bottom:14px;}
+.modal-err.show{display:block;}
+
+/* ── TOAST ── */
+.toast-wrap{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:600;pointer-events:none;}
+.toast{background:var(--ink);color:white;padding:11px 16px;border-radius:9px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:9px;box-shadow:0 4px 18px rgba(0,0,0,.25);pointer-events:all;opacity:0;transform:translateY(8px);transition:all .25s;max-width:320px;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.success{background:#155e27;}
+.toast.error{background:#7f1d1d;}
+.toast svg{width:16px;height:16px;flex-shrink:0;}
+
+@media(max-width:700px){
+  .tbr{flex-direction:column;align-items:stretch;}
+  .tbr-left,.tbr-right{justify-content:space-between;}
+}
+</style>
+</head>
+<body>
+
+<!-- ── AUTH LOADER ── -->
+<div id="auth-loader">
+  <div class="auth-spin"></div>
+  <p style="font-size:13px;color:#697282;">Verifying session…</p>
+</div>
+
+<!-- ── HEADER ── -->
+<header class="hdr">
+  <a class="hdr-brand" href="FillDetails.html">
+    <img src="Logo.svg" alt="Oak Street Technologies logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+    <span class="hdr-logo-fallback" style="display:none;">OS</span>
+    New Joiner Onboarding
+  </a>
+  <div class="hdr-right">
+    <span class="hdr-user" id="user-email"></span>
+    <button class="btn-signout" onclick="doSignOut()">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="width:13px;height:13px"><path d="M5 7h7M9 5l3 2-3 2"/><path d="M9 2H2v10h7"/></svg>
+      Sign Out
+    </button>
+  </div>
+</header>
+
+<!-- ── NO DATA ── -->
+<div id="no-data-screen" class="no-data" style="display:none;">
+  <div class="no-data-icon">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#24B34B" stroke-width="1.8" stroke-linecap="round">
+      <path d="M14 9v6M14 17h.01M26 14A12 12 0 1 1 2 14a12 12 0 0 1 24 0z"/>
+    </svg>
+  </div>
+  <h2>No plan found</h2>
+  <p>It looks like you haven't generated a plan yet. Go back to fill in the details and generate your onboarding plan.</p>
+  <a href="FillDetails.html" class="btn-back-big">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="width:14px;height:14px"><path d="M9 2L4 7l5 5"/></svg>
+    Go Back to Form
+  </a>
+</div>
+
+<!-- ── MAIN ── -->
+<div id="main-content" style="display:none;">
+  <div class="tbr">
+    <div class="tbr-left">
+      <a href="FillDetails.html" class="btn-tb">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 2L4 7l5 5"/></svg>
+        Edit Plan
+      </a>
+      <span class="plan-badge" id="plan-badge"></span>
+    </div>
+    <div class="tbr-right">
+      <button class="btn-tb outline-green" onclick="openEmailModal()">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 3h12v8H1z"/><path d="M1 3l6 5 6-5"/></svg>
+        Send via Email
+      </button>
+      <button class="btn-tb green" onclick="window.print()">
+        <svg viewBox="0 0 14 14" fill="currentColor"><path d="M4 1h6v3H4V1zM1 5h12a1 1 0 011 1v4a1 1 0 01-1 1h-1v2H2v-2H1a1 1 0 01-1-1V6a1 1 0 011-1zm3 7h6v-2H4v2z"/></svg>
+        Print / Save PDF
+      </button>
+    </div>
+  </div>
+
+  <div class="plan-wrap" id="plan-wrap">
+    <div class="plan-doc" id="plan-doc"></div>
+  </div>
+</div>
+
+<!-- ── EMAIL MODAL ── -->
+<div class="email-modal-overlay" id="email-modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="email-modal">
+    <div class="modal-hdr">
+      <div class="modal-hdr-ic">
+        <svg viewBox="0 0 20 20" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 5h14v10H3z"/><path d="M3 5l7 6 7-6"/>
+        </svg>
+      </div>
+      <div class="modal-hdr-text">
+        <h3>Send Onboarding Plan</h3>
+        <p>Email a formatted copy of this plan</p>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-preview-box" id="modal-preview-box"></div>
+      <div class="modal-err" id="modal-err"></div>
+      <div class="mfld">
+        <label>Recipient Email *</label>
+        <input type="email" id="email-to" placeholder="manager@9ostech.com" autocomplete="email">
+      </div>
+      <div class="mfld">
+        <label>CC (optional)</label>
+        <input type="email" id="email-cc" placeholder="hr@9ostech.com">
+      </div>
+      <div class="mfld">
+        <label>Personal Note (optional)</label>
+        <textarea id="email-note" placeholder="Add a short message to include with the plan…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeEmailModal()">Cancel</button>
+      <button class="btn-send" id="btn-send" onclick="sendEmail()">
+        <div class="btn-send-spin"></div>
+        <span class="btn-send-txt">Send Email</span>
+        <svg class="btn-send-ico" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="width:13px;height:13px"><path d="M13 1L1 6l4 2 2 5 2-4 4-8z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+const SENDER_EMAIL = 'onboarding@resend.dev';
+let planData = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    if (typeof requireAuth !== 'function') {
+      throw new Error('requireAuth() is not available. Check auth-guard.js file path.');
+    }
+
+    const session = await requireAuth();
+    if (!session) return;
+
+    const emailEl = document.getElementById('user-email');
+    if (emailEl && session.user && session.user.email) {
+      emailEl.textContent = session.user.email;
+    }
+
+    const raw = localStorage.getItem('obf_plan_data');
+    if (!raw) {
+      showNoData();
+      return;
+    }
+
+    try {
+      planData = normalizePlanData(JSON.parse(raw));
+    } catch (parseError) {
+      console.error('Invalid plan data:', parseError);
+      localStorage.removeItem('obf_plan_data');
+      showNoData();
+      return;
+    }
+
+    showMain();
+  } catch (error) {
+    console.error('Generate page failed:', error);
+    const loader = document.getElementById('auth-loader');
+    if (loader) loader.classList.add('hidden');
+    showToast('error', 'Unable to load the plan. Check Console for details.');
+    showNoData();
+  }
+});
+
+// Accept both the original topic-based form data and the newer day-based
+// FillDetails format without changing this page's visual design.
+function normalizePlanData(data) {
+  if (!data || !Array.isArray(data.weeks)) return data;
+  if (data.weeks.some(week => Array.isArray(week.topics))) return data;
+
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  const weeks = data.weeks.map(week => ({
+    ...week,
+    title: week.title || '',
+    goal: week.goal || '',
+    topics: Array.isArray(week.days)
+      ? week.days.map((day, index) => ({
+          day: dayNames[Math.max(0, Number(day.localD || index + 1) - 1)] || dayNames[index % 5],
+          title: day.title || '',
+          tasks: Array.isArray(day.tasks) ? day.tasks : [],
+          outcome: day.outcome || '',
+          date: day.date || ''
+        }))
+      : []
+  }));
+
+  const firstDay = data.weeks[0]?.days?.[0];
+  return {
+    ...data,
+    nWeeks: Number(data.nWeeks || weeks.length),
+    startDate: data.startDate || firstDay?.date || '',
+    person: data.person || { name: '', email: '', manager: data.reports || '' },
+    weeks
+  };
+}
+
+function showNoData() {
+  const loader = document.getElementById('auth-loader');
+  if (loader) loader.classList.add('hidden');
+
+  document.getElementById('main-content').style.display = 'none';
+  document.getElementById('no-data-screen').style.display = 'flex';
+}
+
+function showMain() {
+  const loader = document.getElementById('auth-loader');
+  if (loader) loader.classList.add('hidden');
+
+  document.getElementById('no-data-screen').style.display = 'none';
+  document.getElementById('main-content').style.display = 'block';
+
+  const badge = document.getElementById('plan-badge');
+  if (badge) badge.textContent = `${planData.nWeeks || 0}-Week Plan · ${planData.role || 'Untitled Role'}`;
+
+  const prev = document.getElementById('modal-preview-box');
+  if (prev) prev.innerHTML = `
+    <strong>Plan:</strong> ${planData.nWeeks || 0}-Week Onboarding · ${planData.role || '—'}<br>
+    <strong>From:</strong> ${SENDER_EMAIL}<br>
+    <strong>Includes:</strong> ${(planData.nWeeks || 0) * 5} training days across ${planData.nWeeks || 0} weeks
+  `;
+
+  renderDoc(planData);
+  requestAnimationFrame(() => requestAnimationFrame(scalePlan));
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function scalePlan() {
+  const wrap = document.getElementById('plan-wrap');
+  const doc  = document.getElementById('plan-doc');
+  if (!wrap || !doc) return;
+
+  const pad = 20;
+  const ww  = wrap.offsetWidth || window.innerWidth;
+  const s   = Math.max(Math.min((ww - pad * 2) / 1920, 1), 0.05);
+  const ox  = Math.max((ww - 1920 * s) / 2, pad);
+  const oy  = pad;
+
+  doc.style.transform       = `translate(${ox}px,${oy}px) scale(${s})`;
+  doc.style.transformOrigin = 'top left';
+  wrap.style.height = (1080 * s + oy * 2) + 'px';
+}
+window.addEventListener('resize', scalePlan);
+
+function renderDoc(data) {
+  const doc = document.getElementById('plan-doc');
+  if (!doc) return;
+
+  const planLabel = Number(data.nWeeks) === 4 ? 'Four' : 'Two';
+
+  const iconTitle = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;">
+    <path d="M8.00016 14.6663C11.6821 14.6663 14.6668 11.6816 14.6668 7.99967C14.6668 4.31778 11.6821 1.33301 8.00016 1.33301C4.31826 1.33301 1.3335 4.31778 1.3335 7.99967C1.3335 11.6816 4.31826 14.6663 8.00016 14.6663Z" stroke="#02621C" stroke-width="1.33" stroke-linecap="round"/>
+    <path d="M8 12C10.2091 12 12 10.2091 12 8C12 5.79086 10.2091 4 8 4C5.79086 4 4 5.79086 4 8C4 10.2091 5.79086 12 8 12Z" stroke="#02621C" stroke-width="1.33" stroke-linecap="round"/>
+    <path d="M8 9.33a1.33 1.33 0 100-2.66A1.33 1.33 0 008 9.33z" stroke="#02621C" stroke-width="1.33" stroke-linecap="round"/>
+  </svg>`;
+
+  const iconTasks = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;">
+    <path d="M3.333 5.333h9.334M3.333 8h6M3.333 10.667h2.667" stroke="#02621C" stroke-width="1.33" stroke-linecap="round"/>
+    <circle cx="12" cy="5.333" r="1.25" stroke="#02621C" stroke-width="1.33"/>
+    <circle cx="9.333" cy="8" r="1.25" stroke="#02621C" stroke-width="1.33"/>
+    <circle cx="12" cy="10.667" r="1.25" stroke="#02621C" stroke-width="1.33"/>
+  </svg>`;
+
+  const iconOutcome = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;">
+    <path d="M14.667 7.333v5.334a1.333 1.333 0 0 1-1.334 1.333H2.667a1.333 1.333 0 0 1-1.334-1.333V2.667A1.333 1.333 0 0 1 2.667 1.333h5.333" stroke="#02621C" stroke-width="1.33" stroke-linecap="round"/>
+    <path d="M10 1l3.333 3.333L10 7.667" stroke="#02621C" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+
+  let outputHTML = `
+    <div class="ph">
+      <div class="ph-logo">
+        <img src="Logo.svg" alt="Oak Street Technologies logo">
+      </div>
+      <div class="ph-right">
+        <div class="ph-title">${planLabel}-Week Onboarding Plan</div>
+        <div class="ph-chips">
+          <div class="ph-chip">
+            <div class="ph-chip-lbl">Role</div>
+            <div class="ph-chip-val">${escapeHtml(data.role || '—')}</div>
+          </div>
+          <div class="ph-chip">
+            <div class="ph-chip-lbl">Reports To</div>
+            <div class="ph-chip-val">${escapeHtml(data.reports || '—')}</div>
+          </div>
+          <div class="ph-chip">
+            <div class="ph-chip-lbl">Collaborates With</div>
+            <div class="ph-chip-val">${escapeHtml(data.collab || '—')}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  (data.weeks || []).forEach((week, weekIndex) => {
+    const days = Array.isArray(week.days)
+      ? week.days
+      : (week.topics || []).map((topic, dayIndex) => ({
+          g: weekIndex * 5 + dayIndex + 1,
+          localD: dayIndex + 1,
+          date: topic.date || '',
+          title: topic.title || '',
+          tasks: topic.tasks || [],
+          outcome: topic.outcome || ''
+        }));
+
+    outputHTML += `
+      <div class="pw">
+        <div class="pw-pill">Week ${weekIndex + 1} — ${escapeHtml(week.title || `Week ${weekIndex + 1}`)}</div>
+        ${week.goal ? `<div class="pw-sub">${escapeHtml(week.goal)}</div>` : ''}
+      </div>
+      <div class="pd">
+    `;
+
+    days.forEach((day, dayIndex) => {
+      outputHTML += `
+        <div class="pdc">
+          <div class="pdc-top">
+            <span class="pdc-badge">Day ${escapeHtml(day.g || weekIndex * 5 + dayIndex + 1)}</span>
+            <span class="pdc-date">${formatPlanDate(day.date)}</span>
+          </div>
+          <div class="pdc-topic-row">
+            ${iconTitle}
+            <span class="pdc-topic-txt">${escapeHtml(day.title || '—')}</span>
+          </div>
+          <div class="pdc-tasks-area">
+            ${iconTasks}
+            <div class="pdc-tasks-list">
+              ${(day.tasks || []).map(task => `<div class="pdc-task"><span class="ptb">•</span><span class="ptt">${escapeHtml(task)}</span></div>`).join('')}
+            </div>
+          </div>
+          ${day.outcome ? `<div class="pdc-out">${iconOutcome}<span class="pot">${escapeHtml(day.outcome)}</span></div>` : ''}
+        </div>
+      `;
+    });
+
+    outputHTML += '</div>';
+  });
+
+  doc.innerHTML = outputHTML;
+}
+
+function formatPlanDate(value) {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return escapeHtml(value);
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  return `${String(date.getDate()).padStart(2, '0')} ${months[date.getMonth()]} ${date.getFullYear()} (${days[date.getDay()]})`;
+}
+
+function openEmailModal() {
+  document.getElementById('email-modal-overlay').classList.add('open');
+  document.getElementById('email-to').focus();
+}
+
+function closeEmailModal() {
+  document.getElementById('email-modal-overlay').classList.remove('open');
+  document.getElementById('email-to').value = '';
+  document.getElementById('email-cc').value = '';
+  document.getElementById('email-note').value = '';
+  document.getElementById('modal-err').classList.remove('show');
+}
+
+function handleOverlayClick(e) {
+  if (e.target.id === 'email-modal-overlay') closeEmailModal();
+}
+
+async function sendEmail() {
+  const to = document.getElementById('email-to').value.trim();
+
+  if (!to) {
+    showError('Please enter a recipient email address');
+    return;
+  }
+
+  const btn = document.getElementById('btn-send');
+  btn.disabled = true;
+  btn.classList.add('loading');
+
+  try {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    showToast('success', 'Email sent successfully!');
+    closeEmailModal();
+  } catch (error) {
+    console.error('Email send error:', error);
+    showError('Failed to send email. Please try again.');
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('modal-err');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function showToast(type, msg) {
+  const wrap = document.getElementById('toast-wrap');
+  if (!wrap) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `
+    ${type === 'success'
+      ? '<svg viewBox="0 0 16 16" fill="none"><path d="M13.333 4L5.999 11.333 2.666 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : '<svg viewBox="0 0 16 16" fill="none"><path d="M8 14.667A6.667 6.667 0 1 0 8 1.333a6.667 6.667 0 0 0 0 13.334zM8 4.667v4M8 11.333h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'}
+    <span>${escapeHtml(msg)}</span>
+  `;
+
+  wrap.appendChild(toast);
+  setTimeout(() => toast.classList.add('show'), 10);
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+</script>
+</body>
+</html>
