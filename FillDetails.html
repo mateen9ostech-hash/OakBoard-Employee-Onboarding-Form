@@ -20,9 +20,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 
 /* HDR */
 .hdr{background:var(--white);border-bottom:1px solid var(--line);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 32px;position:sticky;top:0;z-index:200;}
-.hdr-brand{display:flex;align-items:center;gap:16px;font-weight:700;font-size:17px;color:var(--ink);}
-.hdr-icon{width:42px;height:42px;background:transparent;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.hdr-icon img{width:42px;height:42px;object-fit:contain;display:block;}
+.hdr-brand{display:flex;align-items:center;gap:16px;font-weight:700;font-size:17px;color:var(--g-dk);}
+.hdr-icon{width:30px;height:30px;background:var(--g-lt);border-radius:8px;display:flex;align-items:center;justify-content:center;}
 .hdr-steps{display:flex;align-items:center;gap:6px;}
 .hdr-step{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--ink3);}
 .hdr-sn{width:24px;height:24px;border-radius:50%;background:#e4e8e3;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--ink3);transition:all .25s;}
@@ -415,27 +414,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 @media (max-width:700px){.r2,.r3{grid-template-columns:1fr;}.dur-row{flex-direction:column;}.pd{grid-template-columns:repeat(2,1fr);}}
 </style>
 <!-- SUPABASE SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="Assets/supabase-js.umd.js"></script>
+<script src="auth-guard.js"></script>
 <script>
-// ── SUPABASE AUTH GUARD ──
-const SUPABASE_URL = 'https://avdwwlwxmnuqphxlpgrn.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2ZHd3bHd4bW51cXBoeGxwZ3JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMzgxMjksImV4cCI6MjA5MDYxNDEyOX0.3Ka_rAeRYciF3CNagRFYl78LUpJPJLkC7qtQFiK1iqE';
-const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-(async () => {
-  const { data: { session } } = await sbClient.auth.getSession();
-  if (!session) {
-    window.location.href = 'Login.html';
-    return;
-  }
-  // Show user email in header
-  const emailEl = document.getElementById('user-email');
-  if (emailEl) emailEl.textContent = session.user.email;
-})();
+document.addEventListener('DOMContentLoaded', requireAuth);
 
 async function signOut() {
-  await sbClient.auth.signOut();
-  window.location.href = 'Login.html';
+  await doSignOut();
 }
 </script>
 </head>
@@ -445,9 +430,9 @@ async function signOut() {
 <header class="hdr">
   <div class="hdr-brand">
     <div class="hdr-icon">
-    <img src="Logo.svg" alt="Oak Street Technologies logo">
+    <img src="Assets/logo.svg" alt="Logo" width="50" height="50">
     </div>
-        New Joiner Onboarding
+        OakBoard
   </div> 
   
     <div style="display:flex;align-items:center;gap:12px;">
