@@ -24,8 +24,20 @@ The recovered UI and workflow are merged with the stabilized authentication impl
 
 ## Secure email delivery
 
-- The recovered email modal and formatted email template are preserved.
+- The email body stays compact and the complete plan is attached as a 1920 x 1080 (16:9) landscape PDF matching the supplied reference.
+- PDF generation uses the locally bundled browser library, so it does not depend on a CDN.
 - The Resend API key is no longer present in browser code.
 - `GenerateForm.html` calls the authenticated `send-onboarding-email` Supabase Edge Function.
 - The function permits authenticated `@9ostech.com` users, validates the payload, and reads `RESEND_API_KEY` only from server-side environment secrets.
 - Deployment and secret configuration are intentionally not performed from this workspace.
+
+## Demo Mode
+
+- Until a custom sending domain is verified, email delivery is locked to `mateen9ostech@gmail.com`.
+- CC is disabled in the browser and rejected by the Edge Function.
+- The restriction is enforced in both the UI and server-side function, so it cannot be bypassed by editing the form.
+
+## Document output
+
+- GenerateForm uses a responsive 16:9 landscape canvas matching the supplied 1920 x 1080 reference.
+- Print and Save as PDF use a borderless `16in x 9in` page with no preview shadow or gray frame.

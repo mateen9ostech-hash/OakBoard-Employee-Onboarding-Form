@@ -46,30 +46,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .plan-wrap{
   width:100%;
   background:#d4d4d4;
-  overflow:hidden;
+  overflow:auto;
   position:relative;
+  padding:20px;
 }
 .plan-doc{
   font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
   background:#FFFFFF;
-  width:1920px;
-  height:1080px;
-  padding:36px;
+  width:100%;
+  aspect-ratio:16 / 9;
+  padding:clamp(16px,1.9vw,36px);
   display:flex;
   flex-direction:column;
   align-items:flex-start;
-  gap:9px;
+  gap:clamp(5px,.5vw,9px);
   overflow:hidden;
-  position:absolute;
-  top:0;left:0;
-  transform-origin:top left;
+  position:relative;
+  margin:0 auto;
   box-shadow:0 4px 32px rgba(0,0,0,0.18);
 }
 
 /* ── PLAN DOC STYLES (match FillDetails.html exactly) ── */
 .ph{display:flex;align-items:stretch;background:white;border-radius:10px;box-shadow:0px 10px 15px rgba(0,0,0,0.10);padding:16px 22px;width:100%;flex-shrink:0;}
 .ph-logo{width:140px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding-right:18px;border-right:1px solid #f0f0f0;margin-right:20px;}
-.ph-logo svg{width:139px;height:auto;}
+.ph-logo img{display:block;width:110px;height:auto;max-height:112px;object-fit:contain;}
 .ph-right{flex:1;display:flex;flex-direction:column;justify-content:space-between;}
 .ph-title{font-size:26px;font-weight:700;color:#101727;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;line-height:1.2;margin-bottom:10px;}
 .ph-chips{display:flex;gap:8px;}
@@ -79,8 +79,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .pw{background:rgba(249,249,249,1);border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,0.10);padding:10px 20px 8px;width:100%;flex-shrink:0;}
 .pw-pill{display:inline-block;background:rgba(36,179,75,1);color:white;font-size:14px;font-weight:700;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;padding:4px 10px;border-radius:4px;margin-bottom:6px;}
 .pw-sub{font-size:14px;color:rgba(53,65,82,1);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-weight:400;}
-.pd{display:flex;flex-wrap:nowrap;gap:12px;width:1848px;flex-shrink:0;height:306px;align-items:flex-start;}
-.pdc{background:white;border-radius:14px;width:360px;height:306px;flex-shrink:0;padding:16px;display:flex;flex-direction:column;gap:0;box-shadow:0 1px 4px rgba(0,0,0,0.06);overflow:hidden;box-sizing:border-box;}
+.pd{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:clamp(6px,.65vw,12px);width:100%;flex:1;min-height:0;align-items:stretch;}
+.pdc{background:white;border-radius:14px;width:auto;height:100%;min-width:0;padding:clamp(8px,.85vw,16px);display:flex;flex-direction:column;gap:0;box-shadow:0 1px 4px rgba(0,0,0,0.06);overflow:hidden;box-sizing:border-box;}
 .pdc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
 .pdc-badge{background:rgba(36,179,75,1);color:white;font-size:12px;font-weight:500;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;padding:2px 8px;border-radius:8px;display:inline-block;}
 .pdc-date{font-size:12px;color:rgba(105,114,130,1);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-weight:400;}
@@ -99,9 +99,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   #auth-loader,.hdr,.tbr,.email-modal-overlay,.toast-wrap{display:none!important;}
   body,html{background:white;margin:0;padding:0;}
-  .plan-wrap{width:1920px!important;height:1080px!important;background:white!important;overflow:visible!important;position:static!important;}
-  .plan-doc{position:static!important;transform:none!important;width:1920px!important;height:1080px!important;box-shadow:none!important;}
-  @page{size:1920px 1080px landscape;margin:0;}
+  .plan-wrap{width:auto!important;height:auto!important;padding:0!important;background:white!important;overflow:visible!important;position:static!important;}
+  .plan-doc{position:static!important;transform:none!important;width:16in!important;height:9in!important;aspect-ratio:auto!important;padding:.2in!important;gap:.08in!important;margin:0!important;box-shadow:none!important;border-radius:0!important;}
+  .pd{gap:.08in!important;}
+  .pdc{padding:.12in!important;box-shadow:none!important;border:.01in solid #e8e8e8;}
+  @page{size:16in 9in;margin:0;}
 }
 
 /* ── NO DATA SCREEN ── */
@@ -131,6 +133,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .mfld textarea{min-height:80px;}
 .modal-preview-box{background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--ink3);line-height:1.5;}
 .modal-preview-box strong{color:var(--ink2);}
+.demo-notice{background:#fff8e6;border:1px solid #f0cf78;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;line-height:1.45;color:#73510d;}
+.demo-notice strong{color:#503500;}
+.mfld input:read-only,.mfld input:disabled{background:#f4f6f4;color:#59645c;cursor:not-allowed;}
 .modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:16px 24px;border-top:1px solid var(--line);background:var(--surf);}
 .btn-cancel{font-family:inherit;font-size:13px;font-weight:500;padding:9px 18px;border-radius:7px;border:1.5px solid var(--line);background:white;color:var(--ink2);cursor:pointer;transition:all .15s;}
 .btn-cancel:hover{border-color:#cdd5c9;}
@@ -237,14 +242,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
     </div>
     <div class="modal-body">
       <div class="modal-preview-box" id="modal-preview-box"></div>
+      <div class="demo-notice"><strong>Demo Mode:</strong> Resend test delivery is limited to the verified project-owner email.</div>
       <div class="modal-err" id="modal-err"></div>
       <div class="mfld">
         <label>Recipient Email *</label>
-        <input type="email" id="email-to" placeholder="manager@9ostech.com" autocomplete="email">
+        <input type="email" id="email-to" value="mateen9ostech@gmail.com" readonly aria-readonly="true">
       </div>
       <div class="mfld">
-        <label>CC (optional)</label>
-        <input type="email" id="email-cc" placeholder="hr@9ostech.com">
+        <label>CC (unavailable in Demo Mode)</label>
+        <input type="email" id="email-cc" placeholder="Available after domain verification" disabled>
       </div>
       <div class="mfld">
         <label>Personal Note (optional)</label>
@@ -277,12 +283,14 @@ window.setTimeout(() => {
 </script>
 <script src="Assets/supabase-js.umd.js"></script>
 <script src="auth-guard.js"></script>
+<script src="Assets/html2pdf.bundle.min.js"></script>
 <script>
 
 // ══════════════════════════════════
 // CONFIG
 // ══════════════════════════════════
 const SENDER_EMAIL = 'onboarding@resend.dev';
+const DEMO_RECIPIENT_EMAIL = 'mateen9ostech@gmail.com';
 
 let planData = null;
 
@@ -346,16 +354,8 @@ function scalePlan() {
   const wrap = document.getElementById('plan-wrap');
   const doc  = document.getElementById('plan-doc');
   if (!wrap || !doc) return;
-
-  const pad = 20;
-  const ww  = wrap.offsetWidth || window.innerWidth;
-  const s   = Math.max(Math.min((ww - pad * 2) / 1920, 1), 0.05);
-  const ox  = Math.max((ww - 1920 * s) / 2, pad);
-  const oy  = pad;
-
-  doc.style.transform       = `translate(${ox}px,${oy}px) scale(${s})`;
-  doc.style.transformOrigin = 'top left';
-  wrap.style.height = (1080 * s + oy * 2) + 'px';
+  doc.style.transform = 'none';
+  wrap.style.height = 'auto';
 }
 window.addEventListener('resize', scalePlan);
 
@@ -381,18 +381,8 @@ function renderDoc(data) {
     <path d="M6 8l1.33 1.33L10 6.67" stroke="#02621C" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
 
-  // Full Oak Street Technologies logo (from Logo.svg — inlined for self-contained file)
-  const logo = `<svg width="139" height="auto" viewBox="0 0 122 94" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M13.9 22.3c-.14 0-.24.04-.24.16 0 .49 2 .19 2 1.59 0 .87-.75 1.25-1.63 1.25-.67 0-1.42-.22-1.93-.62l.47-.96c.4.33 1.08.6 1.47.6.19 0 .31-.06.31-.2 0-.5-2-.17-2-1.53 0-.78.65-1.27 1.65-1.27.61 0 1.24.19 1.68.46l-.47.98c-.39-.22-1-.45-1.32-.45" fill="#595A5C"/>
-    <path d="M17.8 25.3c-.96 0-1.64-.7-1.64-1.6 0-.91.68-1.61 1.64-1.61.95 0 1.63.7 1.63 1.6 0 .91-.68 1.61-1.63 1.61zm0-2.26c-.38 0-.65.3-.65.66 0 .37.27.66.65.66s.64-.3.64-.66c0-.37-.26-.66-.64-.66z" fill="#595A5C"/>
-    <path d="M22 25.25l-.72-1.1-.3.34v.76h-.97v-3.07h.97v1.17l.96-1.17h1.16l-1.08 1.23 1.14 1.84H22z" fill="#595A5C"/>
-    <rect x="2" y="0" width="120" height="68" rx="4" fill="#24B34B" opacity=".12"/>
-    <path d="M61 4L35 34h52L61 4z" fill="#24B34B"/>
-    <path d="M61 14L40 38h42L61 14z" fill="white" opacity=".6"/>
-    <rect x="55" y="46" width="12" height="20" fill="#24B34B"/>
-    <path d="M121.9 28.1L114.5 20.7V1.9H78.2C77.6.77 76.4 0 75 0c-1.4 0-2.6.77-3.2 1.93-.27.51-.41 1.1-.41 1.7 0 .6.15 1.13.39 1.61.59 1.19 1.8 2 3.22 2 1.42 0 2.63-.8 3.22-2H111v16.23l7.41 7.47v60.36H76.4c-.8-1.22-1.68-3.18-2.03-3.66-.44-.62-1.12-14.97-.91-15.86.2-.9 1.03-2.44 1.8-2.74.77-.27 4.52-1.13 5.59-1.76 1.09-.62 1.35-2.52 1.56-3.21.06-.18.27-.32.58-.44v.06l.34-.15.43-.22v.06c.27-.09.59-.3.95-.65.18-.18.32-.36.43-.51.09-.12.18-.24.27-.39l.09.09.09.09c.18.45.53.92 1.09 1.36l.59-.74c-.09-1.01.08-1.52.2-1.52.15 0 .31.03.43.06.38.65 1.15 1.39 2.57 1.59v-.32c.33.15.74.24 1.19.3v-.65c-.41-.68-.41-1.37-.41-1.37.27.24.68.57 1.21.77-.53.42-.99 1.1-1.12 2.21l.82-.06c.12.54.35 1.11.88 1.74 0 0 1.3-1.31.35-3.16v-.06c.12.12.29.24.47.36v.36c0 2.23 2.45 3.15 2.45 3.15l.35-1.9c-.9-.81-1.07-1.69-1.07-1.69.53.06.97.09 1.33.09-.41-.62-.53-1.5-.53-1.5l.71.15c.35.65.97 1.15 1.83 1.38l.03.06s1.21-.36 1.59-1.61c.03.65.27 1.39.91 2.15 0 0 .27-.27.47-.75.24.36.56.69.99.95 0 0 .27-.54.27-1.28.33.27.74.53 1.24.71 0 0 .21-1.13-.47-2.15.41.24.94.41 1.56.44 0 0-.03-.24-.15-.54.29.18.59.33.97.44 0 0 .21-1.75-1.3-2.83l.24-.27s-.18-.12-.44-.24c.09-.56 0-1.27-.5-2.07h.03c.18.15.41.36.68.54v.32c0 2.23 2.45 3.15 2.45 3.15l.35-1.9c-1.71-1.13-1.54-2.26-1.54-2.26.53.12 1.12.12 1.83-.15 0 0-.5-1-1.56-1.43.41-.09.83-.3 1.21-.62l.24.24s.47-.6.59-1.4c.41.5 1.06.96 2.15 1.12 0 0 .15-1.28-.83-2.14.59.21 1.39.3 2.36 0 0 0-.41-1.01-1.54-1.39.53-.18 1.09-.48 1.62-1.04 0 0-1.63-1.1-3.22-.03h-.12c.47-.89.8-2.46 0-3.86.59-.18 1.21-.53 1.77-1.21 0 0-1.59-.92-3.19.15l-.24-.33c.53.06 1.18-.03 1.86-.44 0 0-.27-.44-.8-.81.27-.18.53-.41.8-.74 0 0-1.48-1.13-2.9-.36.18-.3 1.3-2.06-.5-3.93 0 0-.18.18-.35.51-.12-.51-.35-1-.8-1.57 0 0-.97.74-1.15 1.75-.47.15-.83.39-1.07.74v-.03s0-.21-.06-.3v-.21s-.24-.09-.59-.21c-.12-.06-.21-.09-.27-.12v.06c-.27 0-.56-.03-.86.09l-.09-.06h-.06v-.06s.27-.12.36-.21c.12-.09.24-.24.39-.39c-.21-.03-.36-.03-.47-.03.06-.21.06-.42.09-.63l.03-.06v-.15s-.21 0-.47.03l-.83.24.03-.06.03-.09c.03-.21-.06-.45-.27-.71l-.35.09c-.12.09-.21.18-.27.27l-.21-.03-.03-.03c-.21-.18-.36-.27-.51-.33.15-.42.21-.86.21-1.33 0 0-1.24 0-1.98.68l.21-.21c-.24 0-.42 0-.54.06l-.33.12v-.06l.09-.12.06-.06.15-.15c.21-.36.36-.65.48-.92c-.12 0-.24 0-.45 0c-.33.06-.59.15-.83.27l-.06.03-.06-.06c.24-.8.21-1.84-.56-3.09 0 0-.89.57-1.21 1.63-.33-.57-.86-1.15-1.65-1.63 0 0-.56.98-.27 2.15-.24.21-.62.59-.83 1.16h-.3c-.33-.42-.74-.87-1.37-1.27 0 0-.41.77-.33 1.78l-.3.33c-.06-.86-.72-2.56-3.27-3.38 0 0-.09 2.14 2.04 2.98c-.12.03-.24.09-.36.15l-.36.09-.09-.15c-.35-.54-.9-1.01-1.83-1.18 0 0-.09 1.04.56 1.96c-.62-.15-1.39-.15-2.24.09 0 0 .18.45.62.89l-.48.36c-.09-.62-.39-2.38-2.31-3.65 0 0-1.42 1.16-.56 2.94l-.35-.12c-.47-.52-1.16-.89-2.39-1.04 0 0-.09.86.57 1.6-.5-.06-1.13-.06-1.86.18 0 0 .89 2.2 3.33 2.11c-.59.27-1.18.72-1.65 1.49 0 0 1.15.63 2.48.33l-.15.21-.24.09.06.06c-.27.48-.51 1.01-.54 1.75 0 0 .3 0 .71-.12.21.45.39.89.54 1.3l-.15.09-.18.09-.36.27c-.59 0-1.3.21-2.04.65 0 0 .65.57 1.39 1.01l-.3.3c-.36.09-.83.18-1.33.09l-.21-.18s-.47.74-.59 1.75c-.41-.45-1.01-.71-1.77-.71 0 0-.12 1.1.8 2.03l-.21-.09s0 .06 0 .09v.33c0 .06 0 .09 0 .15c-.74.03-1.8.21-2.66 1.31l-.12-.09s-.62 1.57.36 2.69l-.53-.18c-.48-.56-1.14-.83-1.92-.65c-.45-.56-1.21-1.07-2.42-1.13 0 0 0 .86.62 1.6c-.5-.06-1.13-.03-1.83.24 0 0 .89 1.72 2.87 1.42c-.44.27-.89.71-1.24 1.37 0 0 1 .42 2.06.09l-.09.12-.09.15.06.03c-.18.42-.3.95-.27 1.6 0 0 .24 0 .56-.12c.21.45.39.89.56 1.28s-.15.12-.24.18c-.38-.21-.89-.39-1.5-.45 0 0-.03.8.5 1.57l-.18.3.39.09c.21.18.47.33.77.45c-.56 0-1.15.18-1.77.62 0 0 .65.83 1.77.98c-.56.3-1.09.77-1.48 1.6 0 0 1.89.71 3.19-.86l.18.03-.03.09c-1.65.57-1.89 2.32-1.89 2.32c1.21 0 2.04-.48 2.54-1.01v.09c-.5.77-.53 1.61-.53 1.61l.62-.06.21.15s.33-.27.62-.77l.21-.18s.56.12 1.24-.09v.27c0 0 .56-.15 1.1-.57l-.03.15s.8-.14 1.54-.65c-.21.42-.33.98-.33 1.65 0 0 1.42-.24 2.21-1.57l.06.42c0 0 .68-.54 1.24-1.57 0 0 .27-.27.41-.75.24.36.56.69 1 .95 0 0 .27-.54.27-1.28.33.27.74.53 1.24.71 0 0 .21-1.13-.47-2.15.41.24.94.41 1.56.44 0 0-.03-.24-.15-.54.29.18.59.33.97.44 0 0 .21-1.75-1.3-2.83l.24-.27s-.18-.12-.44-.24c.09-.56 0-1.27-.5-2.07h.03V28.1l.06.06-121.9 0.06z" fill="#24B34B" opacity=".3"/>
-    <text x="4" y="88" font-family="'Segoe UI',system-ui,sans-serif" font-size="11" font-weight="600" fill="#595A5C">OAK STREET TECHNOLOGIES</text>
-  </svg>`;
+  // Preserve the attached logo's intrinsic 139:135 aspect ratio.
+  const logo = `<img src="Assets/Logo.svg" alt="Oak Street Technologies logo">`;
 
   let h = `
   <div class="ph">
@@ -446,6 +436,8 @@ function renderDoc(data) {
 // EMAIL MODAL
 // ══════════════════════════════════
 function openEmailModal() {
+  document.getElementById('email-to').value = DEMO_RECIPIENT_EMAIL;
+  document.getElementById('email-cc').value = '';
   document.getElementById('email-modal-overlay').classList.add('open');
   document.getElementById('modal-err').classList.remove('show');
   setTimeout(() => document.getElementById('email-to').focus(), 200);
@@ -459,6 +451,55 @@ function handleOverlayClick(e) {
   if (e.target === document.getElementById('email-modal-overlay')) closeEmailModal();
 }
 
+async function buildPlanPdfAttachment() {
+  if (typeof window.html2pdf !== 'function') {
+    throw new Error('PDF generator is unavailable. Please refresh the page and try again.');
+  }
+
+  const plan = document.getElementById('plan-doc');
+  const filename = `OakBoard-${planData.nWeeks}-Week-Onboarding-Plan.pdf`;
+  const originalStyle = plan.getAttribute('style');
+
+  try {
+    plan.style.width = '1920px';
+    plan.style.height = '1080px';
+    plan.style.aspectRatio = 'auto';
+    plan.style.padding = '36px';
+    plan.style.gap = '9px';
+    plan.style.boxShadow = 'none';
+
+    const worker = window.html2pdf().set({
+      margin: 0,
+      filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 1,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: 1920,
+        windowHeight: 1080
+      },
+      jsPDF: {
+        unit: 'px',
+        format: [1920, 1080],
+        orientation: 'landscape',
+        hotfixes: ['px_scaling']
+      },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    }).from(plan).toPdf();
+
+    const dataUri = await worker.outputPdf('datauristring');
+    return {
+      filename,
+      content: dataUri.slice(dataUri.indexOf(',') + 1)
+    };
+  } finally {
+    if (originalStyle === null) plan.removeAttribute('style');
+    else plan.setAttribute('style', originalStyle);
+  }
+}
+
 async function sendEmail() {
   const toVal  = document.getElementById('email-to').value.trim();
   const ccVal  = document.getElementById('email-cc').value.trim();
@@ -467,8 +508,8 @@ async function sendEmail() {
 
   errEl.classList.remove('show');
 
-  if (!toVal || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toVal)) {
-    errEl.textContent = 'Please enter a valid recipient email address.';
+  if (toVal.toLowerCase() !== DEMO_RECIPIENT_EMAIL) {
+    errEl.textContent = `Demo Mode can only send to ${DEMO_RECIPIENT_EMAIL}.`;
     errEl.classList.add('show');
     return;
   }
@@ -478,25 +519,20 @@ async function sendEmail() {
   btn.disabled = true;
 
   try {
+    const attachment = await buildPlanPdfAttachment();
     const payload = {
       to: toVal,
       subject: `${planData.nWeeks}-Week Onboarding Plan: ${planData.role || 'New Role'} — Oak Street Technologies`,
-      html: buildEmailHTML(planData, note)
+      html: buildEmailHTML(planData, note),
+      attachment
     };
     if (ccVal) payload.cc = ccVal;
 
-    const { data, error } = await window.sbClient.functions.invoke(
-      'send-onboarding-email',
-      { body: payload }
-    );
-
-    if (error) throw new Error(error.message || 'Email service is unavailable.');
-    if (!data || !data.ok) throw new Error(data?.error || 'Email could not be sent.');
+    await window.invokeAuthenticatedFunction('send-onboarding-email', payload);
 
     closeEmailModal();
     showToast('success', `Plan sent to ${toVal} ✓`);
-    document.getElementById('email-to').value  = '';
-    document.getElementById('email-cc').value  = '';
+    document.getElementById('email-to').value  = DEMO_RECIPIENT_EMAIL;
     document.getElementById('email-note').value = '';
 
   } catch(e) {
@@ -588,7 +624,11 @@ function buildEmailHTML(data, note) {
   </td></tr>
 
   ${noteBlock}
-  ${weeksHTML}
+  <tr><td style="background:#fff;padding:20px 32px 28px;border-left:1px solid #e4e8e3;border-right:1px solid #e4e8e3;">
+    <div style="background:#f0fdf4;border:1px solid #b8dfc8;border-radius:8px;padding:14px 16px;font-size:14px;color:#354152;line-height:1.6;">
+      The complete onboarding plan is attached as a 16:9 landscape PDF.
+    </div>
+  </td></tr>
 
   <!-- FOOTER -->
   <tr><td style="background:#f0fdf4;border:1px solid #b8dfc8;border-radius:0 0 12px 12px;padding:16px 32px;text-align:center;">
