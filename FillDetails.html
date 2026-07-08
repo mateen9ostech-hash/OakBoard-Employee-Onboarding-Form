@@ -142,7 +142,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   padding:36px;
   display:flex;
   flex-direction:column;
-  align-items:flex-start;
+  align-items:center;
+  justify-content:center;
   gap:9px;
   overflow:hidden;
   position:absolute;
@@ -154,6 +155,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 }
 
 /* ── HEADER CARD ── */
+.plan-frame{
+  width:1848px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  margin:0 auto;
+  box-sizing:border-box;
+}
 .ph{
   display:flex;
   align-items:stretch;
@@ -161,7 +172,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   border-radius:10px;
   box-shadow:0px 10px 15px rgba(0,0,0,0.10);
   padding:16px 22px;
-  width:100%;
+  width:1848px;
+  height:182px;
+  box-sizing:border-box;
   flex-shrink:0;
 }
 .ph-logo{
@@ -218,11 +231,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 
 /* ── WEEK HEADER BAR ── */
 .pw{
-  background:rgba(249,249,249,1);
+  display:flex;
+  width:1848px;
+  max-width:1848px;
+  padding:16px 328px 16px 20px;
+  flex-direction:column;
+  justify-content:center;
+  align-items:flex-start;
+  gap:8px;
+  align-self:flex-start;
   border-radius:10px;
-  box-shadow:0 1px 2px rgba(0,0,0,0.10);
-  padding:10px 20px 8px;
-  width:100%;
+  border-left:4px solid #24B34B;
+  background:#F9F9F9;
+  box-shadow:0 1px 3px 0 rgba(0,0,0,0.10),0 1px 2px -1px rgba(0,0,0,0.10);
+  box-sizing:border-box;
   flex-shrink:0;
 }
 .pw-pill{
@@ -246,12 +268,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 /* ── DAYS GRID ── */
 .pd{
   display:flex;
-  flex-wrap:nowrap;
-  gap:12px;
   width:1848px;
-  flex-shrink:0;
   height:306px;
-  align-items:flex-start;
+  align-items:center;
+  gap:12px;
+  flex:0 0 auto;
 }
 
 /* ── DAY CARD ── */
@@ -260,7 +281,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   border-radius:14px;
   width:360px;
   height:306px;
-  flex-shrink:0;
   padding:16px;
   display:flex;
   flex-direction:column;
@@ -310,6 +330,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   color:rgba(16,23,39,1);
   font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
   line-height:1.4;
+  overflow-wrap:anywhere;
 }
 
 /* Tasks area: icon + bullet list */
@@ -325,6 +346,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   display:flex;
   flex-direction:column;
   gap:3px;
+  margin:4px 0;
 }
 .pdc-task{
   display:flex;
@@ -344,6 +366,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
   font-weight:400;
   line-height:1.45;
+  overflow-wrap:anywhere;
 }
 
 /* Outcome box */
@@ -362,7 +385,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
   font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
   font-weight:400;
   line-height:1.45;
+  overflow-wrap:anywhere;
 }
+.pdc-top,.pdc-topic-row,.pdc-out{flex-shrink:0;}
+.pdc-tasks-area{min-height:0;}
+.pdc.dense,.pdc.ultra{padding:16px;}
+.pdc.dense .pdc-top,.pdc.ultra .pdc-top{margin-bottom:8px;}
+.pdc.dense .pdc-badge,.pdc.dense .pdc-date,.pdc.ultra .pdc-badge,.pdc.ultra .pdc-date{font-size:12px;}
+.pdc.dense .pdc-topic-row,.pdc.ultra .pdc-topic-row{margin-bottom:7px;gap:6px;}
+.pdc.dense .pdc-topic-txt,.pdc.ultra .pdc-topic-txt{font-size:12px;line-height:1.4;}
+.pdc.dense .pdc-tasks-area,.pdc.ultra .pdc-tasks-area{gap:6px;margin-bottom:8px;}
+.pdc.dense .pdc-tasks-list,.pdc.ultra .pdc-tasks-list{gap:3px;margin:4px 0;}
+.pdc.dense .ptb,.pdc.dense .ptt,.pdc.ultra .ptb,.pdc.ultra .ptt{font-size:12px;line-height:1.45;}
+.pdc.dense .pdc-out,.pdc.ultra .pdc-out{padding:7px 9px;gap:6px;}
+.pdc.dense .pot,.pdc.ultra .pot{font-size:12px;line-height:1.45;}
 
 /* ── ERROR ── */
 .err{background:#fff2f2;border:1.5px solid #ffc5c5;border-radius:8px;padding:11px 15px;font-size:13px;color:#b02020;margin-top:10px;display:none;}
@@ -416,6 +452,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 <!-- SUPABASE SDK -->
 <script src="Assets/supabase-js.umd.js"></script>
 <script src="auth-guard.js"></script>
+<script src="Assets/task-icon-data.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', requireAuth);
 
@@ -433,8 +470,8 @@ async function signOut() {
     <img src="Assets/logo.svg" alt="Logo" width="50" height="50">
     </div>
         OakBoard
-  </div> 
-  
+  </div>
+
     <div style="display:flex;align-items:center;gap:12px;">
       <span id="user-email" style="font-size:12px;color:#697282;font-weight:500;"></span>
       <button onclick="signOut()" style="font-family:inherit;font-size:12px;font-weight:600;padding:7px 14px;border-radius:7px;border:1.5px solid #e4e8e3;background:#fff;color:#354152;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;" onmouseover="this.style.background='#fff2f2';this.style.borderColor='#ffc5c5';this.style.color='#b02020'" onmouseout="this.style.background='#fff';this.style.borderColor='#e4e8e3';this.style.color='#354152'">
@@ -550,6 +587,7 @@ async function signOut() {
 // STATE & INIT
 // ══════════════════════════════════════════
 let nWeeks = 2;
+let demoDateMode = false;
 const DPW  = 5;
 
 document.addEventListener('DOMContentLoaded', init);
@@ -565,7 +603,7 @@ function init() {
   // Set min to today so past dates can't be picked
   startEl.min = new Date().toISOString().split('T')[0];
   buildWeeks();
-  startEl.addEventListener('change', buildWeeks);
+  startEl.addEventListener('change', () => { demoDateMode = false; buildWeeks(); });
 }
 
 // Prevent weekends from being selected in the date picker
@@ -613,7 +651,9 @@ function setDur(n) {
 function workdays(startStr, count) {
   const arr = [], d = startStr ? new Date(startStr + 'T00:00:00') : new Date();
   while (arr.length < count) {
-    if (d.getDay() !== 0 && d.getDay() !== 6) arr.push(new Date(d));
+    const iso = d.toISOString().split('T')[0];
+    const isDemoHoliday = demoDateMode && iso === '2026-06-26';
+    if (d.getDay() !== 0 && d.getDay() !== 6 && !isDemoHoliday) arr.push(new Date(d));
     d.setDate(d.getDate() + 1);
   }
   return arr;
@@ -683,8 +723,8 @@ function mkDay(g, ld, dateObj) {
       </button>
       <div class="ow"><div class="fld">
         <label>Day Outcome *</label>
-        <textarea id="dout-${g}" maxlength="120" placeholder="Success criteria" oninput="upDP(${g});updCC('dout-${g}','cc-o-${g}',120)"></textarea>
-        <span class="cc" id="cc-o-${g}">0 / 120</span>
+        <textarea id="dout-${g}" maxlength="90" placeholder="Success criteria" oninput="upDP(${g});updCC('dout-${g}','cc-o-${g}',90)"></textarea>
+        <span class="cc" id="cc-o-${g}">0 / 90</span>
       </div></div>
     </div>`;
   return div;
@@ -778,38 +818,103 @@ function upDP(g) {
 
 
 // ── FAKE FILL ──
+const DAY_TITLE_MAX = 90;
+const DAY_TASK_MAX = 90;
+const DAY_TASK_SHORT_MAX = 50;
+const DAY_TASK_COUNT_LONG = 4;
+const DAY_TASK_COUNT_SHORT = 6;
+const DAY_OUTCOME_MAX = 90;
+function limitText(value, max) {
+  return String(value ?? '').trim().slice(0, max);
+}
+function limitTasks(tasks) {
+  const clean = (Array.isArray(tasks) ? tasks : [])
+    .map(t => limitText(t, DAY_TASK_MAX))
+    .filter(Boolean);
+  const max = clean.some(t => t.length > DAY_TASK_SHORT_MAX) ? DAY_TASK_COUNT_LONG : DAY_TASK_COUNT_SHORT;
+  return clean.slice(0, max);
+}
+function fitClass(title, tasks, outcome) {
+  const totalChars = title.length + outcome.length + tasks.reduce((sum, task) => sum + task.length, 0);
+  if (tasks.length >= 6 || totalChars > 370) return ' ultra';
+  if (tasks.length >= 5 || totalChars > 290) return ' dense';
+  return '';
+}
+
 function fillDemoData() {
-  // Role Info
-  document.getElementById('f-role').value = 'Graphics Designer';
-  document.getElementById('f-rep').value = 'Muhammad Mateen Shahid';
-  document.getElementById('f-col').value = 'Web & Design Team';
-
-  // Weeks
-  for (let w = 1; w <= nWeeks; w++) {
-    const wtEl = document.getElementById(`wt-${w}`);
-    const wgEl = document.getElementById(`wg-${w}`);
-    if (wtEl) { wtEl.value = `Week ${w} - Learning & Execution`; upWP(w); }
-    if (wgEl) wgEl.value = `Understand workflows and contribute`;
-
-    for (let d = 1; d <= 5; d++) {
-      const g = (w - 1) * 5 + d;
-      const title = document.getElementById(`dtit-${g}`);
-      const outcome = document.getElementById(`dout-${g}`);
-      if (title) { title.value = `Day ${g} - Task Execution`; updCC(`dtit-${g}`, `cc-t-${g}`, 90); }
-      if (outcome) { outcome.value = `Complete assigned tasks successfully`; updCC(`dout-${g}`, `cc-o-${g}`, 120); }
-
-      const tasksContainer = document.getElementById(`tc-${g}`);
-      if (tasksContainer) {
-        const inputs = tasksContainer.querySelectorAll('input[type=text]');
-        inputs.forEach((inp, i) => {
-          inp.value = `Task ${i + 1} for Day ${g}`;
-        });
-        updAddBtn(g);
-      }
-
-      upDP(g);
+  const sampleWeeks = [
+    {
+      title: 'Orientation & Sprint Workflow Foundation',
+      goal: 'Settle in, understand the product, and learn the sprint structure end-to-end',
+      days: [
+        ['HR & IT System Access', ['Complete HR and IT setup to obtain necessary credentials', 'Secure active access to JIRA, SharePoint, MS Teams, and Confluence', 'Discuss role expectations and team norms', 'Meet with Senior Manager IT for context on PMO direction and leadership expectations'], 'System access ready and clear understanding of success metrics'],
+        ['Sprint Workflow Review', ['Read the Sprint Execution Workflow document thoroughly from cover to cover', 'Walk through the active sprint on JIRA with the Project Manager to understand board layout', 'Review JIRA fields including dev/SQA dates, grooming flags, and story points', 'Attend the Enwage team daily standup as a passive observer'], 'Ability to explain the 15-day sprint cycle and identify healthy JIRA tickets'],
+        ['Reporting Fundamentals', ['Review the Planning Report and Demo Report from the previous sprint on SharePoint', 'Learn the broader PMO scope and how the Scrum Master contributes to organizational goals', 'Study the SharePoint repository structure for SOPs and PMO documentation', 'Shadow the Project Manager during departmental coordination meetings'], 'Understanding of PMO deliverables and documentation standards'],
+        ['Sprint Initiation Observation', ['Observe the Sprint Planning session (Sprint Day 1) including scope lock and team commitments', 'Shadow the drafting of the Sprint Planning Report for stakeholders', 'Learn about the start of the regression track for the previous sprint cycle', 'Observe the daily standup and note how the team transitions to new tasks'], 'Witnessed the formal initiation of a new 15-day sprint cycle'],
+        ['Development Tracking', ['Observe the closure of the regression track (Sprint Day 3)', 'Note how regression bugs are reported, prioritized, and assigned to developers', 'Review Confluence decision logs and technical debt information', 'Attend daily standup and track the movement of dev tickets in JIRA'], 'Learned how regression progress is monitored and closed by the PMO']
+      ]
+    },
+    {
+      title: 'Deep Dive Shadowing',
+      goal: 'Follow the Project Manager through a complete sprint to understand every PMO touchpoint',
+      days: [
+        ['Resource Prioritization', ['Observe how development resources are re-prioritized for regression bug fixing', 'Perform a supervised JIRA audit to identify missing dates or assignees', 'Monitor daily standup specifically for early identification of blockers', "Review the current sprint's JIRA hygiene status with the Project Manager"], 'Identified JIRA hygiene gaps under direct supervision'],
+        ['Grooming Introduction', ['Shadow the Project Manager during Grooming Session 1', 'Note which stakeholders attend and how the backlog is refined', 'Draft practice notes regarding key commitments and risks noted in the session', 'Attend standup and verify if blockers raised are being addressed'], 'Understanding of backlog grooming and initial risk identification'],
+        ['Release Readiness', ['Learn release readiness checks during the release finalization stage', 'Draft a practice summary of one Risk Report cycle based on active sprint data', 'Understand what triggers a risk flag and how it is communicated to leadership', 'Attend standup and cross-reference JIRA ticket statuses'], 'Knowledge of release finalization and risk reporting triggers'],
+        ['UAT Smoke', ['Observe the UAT Smoke session and second Grooming Session', 'Review how UAT findings are initially documented by the SQA lead', 'Draft notes from all grooming sessions attended for PM review', 'Attend daily standup to track progress against the sprint midpoint'], 'Understanding of the UAT smoke process and second grooming iteration'],
+        ['Production Verification', ['Observe the SQA team during production verification of the previous release', 'See how production findings are logged and communicated', 'Perform a second supervised JIRA audit and share findings with the PM', 'Shadow the Project Manager in updating the departmental risk log'], 'Exposure to production environment validation and reporting']
+      ]
+    },
+    {
+      title: 'Hands-On Practice',
+      goal: 'Take responsibility for ceremonies and PMO outputs with Project Manager coaching',
+      days: [
+        ['Checkpoint Management', ['Run the daily standup independently with the Project Manager observing', 'Conduct an independent JIRA hygiene audit and flag gaps to the team', 'Monitor the dev completion checkpoint and track QA bucket movement', 'Update story statuses in JIRA based on standup outcomes'], 'Independent standup facilitation and completion of solo JIRA audit'],
+        ['Backlog Shaping', ['Co-facilitate Grooming Session 3 and update the JIRA grooming field to "Yes"', 'Draft the Risk Report and review it with the Project Manager before sharing', 'Lead the standup and ensure all blockers are logged in JIRA', 'Verify that all groomed stories have sufficient acceptance criteria from the Product Manager'], 'Grooming session facilitated and professional risk report drafted'],
+        ['Quality Deadlines', ['Track progress on the last primary QA day and ensure staging iteration deadlines are met', 'Run the daily standup independently and facilitate blocker resolution', 'Conduct a JIRA audit focusing on missing dev/SQA dates', 'Communicate any identified hygiene gaps directly to the relevant team members'], 'Team updated on JIRA hygiene and QA progress toward staging'],
+        ['Staging Closure', ["Co-facilitate Grooming Session 4 and finalize next sprint's backlog refinement", 'Observe and support the staging wrap-up process with SQA', 'Run the daily standup and update the PM on sprint health', 'Draft the final Risk Report for the week'], 'Final grooming session complete and staging status clearly documented'],
+        ['UAT Coordination', ['Track UAT findings and coordinate resolutions with SQA and Dev leads', 'Run the daily standup solo and ensure UAT blockers are prioritized', 'Begin compiling sprint statistics and inputs for the Day 14 Demo Report', 'Review UAT outcomes with the Project Manager for stakeholder communication'], 'UAT findings documented and sprint statistics prepared for lock']
+      ]
+    },
+    {
+      title: 'Independent Sprint Driver',
+      goal: 'Own the full sprint cycle including ceremonies, targets, and reporting',
+      days: [
+        ['Sprint Lock', ['Lead the Sprint Lock Day process independently', 'Perform a comprehensive JIRA audit and compile final sprint statistics', 'Prepare the Demo Report including completed vs. planned scope and velocity', 'Facilitate the final standup of the active sprint cycle'], 'Sprint statistics and demo report finalized for stakeholder presentation'],
+        ['Sprint Closure', ['Lead the Sprint Demo session independently for stakeholders', 'Coordinate and conduct the Bug Bash execution', 'Officially close the sprint in JIRA and handle any necessary spillovers', 'Send the Demo/Closure report to all stakeholders'], 'Sprint officially closed and results communicated independently'],
+        ['Independent Planning', ['Lead the Sprint Planning session independently for the new cycle', 'Define sprint targets collaboratively with the Product Manager and Dev team', 'Lock the sprint scope and send the Sprint Planning Report to stakeholders', 'Initiate the regression track for the previous release'], 'New sprint cycle successfully planned and targets locked independently'],
+        ['Execution Oversight', ['Drive the daily standup solo and ensure the team is aligned on Day 2 tasks', 'Resolve or escalate blockers identified during the standup on the same day', 'Maintain the daily JIRA audit log to ensure data hygiene from the start', 'Coordinate with the Technical Project Manager on any early dev dependencies'], 'Execution track initiated with proactive blocker resolution'],
+        ['Risk Visibility', ['Produce and send the Risk Report independently highlighting at-risk stories', 'Coordinate the closure of the regression cycle with the SQA Lead', 'Perform a JIRA audit and proactively chase missing dates or assignees', 'Lead the daily standup and track dev progress against the Planning Report'], 'Risk visibility established and regression track closed on schedule']
+      ]
     }
-  }
+  ];
+
+  demoDateMode = true;
+  document.getElementById('f-start').value = '2026-06-22';
+  buildWeeks();
+
+  document.getElementById('f-role').value = 'Scrum Master Intern';
+  document.getElementById('f-rep').value = 'Project Manager';
+  document.getElementById('f-col').value = 'PMO Team';
+
+  sampleWeeks.slice(0, nWeeks).forEach((week, wi) => {
+    const w = wi + 1;
+    document.getElementById(`wt-${w}`).value = week.title;
+    document.getElementById(`wg-${w}`).value = week.goal;
+    upWP(w);
+
+    week.days.forEach((day, di) => {
+      const g = wi * DPW + di + 1;
+      document.getElementById(`dtit-${g}`).value = limitText(day[0], DAY_TITLE_MAX);
+      document.getElementById(`dout-${g}`).value = limitText(day[2], DAY_OUTCOME_MAX);
+      updCC(`dtit-${g}`, `cc-t-${g}`, 90);
+      updCC(`dout-${g}`, `cc-o-${g}`, 90);
+      const inputs = document.querySelectorAll(`#tc-${g} input[type="text"]`);
+      inputs.forEach((input, index) => { input.value = limitText(day[1][index] || '', DAY_TASK_MAX); });
+      updAddBtn(g);
+      upDP(g);
+    });
+  });
 }
 
 // ── COLLECT ──
@@ -832,13 +937,13 @@ function collect() {
     for (let d = 1; d <= DPW; d++) {
       const g = (w-1)*DPW + d;
       const tc = document.getElementById(`tc-${g}`);
-      const tasks = tc ? Array.from(tc.querySelectorAll('input')).map(i=>i.value.trim()).filter(Boolean) : [];
+      const tasks = limitTasks(tc ? Array.from(tc.querySelectorAll('input')).map(i=>i.value) : []);
       wk.days.push({
         g, localD: d,
         date: dates[g-1],
-        title: document.getElementById(`dtit-${g}`)?.value.trim() || '',
+        title: limitText(document.getElementById(`dtit-${g}`)?.value, DAY_TITLE_MAX),
         tasks,
-        outcome: document.getElementById(`dout-${g}`)?.value.trim() || ''
+        outcome: limitText(document.getElementById(`dout-${g}`)?.value, DAY_OUTCOME_MAX)
       });
     }
     data.weeks.push(wk);
@@ -867,35 +972,42 @@ function buildPreview() {
 
   // Save plan data to localStorage then navigate
   try {
-    localStorage.setItem('obf_plan_data', JSON.stringify(data));
+    const serialized = JSON.stringify(data);
+    localStorage.setItem('obf_plan_data', serialized);
+    sessionStorage.setItem('obf_plan_data', serialized);
+    if (localStorage.getItem('obf_plan_data') !== serialized && sessionStorage.getItem('obf_plan_data') !== serialized) {
+      throw new Error('Plan data was not saved.');
+    }
   } catch(e) {
     console.error('localStorage error:', e);
+    const el = document.getElementById('ferr');
+    el.textContent = 'Unable to save this plan in the browser. Please refresh Live Server and try again.';
+    el.classList.add('on');
+    el.scrollIntoView({ behavior:'smooth', block:'center' });
+    return;
   }
-  window.location.href = 'GenerateForm.html';
+  window.location.href = new URL('GenerateForm.html', window.location.href).href;
 }
 
 // ══════════════════════════════════════════
 // RENDER — pixel-perfect match to uploaded CSS design
 // ══════════════════════════════════════════
 function renderDoc(data) {
-  const doc  = document.getElementById('plan-doc');
+  const wrap = document.getElementById('plan-wrap');
   const plan = data.nWeeks === 4 ? 'Four' : 'Two';
 
   /* ── SVG ICONS — exact uploaded files, clipPaths removed (full-size rects clip nothing) ── */
   // DayTitleIcon: concentric circles (target/crosshair)
-  const iconTitle = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;">
+  const DayTitleIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;">
     <path d="M8.00016 14.6663C11.6821 14.6663 14.6668 11.6816 14.6668 7.99967C14.6668 4.31778 11.6821 1.33301 8.00016 1.33301C4.31826 1.33301 1.3335 4.31778 1.3335 7.99967C1.3335 11.6816 4.31826 14.6663 8.00016 14.6663Z" stroke="#02621C" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M8 12C10.2091 12 12 10.2091 12 8C12 5.79086 10.2091 4 8 4C5.79086 4 4 5.79086 4 8C4 10.2091 5.79086 12 8 12Z" stroke="#02621C" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M7.99984 9.33366C8.73622 9.33366 9.33317 8.73671 9.33317 8.00033C9.33317 7.26395 8.73622 6.66699 7.99984 6.66699C7.26346 6.66699 6.6665 7.26395 6.6665 8.00033C6.6665 8.73671 7.26346 9.33366 7.99984 9.33366Z" stroke="#02621C" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
 
-  // DayTasksIcon: gear/settings cog
-  const iconTasks = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;">
-    <path d="M10.2602 2.9264C10.344 3.01029 10.4487 3.0703 10.5634 3.10027C10.6781 3.13023 10.7988 3.12905 10.9129 3.09685C11.027 3.06465 11.1305 3.0026 11.2126 2.91709C11.2948 2.83159 11.3526 2.72572 11.3802 2.6104C11.4494 2.32233 11.5942 2.05792 11.7995 1.84438C12.0049 1.63085 12.2635 1.47592 12.5486 1.39555C12.8338 1.31517 13.1352 1.31226 13.4219 1.38711C13.7085 1.46196 13.97 1.61187 14.1795 1.8214C14.389 2.03092 14.5388 2.29249 14.6135 2.57917C14.6883 2.86585 14.6853 3.16727 14.6048 3.45239C14.5243 3.73752 14.3693 3.99604 14.1557 4.20134C13.9421 4.40664 13.6777 4.55129 13.3896 4.6204C13.2743 4.648 13.1684 4.70585 13.0829 4.788C12.9974 4.87015 12.9353 4.97361 12.9031 5.08773C12.8709 5.20185 12.8697 5.32249 12.8997 5.43721C12.9297 5.55194 12.9897 5.6566 13.0736 5.7404L14.1956 6.86173C14.345 7.01118 14.4636 7.18859 14.5444 7.38385C14.6253 7.57911 14.667 7.78839 14.667 7.99973C14.667 8.21108 14.6253 8.42036 14.5444 8.61562C14.4636 8.81088 14.345 8.98829 14.1956 9.13773L13.0736 10.2597C12.9898 10.3436 12.8851 10.4036 12.7704 10.4336C12.6557 10.4636 12.535 10.4624 12.4209 10.4302C12.3068 10.398 12.2033 10.3359 12.1212 10.2504C12.039 10.1649 11.9812 10.0591 11.9536 9.94373C11.8844 9.65567 11.7396 9.39125 11.5343 9.17772C11.3289 8.96419 11.0703 8.80926 10.7852 8.72888C10.5 8.64851 10.1986 8.6456 9.91193 8.72045C9.62528 8.7953 9.36376 8.9452 9.1543 9.15473C8.94485 9.36425 8.79503 9.62582 8.72027 9.9125C8.64552 10.1992 8.64853 10.5006 8.729 10.7857C8.80946 11.0709 8.96448 11.3294 9.17808 11.5347C9.39168 11.74 9.65614 11.8846 9.94424 11.9537C10.0596 11.9813 10.1654 12.0392 10.2509 12.1213C10.3364 12.2035 10.3985 12.3069 10.4307 12.4211C10.4629 12.5352 10.4641 12.6558 10.4341 12.7705C10.4041 12.8853 10.3441 12.9899 10.2602 13.0737L9.13823 14.1951C8.98879 14.3445 8.81138 14.4631 8.61612 14.5439C8.42086 14.6248 8.21158 14.6665 8.00023 14.6665C7.78889 14.6665 7.57961 14.6248 7.38435 14.5439C7.18909 14.4631 7.01168 14.3445 6.86223 14.1951L5.74023 13.0731C5.65643 12.9892 5.55177 12.9292 5.43705 12.8992C5.32232 12.8692 5.20168 12.8704 5.08756 12.9026C4.97345 12.9348 4.86998 12.9969 4.78783 13.0824C4.70569 13.1679 4.64783 13.2737 4.62023 13.3891C4.55103 13.6771 4.40629 13.9415 4.20092 14.1551C3.99555 14.3686 3.73698 14.5235 3.45183 14.6039C3.16667 14.6843 2.86525 14.6872 2.5786 14.6124C2.29194 14.5375 2.03042 14.3876 1.82097 14.1781C1.61151 13.9685 1.46169 13.707 1.38694 13.4203C1.31218 13.1336 1.31519 12.8322 1.39566 12.5471C1.47613 12.2619 1.63115 12.0034 1.84475 11.7981C2.05835 11.5928 2.32281 11.4482 2.6109 11.3791C2.72622 11.3515 2.83209 11.2936 2.9176 11.2115C3.0031 11.1293 3.06515 11.0259 3.09735 10.9117C3.12955 10.7976 3.13073 10.677 3.10077 10.5623C3.07081 10.4475 3.01079 10.3429 2.9269 10.2591L1.8049 9.13773C1.65545 8.98829 1.5369 8.81088 1.45602 8.61562C1.37514 8.42036 1.33351 8.21108 1.33351 7.99973C1.33351 7.78839 1.37514 7.57911 1.45602 7.38385C1.5369 7.18859 1.65545 7.01118 1.8049 6.86173L2.9269 5.73973C3.0107 5.65585 3.11536 5.59583 3.23009 5.56587C3.34481 5.53591 3.46545 5.53709 3.57957 5.56928C3.69369 5.60148 3.79716 5.66353 3.8793 5.74904C3.96145 5.83455 4.0193 5.94042 4.0469 6.05573C4.1161 6.3438 4.26084 6.60822 4.46621 6.82175C4.67158 7.03528 4.93016 7.19021 5.21531 7.27059C5.50046 7.35096 5.80189 7.35387 6.08854 7.27902C6.37519 7.20417 6.63671 7.05426 6.84617 6.84474C7.05562 6.63521 7.20544 6.37364 7.2802 6.08697C7.35495 5.80029 7.35194 5.49887 7.27147 5.21374C7.19101 4.92861 7.03599 4.67009 6.82239 4.46479C6.60879 4.25949 6.34433 4.11484 6.05623 4.04573C5.94092 4.01814 5.83505 3.96028 5.74954 3.87813C5.66403 3.79599 5.60198 3.69252 5.56978 3.5784C5.53759 3.46429 5.53641 3.34364 5.56637 3.22892C5.59633 3.11419 5.65635 3.00954 5.74023 2.92573L6.86223 1.8044C7.01168 1.65495 7.18909 1.5364 7.38435 1.45552C7.57961 1.37464 7.78889 1.33301 8.00023 1.33301C8.21158 1.33301 8.42086 1.37464 8.61612 1.45552C8.81138 1.5364 8.98879 1.65495 9.13823 1.8044L10.2602 2.9264Z" stroke="#02621C" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
+  const DayTasksIcon = `<img src="${window.OAKBOARD_TASK_ICON_DATA_URL}" alt="" width="16" height="16" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;">`;
 
   // DayOutcomeIcon: circle with checkmark
-  const iconOutcome = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;">
+  const DayOutcomeIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;">
     <path d="M8.00016 14.6663C11.6821 14.6663 14.6668 11.6816 14.6668 7.99967C14.6668 4.31778 11.6821 1.33301 8.00016 1.33301C4.31826 1.33301 1.3335 4.31778 1.3335 7.99967C1.3335 11.6816 4.31826 14.6663 8.00016 14.6663Z" stroke="#02621C" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M6 8.00033L7.33333 9.33366L10 6.66699" stroke="#02621C" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
@@ -915,7 +1027,18 @@ function renderDoc(data) {
 </svg>`;
 
   /* ── RENDER ── */
-  let h = `
+  const pageGroups = data.nWeeks === 4
+    ? [data.weeks.slice(0, 2), data.weeks.slice(2, 4)]
+    : [data.weeks.slice(0, 2)];
+
+  wrap.innerHTML = '';
+  pageGroups.forEach((pageWeeks, pageIndex) => {
+    const doc = document.createElement('div');
+    doc.className = 'plan-doc';
+    doc.id = pageIndex === 0 ? 'plan-doc' : `plan-doc-${pageIndex + 1}`;
+
+    let h = `
+  <div class="plan-frame">
   <div class="ph">
     <div class="ph-logo">${logo}</div>
     <div class="ph-right">
@@ -928,7 +1051,8 @@ function renderDoc(data) {
     </div>
   </div>`;
 
-  data.weeks.forEach((wk, wi) => {
+    pageWeeks.forEach((wk, localWeekIndex) => {
+    const wi = pageIndex * 2 + localWeekIndex;
     h += `
   <div class="pw">
     <div class="pw-pill">Week ${wi+1} — ${x(wk.title)}</div>
@@ -938,26 +1062,30 @@ function renderDoc(data) {
 
     wk.days.forEach(day => {
       const dateStr = day.date ? fmtF(day.date) : '';
+      const title = limitText(day.title, DAY_TITLE_MAX);
+      const tasks = limitTasks(day.tasks);
+      const outcome = limitText(day.outcome, DAY_OUTCOME_MAX);
+      const cardClass = fitClass(title, tasks, outcome);
       h += `
-    <div class="pdc">
+    <div class="pdc${cardClass}">
       <div class="pdc-top">
         <span class="pdc-badge">Day ${day.g}</span>
         <span class="pdc-date">${dateStr}</span>
       </div>
       <div class="pdc-topic-row">
-        ${iconTitle}
-        <span class="pdc-topic-txt">${x(day.title)}</span>
+        ${DayTitleIcon}
+        <span class="pdc-topic-txt">${x(title)}</span>
       </div>
       <div class="pdc-tasks-area">
-        ${iconTasks}
+        ${DayTasksIcon}
         <div class="pdc-tasks-list">
-          ${day.tasks.map(t => `<div class="pdc-task"><span class="ptb">•</span><span class="ptt">${x(t)}</span></div>`).join('')}
+          ${tasks.map(t => `<div class="pdc-task"><span class="ptb">•</span><span class="ptt">${x(t)}</span></div>`).join('')}
         </div>
       </div>
-      ${day.outcome ? `
+      ${outcome ? `
       <div class="pdc-out">
-        ${iconOutcome}
-        <span class="pot">${x(day.outcome)}</span>
+        ${DayOutcomeIcon}
+        <span class="pot">${x(outcome)}</span>
       </div>` : ''}
     </div>`;
     });
@@ -965,7 +1093,11 @@ function renderDoc(data) {
     h += `</div>`;
   });
 
-  doc.innerHTML = h;
+    h += `
+  </div>`;
+    doc.innerHTML = h;
+    wrap.appendChild(doc);
+  });
 }
 
 // ── UTILS ──
@@ -991,8 +1123,8 @@ function setStep(n) {
 }
 function scalePlan() {
   const wrap = document.getElementById('plan-wrap');
-  const doc  = document.getElementById('plan-doc');
-  if (!wrap || !doc) return;
+  const docs = document.querySelectorAll('#plan-wrap .plan-doc');
+  if (!wrap || !docs.length) return;
 
   const pad = 20;
   const ww = wrap.offsetWidth || window.innerWidth;
@@ -1002,11 +1134,15 @@ function scalePlan() {
   const ox = Math.max((ww - 1920 * s) / 2, pad);
   const oy = pad;
 
-  doc.style.transform        = `translate(${ox}px, ${oy}px) scale(${s})`;
-  doc.style.transformOrigin  = 'top left';
+  const pageGap = 20;
+  docs.forEach((doc, index) => {
+    const pageY = oy + index * (1080 * s + pageGap);
+    doc.style.transform = `translate(${ox}px, ${pageY}px) scale(${s})`;
+    doc.style.transformOrigin = 'top left';
+  });
 
   // Set wrap height so it contains the scaled doc
-  wrap.style.height = (1080 * s + oy * 2) + 'px';
+  wrap.style.height = (docs.length * 1080 * s + (docs.length - 1) * pageGap + oy * 2) + 'px';
 }
 
 /* ── CHAR COUNTER HELPER ── */

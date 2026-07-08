@@ -40,4 +40,6 @@ The recovered UI and workflow are merged with the stabilized authentication impl
 ## Document output
 
 - GenerateForm uses a responsive 16:9 landscape canvas matching the supplied 1920 x 1080 reference.
-- Print and Save as PDF use a borderless `16in x 9in` page with no preview shadow or gray frame.
+- The clean PDF button captures the exact visible preview as a high-resolution PNG and places it edge-to-edge on one borderless 16:9 PDF page, avoiding browser headers and layout reflow.
+- Two-week plans render and export on one 16:9 page; four-week plans are split into two 16:9 pages with two weeks per page.
+- Fill Sample Plan respects the currently selected two-week or four-week duration.

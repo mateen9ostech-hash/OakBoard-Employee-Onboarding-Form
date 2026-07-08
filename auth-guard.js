@@ -10,6 +10,7 @@
   const SESSION_CACHE_KEY = 'obf_session_cache';
   const SUPABASE_AUTH_STORAGE_KEY = 'sb-avdwwlwxmnuqphxlpgrn-auth-token';
   const SESSION_CHECK_TIMEOUT_MS = 10000;
+  const SESSION_CACHE_MAX_AGE_MS = 2 * 60 * 1000;
 
   function initClient() {
     try {
@@ -61,6 +62,29 @@
     localStorage.removeItem(SESSION_CACHE_KEY);
   }
 
+  function isLocalPreview() {
+    return ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+  }
+
+  function getCachedSession() {
+    try {
+      const raw = localStorage.getItem(SESSION_CACHE_KEY);
+      if (!raw) return null;
+
+      const cached = JSON.parse(raw);
+      if (!cached || !cached.email || !cached.timestamp) return null;
+      if (Date.now() - Number(cached.timestamp) > SESSION_CACHE_MAX_AGE_MS) return null;
+
+      return {
+        user: { email: cached.email },
+        cached: true
+      };
+    } catch (err) {
+      console.error('Unable to read cached session:', err);
+      return null;
+    }
+  }
+
   function getPersistedSession() {
     try {
       const raw = localStorage.getItem(SUPABASE_AUTH_STORAGE_KEY);
@@ -110,6 +134,15 @@
         return persistedSession;
       }
 
+      // Live Server / localhost can occasionally hang on Supabase's browser
+      // session lock. If the user just passed auth in the same local preview,
+      // allow the page to continue so GenerateForm can render saved plan data.
+      const cachedSession = getCachedSession();
+      if (isLocalPreview() && cachedSession && !isLoginPage()) {
+        setUserEmail(cachedSession.user.email);
+        return cachedSession;
+      }
+
       const activeClient = window.sbClient || client;
       if (!activeClient) {
         throw new Error('Supabase client is not available.');
@@ -130,6 +163,11 @@
       return session;
     } catch (err) {
       console.error('Auth check failed:', err);
+      const cachedSession = getCachedSession();
+      if (isLocalPreview() && cachedSession && !isLoginPage()) {
+        setUserEmail(cachedSession.user.email);
+        return cachedSession;
+      }
       clearSessionCache();
       window.location.replace('Login.html');
       return null;

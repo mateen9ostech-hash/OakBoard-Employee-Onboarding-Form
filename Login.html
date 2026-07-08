@@ -324,7 +324,17 @@ async function doSignIn() {
   }
 
   showBanner('signin-ok', 'Signed in! Redirecting…');
-  setTimeout(() => { window.location.href = 'FillDetails.html'; }, 900);
+  try {
+    const sessionEmail = data?.session?.user?.email || data?.user?.email || email;
+    localStorage.setItem('obf_session_cache', JSON.stringify({
+      timestamp: Date.now(),
+      email: sessionEmail
+    }));
+  } catch (cacheErr) {
+    console.error('Unable to cache local session:', cacheErr);
+  }
+
+  setTimeout(() => { window.location.href = new URL('FillDetails.html', window.location.href).href; }, 900);
 }
 
 // ── SIGN UP ──
@@ -348,7 +358,7 @@ async function doSignUp() {
     email, password: pw,
     options: {
       data: { full_name: name },
-      emailRedirectTo: window.location.origin + '/Login.html'
+        emailRedirectTo: new URL('Login.html', window.location.href).href
     }
   });
   setLoading(btn, false);
@@ -378,7 +388,7 @@ async function showForgot() {
     return;
   }
   const { error } = await sbClient.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + '/Login.html'
+    redirectTo: new URL('Login.html', window.location.href).href
   });
   if (error) { showBanner('signin-err', 'Could not send reset email. Try again.'); return; }
   showBanner('signin-ok', 'Password reset link sent to ' + email);
