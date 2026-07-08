@@ -108,6 +108,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .btn-gen{width:100%;padding:15px;background:var(--g);color:white;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s;margin-top:6px;}
 .btn-gen:hover{background:var(--g-dk);transform:translateY(-1px);box-shadow:0 5px 18px rgba(36,179,75,.25);}
 
+/* IMPORT PLAN */
+.import-overlay{position:fixed;inset:0;background:rgba(16,23,39,.56);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;}
+.import-overlay.on{display:flex;}
+.import-modal{width:min(720px,100%);max-height:calc(100vh - 40px);overflow:auto;background:var(--white);border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.25);}
+.import-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:22px 24px 16px;border-bottom:1px solid var(--line);}
+.import-head h2{font-size:19px;margin-bottom:5px;}.import-head p{font-size:13px;color:var(--ink3);line-height:1.45;}
+.import-close{border:0;background:var(--surf);width:32px;height:32px;border-radius:8px;cursor:pointer;color:var(--ink2);font-size:20px;line-height:1;}
+.import-body{padding:20px 24px;display:flex;flex-direction:column;gap:16px;}
+.import-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.import-field{display:flex;flex-direction:column;gap:6px;}.import-field label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink2);}
+.import-field select,.import-field textarea,.import-file{font:inherit;font-size:13px;border:1.5px solid var(--line);border-radius:8px;background:white;color:var(--ink);outline:none;}
+.import-field select{padding:10px 12px}.import-field textarea{padding:12px;min-height:260px;resize:vertical;line-height:1.5;}
+.import-field select:focus,.import-field textarea:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(36,179,75,.10);}
+.import-file{padding:9px}.import-help{font-size:12px;color:var(--ink3);line-height:1.45;}.import-status{display:none;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.45;}
+.import-status.on{display:block}.import-status.error{background:#fff1f1;color:#a11;border:1px solid #f2bcbc}.import-status.info{background:var(--g-lt);color:var(--g-dk);border:1px solid var(--g-md)}
+.import-actions{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px 22px;border-top:1px solid var(--line);}.import-actions button{padding:11px 17px;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;}
+.import-cancel{background:white;border:1.5px solid var(--line);color:var(--ink2)}.import-submit{background:var(--g);border:1.5px solid var(--g);color:white}.import-submit:disabled{opacity:.55;cursor:wait}
+@media(max-width:620px){.import-grid{grid-template-columns:1fr}.import-head,.import-body,.import-actions{padding-left:16px;padding-right:16px}}
+
 /* LOADING */
 #pg-load{min-height:calc(100vh - 56px);align-items:center;justify-content:center;flex-direction:column;gap:20px;text-align:center;padding:40px;}
 .spin{width:52px;height:52px;border:3.5px solid var(--g-lt);border-top-color:var(--g);border-radius:50%;animation:spin 1s linear infinite;}
@@ -547,6 +566,10 @@ async function signOut() {
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="width:15px;height:15px"><path d="M2 7h10M7 2l5 5-5 5"/></svg>
         Fill Sample Plan
       </button>
+      <button class="btn-tb" onclick="openImportModal()" style="padding:15px 20px;font-size:14px;font-weight:600;border-radius:10px;flex-shrink:0;">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="width:15px;height:15px"><path d="M7 1v8M4 6l3 3 3-3M2 11h10"/></svg>
+        Import with AI
+      </button>
       <button class="btn-gen" id="btn-gen" style="margin-top:0;flex:1;" onclick="buildPreview()">
         <svg viewBox="0 0 18 18" fill="currentColor" style="width:17px;height:17px"><path d="M15 3H3a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1V4a1 1 0 00-1-1zM6 11H4V9h2v2zm0-3H4V6h2v2zm3 3H7V9h2v2zm0-3H7V6h2v2zm3 3h-2V9h2v2zm0-3h-2V6h2v2zm2 3h-1V9h1v2zm0-3h-1V6h1v2z"/></svg>
         Generate Onboarding Plan
@@ -579,6 +602,25 @@ async function signOut() {
   </div>
   <div class="plan-wrap" id="plan-wrap">
     <div class="plan-doc" id="plan-doc"></div>
+  </div>
+</div>
+
+<div class="import-overlay" id="import-overlay" onclick="if(event.target===this) closeImportModal()">
+  <div class="import-modal" role="dialog" aria-modal="true" aria-labelledby="import-title">
+    <div class="import-head">
+      <div><h2 id="import-title">Import onboarding plan</h2><p>Paste an email, PDF-extracted text, or onboarding notes. OakBoard will structure it into the current form.</p></div>
+      <button type="button" class="import-close" onclick="closeImportModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="import-body">
+      <div class="import-grid">
+        <div class="import-field"><label for="import-source">Content type</label><select id="import-source"><option value="email_text">Email text</option><option value="pdf_text">PDF text</option><option value="notebooklm_text">NotebookLM text</option><option value="manual_text">Other notes</option></select></div>
+        <div class="import-field"><label for="import-weeks">Plan duration</label><select id="import-weeks"><option value="auto">Detect automatically</option><option value="2">2 weeks</option><option value="4">4 weeks</option></select></div>
+      </div>
+      <div class="import-field"><label for="import-file">Optional text or email file</label><input class="import-file" id="import-file" type="file" accept=".txt,.eml,text/plain,message/rfc822" onchange="loadImportFile(this)"><span class="import-help">For a PDF, copy its text and paste it below. Direct PDF extraction will be added as a separate step.</span></div>
+      <div class="import-field"><label for="import-text">Source content *</label><textarea id="import-text" placeholder="Paste the complete email, PDF text, or onboarding notes here..."></textarea></div>
+      <div class="import-status" id="import-status" role="status"></div>
+    </div>
+    <div class="import-actions"><button type="button" class="import-cancel" onclick="closeImportModal()">Cancel</button><button type="button" class="import-submit" id="import-submit" onclick="parseImportedPlan()">Parse &amp; Fill Form</button></div>
   </div>
 </div>
 
@@ -818,6 +860,96 @@ function upDP(g) {
 
 
 // ── FAKE FILL ──
+// IMPORT PLAN
+function openImportModal() {
+  document.getElementById('import-overlay').classList.add('on');
+  document.body.style.overflow = 'hidden';
+  setImportStatus('', 'info');
+  setTimeout(() => document.getElementById('import-text').focus(), 0);
+}
+function closeImportModal() {
+  document.getElementById('import-overlay').classList.remove('on');
+  document.body.style.overflow = '';
+}
+function setImportStatus(message, type) {
+  const el = document.getElementById('import-status');
+  el.textContent = message || '';
+  el.className = `import-status${message ? ` on ${type || 'info'}` : ''}`;
+}
+async function loadImportFile(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    if (!text.trim()) throw new Error('This file does not contain readable text.');
+    document.getElementById('import-text').value = text.slice(0, 120000);
+    document.getElementById('import-source').value = file.name.toLowerCase().endsWith('.eml') ? 'email_text' : 'manual_text';
+    setImportStatus(`${file.name} loaded. Review the text, then parse it.`, 'info');
+  } catch (error) {
+    setImportStatus(error.message || 'The selected file could not be read.', 'error');
+  }
+}
+function setFieldValue(id, value, max) {
+  const el = document.getElementById(id);
+  if (el) el.value = limitText(value, max || 10000);
+}
+function applyImportedPlan(plan) {
+  if (!plan || !Array.isArray(plan.weeks)) throw new Error('The parser returned an invalid plan.');
+  const weeks = Number(plan.nWeeks) === 4 ? 4 : 2;
+  setDur(weeks);
+  setFieldValue('f-role', plan.role, 80);
+  setFieldValue('f-rep', plan.reports, 120);
+  setFieldValue('f-col', plan.collab, 160);
+  plan.weeks.slice(0, weeks).forEach((week, wi) => {
+    const w = wi + 1;
+    setFieldValue(`wt-${w}`, week.title, 90);
+    setFieldValue(`wg-${w}`, week.goal, 140);
+    upWP(w);
+    (Array.isArray(week.days) ? week.days : []).slice(0, DPW).forEach((day, di) => {
+      const g = wi * DPW + di + 1;
+      setFieldValue(`dtit-${g}`, day.title, DAY_TITLE_MAX);
+      setFieldValue(`dout-${g}`, day.outcome, DAY_OUTCOME_MAX);
+      const tasks = limitTasks(day.tasks);
+      while (document.querySelectorAll(`#tc-${g} .tr2`).length < tasks.length) addTask(g);
+      document.querySelectorAll(`#tc-${g} input[type=text]`).forEach((input, index) => { input.value = tasks[index] || ''; });
+      updAddBtn(g); upDP(g);
+      updCC(`dtit-${g}`, `cc-t-${g}`, DAY_TITLE_MAX);
+      updCC(`dout-${g}`, `cc-o-${g}`, DAY_OUTCOME_MAX);
+    });
+  });
+}
+async function parseImportedPlan() {
+  const rawText = document.getElementById('import-text').value.trim();
+  const preferred = document.getElementById('import-weeks').value;
+  const button = document.getElementById('import-submit');
+  if (rawText.length < 40) return setImportStatus('Please paste enough source content to build a useful plan.', 'error');
+  if (typeof window.invokeAuthenticatedFunction !== 'function') return setImportStatus('The secure parser is unavailable. Reload and sign in again.', 'error');
+  button.disabled = true; button.textContent = 'Parsing...';
+  setImportStatus('Structuring the content into OakBoard weeks and days...', 'info');
+  try {
+    const result = await window.invokeAuthenticatedFunction('parse-onboarding-plan', {
+      sourceType: document.getElementById('import-source').value,
+      rawText,
+      preferredWeeks: preferred === 'auto' ? undefined : Number(preferred),
+      sourceFilename: document.getElementById('import-file').files?.[0]?.name || null
+    });
+    applyImportedPlan(result.plan);
+    closeImportModal();
+    const notice = document.getElementById('ferr');
+    notice.textContent = `Imported successfully using ${result.provider || 'the configured parser'}. Please review before generating.`;
+    notice.classList.add('on');
+    notice.style.cssText += ';background:#f0fdf4;color:#01621c;border-color:#b8dfc8';
+    document.getElementById('f-role').scrollIntoView({behavior:'smooth', block:'center'});
+  } catch (error) {
+    setImportStatus(error.message || 'The plan could not be imported.', 'error');
+  } finally {
+    button.disabled = false; button.textContent = 'Parse & Fill Form';
+  }
+}
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && document.getElementById('import-overlay')?.classList.contains('on')) closeImportModal();
+});
+
 const DAY_TITLE_MAX = 90;
 const DAY_TASK_MAX = 90;
 const DAY_TASK_SHORT_MAX = 50;

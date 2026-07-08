@@ -201,8 +201,25 @@
   };
 
   window.invokeAuthenticatedFunction = async function invokeAuthenticatedFunction(name, body) {
-    const session = getPersistedSession();
-    if (!session) throw new Error('Your session has expired. Please sign in again.');
+    let session = getPersistedSession();
+
+    // The lightweight 2-minute page cache can expire while the user is
+    // preparing a long import. Ask the Supabase client for its live session
+    // before treating that as a real sign-out.
+    if (!session) {
+      const activeClient = window.sbClient || client;
+      if (activeClient) {
+        const result = await getSessionWithTimeout(activeClient);
+        if (result.error) throw result.error;
+        session = result.data && result.data.session;
+      }
+    }
+
+    if (!session || !session.access_token) {
+      throw new Error('Your session has expired. Please sign in again.');
+    }
+
+    cacheSession(session);
 
     const response = await fetch(
       `${SUPABASE_URL_VALUE}/functions/v1/${encodeURIComponent(name)}`,
