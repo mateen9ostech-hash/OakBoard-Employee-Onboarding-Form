@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from '../lib/auth'
 import { type OnboardingPlan, type PlanWeek, writeStoredPlan } from '../types/plan'
@@ -191,7 +191,7 @@ function normalizeNotebookText(value: string) {
     .trim()
 }
 
-function parseNotebookPlan(rawValue: string, preferredWeeks: string): ImportResult['plan'] {
+function parseNotebookPlan(rawValue: string): ImportResult['plan'] {
   const source = normalizeNotebookText(rawValue)
   const weekRegex = /Week\s+Title\s*:\s*(?:Week\s+)?(\d+)?\s*[—–-]?\s*([^\n]+)\n(?:Objective|Goal)\s*:\s*([^\n]+)([\s\S]*?)(?=Week\s+Title\s*:|$)/gi
   const weeks: ImportResult['plan']['weeks'] = []
@@ -231,7 +231,8 @@ function parseNotebookPlan(rawValue: string, preferredWeeks: string): ImportResu
     throw new Error('NotebookLM data format was not recognized. Paste the output with Week Title, Objective, Day Goal, Tasks, and Day Outcome labels.')
   }
 
-  const requestedWeeks = preferredWeeks === '4' ? 4 : preferredWeeks === '2' ? 2 : weeks.length > 2 ? 4 : 2
+  const parsedDayCount = weeks.reduce((total, week) => total + (week.days?.length || 0), 0)
+  const requestedWeeks = weeks.length >= 4 || parsedDayCount > DPW * 2 ? 4 : 2
   return {
     role: fallbackRole(source),
     reports: fallbackReports(source),
@@ -275,7 +276,6 @@ export function FillDetailsPage() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [importOpen, setImportOpen] = useState(false)
-  const [importWeeks, setImportWeeks] = useState('auto')
   const [importText, setImportText] = useState('')
   const [importStatus, setImportStatus] = useState<{ type: 'info' | 'error'; message: string } | null>(null)
 
@@ -453,21 +453,6 @@ export function FillDetailsPage() {
     setOpenWeeks(new Set(Array.from({ length: importedWeeks }, (_, index) => index)))
   }
 
-  async function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    if (!file) return
-    try {
-      const text = await file.text()
-      const cleanedText = text.replace(/\u0000/g, '').trim()
-      if (!cleanedText) throw new Error('This file does not contain readable NotebookLM text.')
-      setImportText(cleanedText.slice(0, 120000))
-      setImportStatus({ type: 'info', message: `${file.name} loaded. Click Fill Form to import it.` })
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : 'The selected file could not be read.'
-      setImportStatus({ type: 'error', message })
-    }
-  }
-
   function parseImportedPlan() {
     const rawText = importText.trim()
     if (rawText.length < 40) {
@@ -476,10 +461,10 @@ export function FillDetailsPage() {
     }
 
     try {
-      const plan = parseNotebookPlan(rawText, importWeeks)
+      const plan = parseNotebookPlan(rawText)
       applyImportedPlan(plan)
       setImportOpen(false)
-      setNotice('NotebookLM data imported locally. Please review before generating.')
+      setNotice(`${plan.nWeeks}-week NotebookLM data imported locally. Please review before generating.`)
       setError('')
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'The NotebookLM data could not be imported.'
@@ -622,17 +607,7 @@ export function FillDetailsPage() {
             </div>
             <div className="import-body">
               <section className="import-step">
-                <div className="import-step-title"><span>1</span><strong>Select plan duration</strong></div>
-                <div className="import-field"><select onChange={(event) => setImportWeeks(event.target.value)} value={importWeeks}><option value="auto">Detect automatically</option><option value="2">2 weeks</option><option value="4">4 weeks</option></select></div>
-              </section>
-
-              <section className="import-step">
-                <div className="import-step-title"><span>2</span><strong>Paste NotebookLM output</strong></div>
-                <div className="import-field">
-                  <label>Optional .txt file</label>
-                  <input className="import-file" accept=".txt,text/plain" onChange={handleImportFile} type="file" />
-                  <span className="import-help">Use this only if you saved the NotebookLM response as a text file.</span>
-                </div>
+                <div className="import-step-title"><span>1</span><strong>Paste NotebookLM output</strong></div>
                 <div className="import-field">
                   <label>NotebookLM content *</label>
                   <textarea
@@ -640,6 +615,7 @@ export function FillDetailsPage() {
                     placeholder="Paste NotebookLM output here. Expected labels: Role, Reports To, Collaborates With, Week Title, Objective, Day Goal, Tasks, Day Outcome..."
                     value={importText}
                   />
+                  <span className="import-help">OakBoard will auto-detect 2-week or 4-week plans from the pasted Week and Day labels.</span>
                 </div>
               </section>
               {importStatus && <div className={`import-status on ${importStatus.type}`}>{importStatus.message}</div>}

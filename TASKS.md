@@ -47,6 +47,8 @@ This file is the live checklist for OakBoard. After each completed task, update 
 - [x] Replace Import with AI with local NotebookLM Data import.
 - [x] Parse NotebookLM formatted text locally in the browser.
 - [x] Fill Role, Reports To, Collaborates With, Week Title, Objective, Day Goal, Tasks, and Day Outcome from NotebookLM output.
+- [x] Remove `.txt` upload from NotebookLM import and use pasted textbox content only.
+- [x] Auto-detect imported NotebookLM plan duration as 2-week or 4-week from pasted Week/Day labels.
 - [x] Migrate the real `GenerateForm.html` preview into React.
 - [x] Preserve 16:9 / landscape print-preview layout in React.
 - [x] Preserve exact day-card sizing rules in React:
@@ -95,6 +97,7 @@ This file is the live checklist for OakBoard. After each completed task, update 
 - [x] Remove Ollama/AI provider env placeholders from local docs.
 - [x] Remove PDF parser dependency after dropping PDF-to-AI import.
 - [x] Keep import flow fully local for pasted NotebookLM text.
+- [x] Keep NotebookLM import duration automatic, without requiring the user to choose 2-week or 4-week manually.
 - [ ] Add import history or reusable saved plans if required.
 
 ### Deployment and workflow
