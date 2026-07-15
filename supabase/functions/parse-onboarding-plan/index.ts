@@ -115,6 +115,19 @@ function dayOutcomeFromTasks(baseOutcome: string, tasks: string[], dayNo: number
   return compactPhrase(`${safeDayLabel(dayNo)} milestone: ${phrase || "progress reviewed"}`, baseOutcome || `${safeDayLabel(dayNo)} milestone completed`, DAY_OUTCOME_MAX);
 }
 
+function deriveWeekGoal(week: PlanWeek, weekIndex: number) {
+  const titles = week.days
+    .map((day) => day.title)
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(" and ");
+  return compactPhrase(
+    titles ? `Build capability in ${titles}` : `Complete Week ${weekIndex + 1} onboarding outcomes`,
+    `Complete Week ${weekIndex + 1} onboarding outcomes`,
+    140,
+  );
+}
+
 function blankDay(globalDay: number): PlanDay {
   return {
     g: globalDay,
@@ -125,20 +138,30 @@ function blankDay(globalDay: number): PlanDay {
 }
 
 function makeDaysDistinct(plan: OakBoardPlan): OakBoardPlan {
+  const globalSeen = new Set<string>();
+  const weekGoalSeen = new Set<string>();
+
   return {
     ...plan,
-    weeks: plan.weeks.map((week) => {
+    weeks: plan.weeks.map((week, weekIndex) => {
       const seen = new Set<string>();
+      const goalSignature = week.goal.toLowerCase();
+      const goal = !goalSignature || weekGoalSeen.has(goalSignature)
+        ? deriveWeekGoal(week, weekIndex)
+        : week.goal;
+      weekGoalSeen.add(goal.toLowerCase());
+
       return {
         ...week,
+        goal,
         days: week.days.map((day, index) => {
           const signature = JSON.stringify({
-            title: day.title.toLowerCase(),
             tasks: day.tasks.map((task) => task.toLowerCase()),
             outcome: day.outcome.toLowerCase(),
           });
-          if (!seen.has(signature)) {
+          if (!seen.has(signature) && !globalSeen.has(signature)) {
             seen.add(signature);
+            globalSeen.add(signature);
             return day;
           }
 
@@ -156,7 +179,10 @@ function makeDaysDistinct(plan: OakBoardPlan): OakBoardPlan {
             outcome: dayOutcomeFromTasks(day.outcome, tasks, day.g),
           };
           seen.add(JSON.stringify({
-            title: updatedDay.title.toLowerCase(),
+            tasks: updatedDay.tasks.map((task) => task.toLowerCase()),
+            outcome: updatedDay.outcome.toLowerCase(),
+          }));
+          globalSeen.add(JSON.stringify({
             tasks: updatedDay.tasks.map((task) => task.toLowerCase()),
             outcome: updatedDay.outcome.toLowerCase(),
           }));
@@ -235,7 +261,16 @@ function normalizePlan(input: Partial<OakBoardPlan>, preferredWeeks?: number): O
   return normalized;
 }
 
+function extractLabeledValue(rawText: string, label: string) {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = rawText.match(new RegExp(`^\\s*${escapedLabel}\\s*:\\s*(.+)$`, "im"));
+  return match ? match[1].trim() : "";
+}
+
 function extractRole(rawText: string) {
+  const labeledRole = extractLabeledValue(rawText, "Role");
+  if (labeledRole) return labeledRole;
+
   const designationMatch = rawText.match(/Designation\s*\n?\s*([^\n]+)/i)
     || rawText.match(/Designation\s*[:\-]\s*([^\n]+)/i)
     || rawText.match(/for\s+(?:the\s+)?([A-Za-z][A-Za-z\s/&-]{2,60})\s+role/i);
@@ -243,6 +278,9 @@ function extractRole(rawText: string) {
 }
 
 function extractReports(rawText: string) {
+  const labeledReports = extractLabeledValue(rawText, "Reports To");
+  if (labeledReports) return labeledReports;
+
   const mentionMatch = rawText.match(/@([^,\n]+)(?:\s*\/\s*@?([^,\n]+))?.{0,80}onboarding plan/i);
   if (mentionMatch) return [mentionMatch[1], mentionMatch[2]].filter(Boolean).join(" / ").trim();
   const fromMatch = rawText.match(/From:\s*([^\n<]+)/i);
@@ -250,10 +288,69 @@ function extractReports(rawText: string) {
 }
 
 function extractCollaborators(rawText: string) {
+  const labeledCollaborators = extractLabeledValue(rawText, "Collaborates With");
+  if (labeledCollaborators) return labeledCollaborators;
+
   const toMatch = rawText.match(/To:\s*([\s\S]*?)(?:\nCc:|\nSubject:)/i);
   return toMatch
     ? toMatch[1].replace(/<[^>]+>/g, "").replace(/\s*;\s*/g, ", ").replace(/\n+/g, " ").trim().slice(0, 160)
     : "";
+}
+
+function cleanWeekTitle(value: string, weekNo: number) {
+  const normalized = value.replace(/\s*[—–-]\s*/g, " - ").trim();
+  return normalized || `Week ${weekNo}`;
+}
+
+function parseNotebookStylePlan(rawText: string): Partial<OakBoardPlan> | null {
+  if (!/Week Title\s*:/i.test(rawText) || !/Day Goal\s*:/i.test(rawText) || !/Day Outcome\s*:/i.test(rawText)) {
+    return null;
+  }
+
+  const weekRegex = /Week\s+Title\s*:\s*(?:Week\s+)?(\d+)?\s*[—–-]?\s*([^\n]+)\n(?:Objective|Goal)\s*:\s*([^\n]+)([\s\S]*?)(?=Week\s+Title\s*:|$)/gi;
+  const weeks: PlanWeek[] = [];
+  let weekMatch: RegExpExecArray | null;
+
+  while ((weekMatch = weekRegex.exec(rawText)) !== null) {
+    const weekNo = weekMatch[1] ? Number(weekMatch[1]) : weeks.length + 1;
+    const title = cleanWeekTitle(`Week ${weekNo} - ${weekMatch[2].trim()}`, weekNo);
+    const goal = weekMatch[3].trim();
+    const body = weekMatch[4].trim();
+    const dayRegex = /Day\s+(\d+)(?:\s+([0-9]{1,2}\s+[A-Za-z]+\s+[0-9]{4}\s+\([^)]+\)|[0-9]{4}-[0-9]{2}-[0-9]{2}))?[\s\S]*?Day\s+Goal\s*:\s*([^\n]+)\nTasks\s*:\s*([\s\S]*?)Day\s+Outcome\s*:\s*([^\n]+)(?=\nDay\s+\d+|\nWeek\s+Title\s*:|$)/gi;
+    const days: PlanDay[] = [];
+    let dayMatch: RegExpExecArray | null;
+
+    while ((dayMatch = dayRegex.exec(body)) !== null) {
+      const dayNo = Number(dayMatch[1]);
+      const date = cleanText(dayMatch[2], 40) || undefined;
+      const title = dayMatch[3].trim();
+      const tasks = dayMatch[4]
+        .split("\n")
+        .map((line) => line.replace(/^[-•*]\s*/, "").trim())
+        .filter(Boolean);
+      const outcome = dayMatch[5].trim();
+
+      days.push({
+        g: dayNo,
+        date,
+        title,
+        tasks,
+        outcome,
+      });
+    }
+
+    weeks.push({ title, goal, days });
+  }
+
+  if (!weeks.length || weeks.every((week) => !week.days.length)) return null;
+
+  return {
+    role: extractRole(rawText),
+    reports: extractReports(rawText),
+    collab: extractCollaborators(rawText),
+    nWeeks: weeks.length > 2 ? 4 : 2,
+    weeks,
+  };
 }
 
 function parseWeekBlocks(rawText: string): PlanWeek[] {
@@ -314,6 +411,9 @@ function parseWeekBlocks(rawText: string): PlanWeek[] {
 }
 
 function heuristicParse(rawText: string, preferredWeeks?: number): OakBoardPlan {
+  const notebookPlan = parseNotebookStylePlan(rawText);
+  if (notebookPlan) return normalizePlan(notebookPlan, preferredWeeks);
+
   return normalizePlan({
     role: extractRole(rawText),
     reports: extractReports(rawText),
@@ -323,9 +423,43 @@ function heuristicParse(rawText: string, preferredWeeks?: number): OakBoardPlan 
   }, preferredWeeks);
 }
 
+function notebookStyleReference() {
+  return `NotebookLM-style OakBoard reasoning framework:
+- Do not use fixed role templates. Build the plan from the uploaded PDF/email/text and the user's requested role, duration, start date, reporting line, collaborators, tools, deliverables, and management instructions.
+- First extract a private working table from the source with these columns when available:
+  Role | Onboarding Duration | Onboarding Phase | Scheduled Day/Week | Key Activity/Topic | Expected Outcome | Success Metric.
+- If a column is missing, infer it from the surrounding source context and role responsibilities. Do not invent unrelated company processes or copy examples from another role.
+- Convert the extracted working table into OakBoard fields:
+  - role = source role or requested role.
+  - reports = source reporting manager/team.
+  - collab = source collaborators, stakeholders, tools teams, or delivery teams.
+  - week.title = "Week N - <source-driven phase name>".
+  - week.goal = a clear objective for that source-driven phase.
+  - day.title = the day's key activity/topic.
+  - day.tasks = 4 concrete actions derived from that day/week source context.
+  - day.outcome = expected outcome or success metric rewritten as one concise day result.
+- Respect source specificity:
+  - If source includes exact daily activities, preserve them.
+  - If source gives only weekly phases, distribute them into progressive day-specific milestones.
+  - If source is only an email request, infer a practical onboarding plan from the requested role and constraints.
+- Every day must be role-specific, source-specific, and different from the other days.
+- Never use "Not in source" in final output.
+- Avoid repeated goals/tasks/outcomes. Every day should feel like a distinct milestone from the uploaded content.`;
+}
+
 function parserSystemPrompt(preferredWeeks?: number) {
   return `You convert messy management emails, PDF text, or onboarding notes into strict OakBoard JSON.
 Return only valid JSON and no markdown.
+${notebookStyleReference()}
+Map source labels exactly when present:
+- "Role:" -> role
+- "Reports To:" -> reports
+- "Collaborates With:" -> collab
+- "Week Title:" -> week.title
+- "Objective:" -> week.goal
+- "Day Goal:" -> day.title
+- "Tasks:" lines -> day.tasks
+- "Day Outcome:" -> day.outcome
 Schema:
 {
   "role": "string",
@@ -353,6 +487,11 @@ Rules:
 - Each week must have exactly 5 days.
 - Day numbers must be sequential from 1.
 - If a source combines Day 1-2, split it into separate days with useful tasks.
+- Never copy the same weekly goal across multiple weeks.
+- Never copy the same task list or same outcome across multiple days.
+- Every day must have a unique practical title, unique tasks, and a unique outcome based on the source.
+- If the source has grouped or sparse content, infer day-specific work from the role and nearby context.
+- If the source contains explicit day goals/tasks/outcomes, preserve that exact meaning and put it in the matching field.
 - Prefer practical onboarding actions over vague summaries.`;
 }
 
@@ -404,6 +543,12 @@ async function callOllama(rawText: string, preferredWeeks?: number): Promise<Oak
       model,
       stream: false,
       ...(!isCloud ? { format: "json" } : {}),
+      options: {
+        temperature: 0.05,
+        top_p: 0.85,
+        repeat_penalty: 1.15,
+        num_ctx: 12000,
+      },
       messages: [
         { role: "system", content: parserSystemPrompt(preferredWeeks) },
         { role: "user", content: rawText },
@@ -541,6 +686,7 @@ export default {
       let parsedPlan: OakBoardPlan;
       let usedProvider = provider;
       let usedModel = Deno.env.get("AI_MODEL") || Deno.env.get("OLLAMA_MODEL") || undefined;
+      const structuredPlan = parseNotebookStylePlan(rawText);
 
       try {
         if (provider === "openai-compatible") {
@@ -553,9 +699,13 @@ export default {
           usedModel = undefined;
         }
       } catch (providerError) {
-        console.error("AI parser provider failed, falling back to heuristic parser:", providerError);
-        parsedPlan = heuristicParse(rawText, preferredWeeks);
-        usedProvider = `${provider}-fallback-heuristic`;
+        console.error("AI parser provider failed, falling back to structured/heuristic parser:", providerError);
+        parsedPlan = structuredPlan
+          ? normalizePlan(structuredPlan, preferredWeeks)
+          : heuristicParse(rawText, preferredWeeks);
+        usedProvider = structuredPlan
+          ? `${provider}-fallback-structured-notebook-parser`
+          : `${provider}-fallback-heuristic`;
       }
 
       const plan = normalizePlan(parsedPlan, preferredWeeks);

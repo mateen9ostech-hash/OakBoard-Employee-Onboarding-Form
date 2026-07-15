@@ -11,7 +11,7 @@ This file is the live checklist for OakBoard. After each completed task, update 
 - [x] Rename/normalize project folder to `OakBoard-Employee-Onboarding-Form`.
 - [x] Clean old duplicate OakBoard project copies from the local workspace.
 - [x] Fix major `Verifying session...` loop issues in the static app auth guard.
-- [x] Reduce local session lifetime from 15 minutes to 2 minutes.
+- [x] Set local session freshness window to 15 minutes minimum.
 - [x] Preserve existing static app flow: Login -> Fill Details -> Generate Form.
 - [x] Add local Supabase SDK bundle usage for safer static-app auth loading.
 - [x] Add Supabase migration for onboarding plans/imports/email logs.
@@ -46,6 +46,9 @@ This file is the live checklist for OakBoard. After each completed task, update 
 - [x] Migrate the real `FillDetails.html` UI into React.
 - [x] Migrate the Import with AI modal into React.
 - [x] Connect React Import with AI flow to `parse-onboarding-plan`.
+- [x] Make Import with AI modal step-wise: choose Text, Email, or PDF first.
+- [x] Show PDF upload only for PDF imports and text boxes only for Text/Email imports.
+- [x] Extract readable PDF text before parsing instead of sending raw `%PDF` file bytes.
 - [x] Migrate the real `GenerateForm.html` preview into React.
 - [x] Preserve 16:9 / landscape print-preview layout in React.
 - [x] Preserve exact day-card sizing rules in React:
@@ -90,10 +93,13 @@ This file is the live checklist for OakBoard. After each completed task, update 
 
 ### Backend and AI parser
 
-- [ ] Configure Supabase Edge Function secrets for AI provider.
-- [ ] Configure `AI_PROVIDER=ollama` when ready.
-- [ ] Add/verify Ollama API key in Supabase secrets, not frontend code.
+- [x] Configure Supabase Edge Function secrets for AI provider.
+- [x] Configure `AI_PROVIDER=ollama` when ready.
+- [x] Add/verify Ollama API key in Supabase secrets, not frontend code.
 - [x] Improve parser so grouped day ranges do not duplicate same data across all days.
+- [x] Improve parser post-processing so repeated AI goals/tasks/outcomes are made day/week-specific.
+- [x] Add deterministic NotebookLM-style parser for Role, Reports To, Collaborates With, Week Title, Objective, Day Goal, Tasks, and Day Outcome content.
+- [x] Tune Ollama prompt with NotebookLM-style dynamic extraction framework instead of fixed role templates.
 - [x] Add parser validation for 2-week vs 4-week plan duration.
 - [x] Save parsed/imported plans into Supabase Postgres.
 - [ ] Add import history or reusable saved plans if required.
@@ -102,10 +108,10 @@ This file is the live checklist for OakBoard. After each completed task, update 
 
 - [x] Add Vercel configuration for React deployment if needed.
 - [x] Add Vercel environment variable instructions.
-- [ ] Decide final deployment target for React app.
+- [x] Decide final deployment target for React app.
 - [x] Test production build locally before every deploy.
 - [x] Push current React migration changes after user says `push`.
-- [ ] Deploy only after explicit user approval.
+- [x] Deploy only after explicit user approval.
 
 ### Cleanup
 

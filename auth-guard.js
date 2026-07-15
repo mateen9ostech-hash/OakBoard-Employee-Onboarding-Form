@@ -10,7 +10,7 @@
   const SESSION_CACHE_KEY = 'obf_session_cache';
   const SUPABASE_AUTH_STORAGE_KEY = 'sb-avdwwlwxmnuqphxlpgrn-auth-token';
   const SESSION_CHECK_TIMEOUT_MS = 10000;
-  const SESSION_CACHE_MAX_AGE_MS = 2 * 60 * 1000;
+  const SESSION_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
 
   function initClient() {
     try {
@@ -203,7 +203,7 @@
   window.invokeAuthenticatedFunction = async function invokeAuthenticatedFunction(name, body) {
     let session = getPersistedSession();
 
-    // The lightweight 2-minute page cache can expire while the user is
+    // The lightweight 15-minute page cache can expire while the user is
     // preparing a long import. Ask the Supabase client for its live session
     // before treating that as a real sign-out.
     if (!session) {

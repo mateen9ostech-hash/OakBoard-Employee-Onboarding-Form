@@ -1,7 +1,7 @@
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 
-export const SESSION_MAX_AGE_MS = 2 * 60 * 1000
+export const SESSION_MAX_AGE_MS = 15 * 60 * 1000
 export const SESSION_CHECK_TIMEOUT_MS = 10_000
 
 export type SessionCheck =

@@ -1996,6 +1996,56 @@ textarea:focus {
   padding: 20px 24px;
 }
 
+.import-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.import-step-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #152033;
+  font-size: 13px;
+}
+
+.import-step-title span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--green);
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.import-choice-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.import-choice-row button {
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  color: #354152;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 12px;
+}
+
+.import-choice-row button.active {
+  border-color: var(--green);
+  background: #ecfdf3;
+  color: var(--green-dark);
+  box-shadow: 0 0 0 3px rgba(36, 179, 75, 0.12);
+}
+
 .import-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

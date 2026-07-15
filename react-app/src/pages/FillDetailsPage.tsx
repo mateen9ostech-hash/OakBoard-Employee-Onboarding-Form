@@ -1,7 +1,11 @@
 import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import * as pdfjs from 'pdfjs-dist'
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import { invokeAuthenticatedFunction, signOut } from '../lib/auth'
 import { type OnboardingPlan, type PlanWeek, writeStoredPlan } from '../types/plan'
+
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
 const DPW = 5
 const DAY_TITLE_MAX = 90
@@ -17,6 +21,8 @@ type ImportPayload = {
   preferredWeeks?: number
   sourceFilename?: string | null
 }
+
+type ImportSource = 'manual_text' | 'email_text' | 'pdf_text'
 
 type ImportResult = {
   provider?: string
@@ -159,7 +165,7 @@ export function FillDetailsPage() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [importOpen, setImportOpen] = useState(false)
-  const [importSource, setImportSource] = useState('email_text')
+  const [importSource, setImportSource] = useState<ImportSource>('manual_text')
   const [importWeeks, setImportWeeks] = useState('auto')
   const [importText, setImportText] = useState('')
   const [importFileName, setImportFileName] = useState<string | null>(null)
@@ -336,16 +342,51 @@ export function FillDetailsPage() {
     setOpenWeeks(new Set(Array.from({ length: importedWeeks }, (_, index) => index)))
   }
 
+  function setImportType(nextSource: ImportSource) {
+    setImportSource(nextSource)
+    setImportText('')
+    setImportFileName(null)
+    setImportStatus(null)
+  }
+
+  async function extractPdfText(file: File) {
+    const data = await file.arrayBuffer()
+    const pdf = await pdfjs.getDocument({ data }).promise
+    const pageTexts: string[] = []
+
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber)
+      const content = await page.getTextContent()
+      const text = content.items
+        .map((item) => ('str' in item ? item.str : ''))
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+      if (text) pageTexts.push(text)
+    }
+
+    return pageTexts.join('\n\n').trim()
+  }
+
   async function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
     try {
-      const text = await file.text()
-      if (!text.trim()) throw new Error('This file does not contain readable text.')
-      setImportText(text.slice(0, 120000))
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+      const text = isPdf ? await extractPdfText(file) : await file.text()
+      const cleanedText = text.replace(/\u0000/g, '').trim()
+      if (!cleanedText) {
+        throw new Error(isPdf
+          ? 'This PDF does not contain selectable text. Export/copy text from the PDF or use an OCR PDF.'
+          : 'This file does not contain readable text.')
+      }
+      if (isPdf && /^%PDF-\d/i.test(cleanedText)) {
+        throw new Error('This PDF could not be extracted as readable text. Please use a text-selectable PDF or OCR it first.')
+      }
+      setImportText(cleanedText.slice(0, 120000))
       setImportFileName(file.name)
-      setImportSource(file.name.toLowerCase().endsWith('.eml') ? 'email_text' : 'manual_text')
-      setImportStatus({ type: 'info', message: `${file.name} loaded. Review the text, then parse it.` })
+      setImportSource(isPdf ? 'pdf_text' : file.name.toLowerCase().endsWith('.eml') ? 'email_text' : 'manual_text')
+      setImportStatus({ type: 'info', message: `${file.name} loaded and readable text was extracted. Now parse it.` })
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'The selected file could not be read.'
       setImportStatus({ type: 'error', message })
@@ -355,7 +396,7 @@ export function FillDetailsPage() {
   async function parseImportedPlan() {
     const rawText = importText.trim()
     if (rawText.length < 40) {
-      setImportStatus({ type: 'error', message: 'Please paste enough source content to build a useful plan.' })
+      setImportStatus({ type: 'error', message: importSource === 'pdf_text' ? 'Please upload a readable PDF first.' : 'Please paste enough source content to build a useful plan.' })
       return
     }
 
@@ -514,12 +555,39 @@ export function FillDetailsPage() {
               <button className="import-close" onClick={() => setImportOpen(false)} type="button">×</button>
             </div>
             <div className="import-body">
-              <div className="import-grid">
-                <div className="import-field"><label>Content type</label><select onChange={(event) => setImportSource(event.target.value)} value={importSource}><option value="email_text">Email text</option><option value="pdf_text">PDF text</option><option value="notebooklm_text">NotebookLM text</option><option value="manual_text">Other notes</option></select></div>
-                <div className="import-field"><label>Plan duration</label><select onChange={(event) => setImportWeeks(event.target.value)} value={importWeeks}><option value="auto">Detect automatically</option><option value="2">2 weeks</option><option value="4">4 weeks</option></select></div>
-              </div>
-              <div className="import-field"><label>Optional text or email file</label><input className="import-file" accept=".txt,.eml,text/plain,message/rfc822" onChange={handleImportFile} type="file" /><span className="import-help">For a PDF, copy its text and paste it below.</span></div>
-              <div className="import-field"><label>Source content *</label><textarea onChange={(event) => setImportText(event.target.value)} placeholder="Paste the complete email, PDF text, or onboarding notes here..." value={importText} /></div>
+              <section className="import-step">
+                <div className="import-step-title"><span>1</span><strong>Select source type</strong></div>
+                <div className="import-choice-row" role="radiogroup" aria-label="Import source type">
+                  <button className={importSource === 'manual_text' ? 'active' : ''} onClick={() => setImportType('manual_text')} type="button">Text</button>
+                  <button className={importSource === 'email_text' ? 'active' : ''} onClick={() => setImportType('email_text')} type="button">Email</button>
+                  <button className={importSource === 'pdf_text' ? 'active' : ''} onClick={() => setImportType('pdf_text')} type="button">PDF</button>
+                </div>
+              </section>
+
+              <section className="import-step">
+                <div className="import-step-title"><span>2</span><strong>Select plan duration</strong></div>
+                <div className="import-field"><select onChange={(event) => setImportWeeks(event.target.value)} value={importWeeks}><option value="auto">Detect automatically</option><option value="2">2 weeks</option><option value="4">4 weeks</option></select></div>
+              </section>
+
+              <section className="import-step">
+                <div className="import-step-title"><span>3</span><strong>{importSource === 'pdf_text' ? 'Upload PDF file' : importSource === 'email_text' ? 'Paste email text' : 'Paste text content'}</strong></div>
+                {importSource === 'pdf_text' ? (
+                  <div className="import-field">
+                    <label>PDF file *</label>
+                    <input className="import-file" accept=".pdf,application/pdf" onChange={handleImportFile} type="file" />
+                    <span className="import-help">{importFileName ? `${importFileName} ready for parsing.` : 'Upload a selectable-text PDF. Scanned image-only PDFs need OCR first.'}</span>
+                  </div>
+                ) : (
+                  <div className="import-field">
+                    <label>{importSource === 'email_text' ? 'Email content *' : 'Source content *'}</label>
+                    <textarea
+                      onChange={(event) => setImportText(event.target.value)}
+                      placeholder={importSource === 'email_text' ? 'Paste the complete onboarding email here...' : 'Paste the onboarding notes or copied PDF text here...'}
+                      value={importText}
+                    />
+                  </div>
+                )}
+              </section>
               {importStatus && <div className={`import-status on ${importStatus.type}`}>{importStatus.message}</div>}
             </div>
             <div className="import-actions">
