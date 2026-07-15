@@ -1,5 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
+import { toPng } from 'html-to-image'
+import { jsPDF } from 'jspdf'
+import { invokeAuthenticatedFunction } from '../lib/auth'
 import { type PlanDay, type PlanWeek, readStoredPlan } from '../types/plan'
 
 const DAY_TITLE_MAX = 90
@@ -8,6 +11,24 @@ const DAY_TASK_SHORT_MAX = 50
 const DAY_TASK_COUNT_LONG = 4
 const DAY_TASK_COUNT_SHORT = 6
 const DAY_OUTCOME_MAX = 90
+const DEMO_RECIPIENT_EMAIL = 'mateen9ostech@gmail.com'
+
+type EmailPayload = {
+  to: string
+  cc?: string
+  subject: string
+  html: string
+  attachment: {
+    filename: string
+    content: string
+  }
+}
+
+type EmailResult = {
+  ok: boolean
+  id?: string
+  error?: string
+}
 
 function limitText(value: unknown, max: number) {
   return String(value ?? '').trim().slice(0, max)
@@ -33,6 +54,14 @@ function formatDate(date: unknown) {
     year: 'numeric',
     weekday: 'short',
   })
+}
+
+function escapeHtml(value: unknown) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }
 
 function fitClass(title: string, tasks: string[], outcome: string) {
@@ -154,6 +183,14 @@ function PlanPage({
 
 export function GenerateFormPage() {
   const plan = useMemo(() => readStoredPlan(), [])
+  const [exporting, setExporting] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
+  const [emailTo, setEmailTo] = useState(DEMO_RECIPIENT_EMAIL)
+  const [emailCc, setEmailCc] = useState('')
+  const [emailNote, setEmailNote] = useState('')
+  const [emailError, setEmailError] = useState('')
+  const [emailNotice, setEmailNotice] = useState('')
+  const [sendingEmail, setSendingEmail] = useState(false)
 
   if (!plan) {
     return <Navigate to="/fill-details" replace />
@@ -177,12 +214,197 @@ export function GenerateFormPage() {
   const role = plan.role || ''
   const reports = plan.reports || plan.reportsTo || ''
   const collab = plan.collab || plan.collaboratesWith || ''
+  const filename = `OakBoard-${nWeeks}-Week-Onboarding-Plan.pdf`
+
+  async function buildPdfAttachment() {
+    const pages = Array.from(document.querySelectorAll<HTMLElement>('.plan-doc-react'))
+    if (pages.length === 0) throw new Error('No plan pages found.')
+
+    const pdf = new jsPDF({
+      orientation: 'landscape',
+      unit: 'px',
+      format: [1920, 1080],
+      hotfixes: ['px_scaling'],
+    })
+
+    for (const [index, page] of pages.entries()) {
+      const dataUrl = await toPng(page, {
+        cacheBust: true,
+        pixelRatio: 2,
+        width: 1920,
+        height: 1080,
+        style: {
+          margin: '0',
+          transform: 'none',
+          boxShadow: 'none',
+        },
+      })
+
+      if (index > 0) pdf.addPage([1920, 1080], 'landscape')
+      pdf.addImage(dataUrl, 'PNG', 0, 0, 1920, 1080, undefined, 'FAST')
+    }
+
+    const dataUri = pdf.output('datauristring')
+    return {
+      filename,
+      content: dataUri.slice(dataUri.indexOf(',') + 1),
+    }
+  }
+
+  async function downloadPdf() {
+    setExporting(true)
+    try {
+      const attachment = await buildPdfAttachment()
+      const binary = atob(attachment.content)
+      const bytes = new Uint8Array(binary.length)
+      for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index)
+      }
+
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = attachment.filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'PDF export failed.'
+      window.alert(message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  function buildEmailHtml(note: string) {
+    const planLabel = nWeeks === 4 ? 'Four-Week' : 'Two-Week'
+    const noteBlock = note
+      ? `<tr><td style="padding:16px 32px 0;"><div style="background:#f0fdf4;border-left:4px solid #24B34B;border-radius:4px;padding:12px 16px;font-size:14px;color:#354152;line-height:1.6;"><strong style="color:#01621C;">Note from sender:</strong><br>${escapeHtml(note)}</div></td></tr>`
+      : ''
+
+    const weekRows = weeks
+      .slice(0, nWeeks)
+      .map((week, weekIndex) => {
+        const dayRows = week.days
+          .slice(0, 5)
+          .map((day) => {
+            const tasks = limitTasks(day.tasks)
+            const taskRows = tasks
+              .map((task) => `<li style="font-size:12px;color:#495565;margin-bottom:4px;line-height:1.5;">${escapeHtml(task)}</li>`)
+              .join('')
+            return `
+              <tr><td style="padding:10px 32px 0;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #e4e8e3;border-radius:10px;overflow:hidden;">
+                  <tr><td style="background:#f8faf7;padding:8px 14px;border-bottom:1px solid #e4e8e3;">
+                    <span style="background:#24B34B;color:white;font-size:11px;font-weight:600;padding:2px 9px;border-radius:6px;">Day ${day.g || day.day}</span>
+                    ${day.date ? `<span style="font-size:11px;color:#697282;margin-left:8px;">${escapeHtml(formatDate(day.date))}</span>` : ''}
+                  </td></tr>
+                  <tr><td style="padding:12px 14px;">
+                    <p style="font-size:13px;font-weight:600;color:#101727;margin:0 0 8px;">${escapeHtml(limitText(day.title, DAY_TITLE_MAX))}</p>
+                    ${taskRows ? `<ul style="margin:0 0 8px;padding-left:18px;">${taskRows}</ul>` : ''}
+                    ${day.outcome ? `<div style="background:#f0fdf4;border-radius:4px;padding:8px 10px;font-size:12px;color:#354152;line-height:1.5;">✓ ${escapeHtml(limitText(day.outcome, DAY_OUTCOME_MAX))}</div>` : ''}
+                  </td></tr>
+                </table>
+              </td></tr>`
+          })
+          .join('')
+
+        return `
+          <tr><td style="padding:24px 32px 0;">
+            <div style="background:#24B34B;color:white;font-weight:700;font-size:13px;padding:6px 14px;border-radius:4px;display:inline-block;letter-spacing:.3px;">
+              Week ${weekIndex + 1} — ${escapeHtml(week.title || 'Training Plan')}
+            </div>
+            ${week.goal ? `<p style="font-size:13px;color:#697282;margin:6px 0 0;">${escapeHtml(week.goal)}</p>` : ''}
+          </td></tr>
+          ${dayRows}`
+      })
+      .join('')
+
+    return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f8faf7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8faf7;padding:32px 0;">
+<tr><td align="center"><table width="680" cellpadding="0" cellspacing="0" style="max-width:680px;width:100%;">
+  <tr><td style="background:#24B34B;border-radius:12px 12px 0 0;padding:24px 32px;">
+    <div style="color:white;font-size:22px;font-weight:800;">OakBoard</div>
+    <div style="color:#dcfce7;font-size:13px;margin-top:4px;">Oak Street Technologies</div>
+  </td></tr>
+  <tr><td style="background:white;padding:26px 32px 8px;">
+    <h1 style="font-size:22px;color:#101727;margin:0 0 16px;">${planLabel} Onboarding Plan</h1>
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="background:#f8faf7;border:1px solid #e4e8e3;border-radius:8px;padding:12px;"><div style="font-size:10px;color:#697282;text-transform:uppercase;font-weight:700;">Role</div><div style="font-size:14px;color:#101727;font-weight:700;margin-top:4px;">${escapeHtml(role || '—')}</div></td>
+        <td width="10"></td>
+        <td style="background:#f8faf7;border:1px solid #e4e8e3;border-radius:8px;padding:12px;"><div style="font-size:10px;color:#697282;text-transform:uppercase;font-weight:700;">Reports To</div><div style="font-size:14px;color:#101727;font-weight:700;margin-top:4px;">${escapeHtml(reports || '—')}</div></td>
+        <td width="10"></td>
+        <td style="background:#f8faf7;border:1px solid #e4e8e3;border-radius:8px;padding:12px;"><div style="font-size:10px;color:#697282;text-transform:uppercase;font-weight:700;">Collaborates With</div><div style="font-size:14px;color:#101727;font-weight:700;margin-top:4px;">${escapeHtml(collab || '—')}</div></td>
+      </tr>
+    </table>
+  </td></tr>
+  ${noteBlock}
+  ${weekRows}
+  <tr><td style="background:white;padding:24px 32px 32px;border-radius:0 0 12px 12px;">
+    <p style="font-size:12px;color:#697282;line-height:1.5;margin:0;">A complete landscape PDF copy of this onboarding plan is attached.</p>
+  </td></tr>
+</table></td></tr></table>
+</body></html>`
+  }
+
+  function openEmailModal() {
+    setEmailTo(DEMO_RECIPIENT_EMAIL)
+    setEmailCc('')
+    setEmailNote('')
+    setEmailError('')
+    setEmailNotice('')
+    setEmailOpen(true)
+  }
+
+  async function sendEmail() {
+    setEmailError('')
+    setEmailNotice('')
+
+    if (emailTo.trim().toLowerCase() !== DEMO_RECIPIENT_EMAIL) {
+      setEmailError(`Demo Mode can only send to ${DEMO_RECIPIENT_EMAIL}.`)
+      return
+    }
+
+    if (emailCc.trim()) {
+      setEmailError('CC is unavailable in demo mode.')
+      return
+    }
+
+    setSendingEmail(true)
+    try {
+      const attachment = await buildPdfAttachment()
+      const payload: EmailPayload = {
+        to: emailTo.trim(),
+        subject: `${nWeeks}-Week Onboarding Plan: ${role || 'New Role'} — Oak Street Technologies`,
+        html: buildEmailHtml(emailNote.trim()),
+        attachment,
+      }
+      const result = await invokeAuthenticatedFunction<EmailPayload, EmailResult>('send-onboarding-email', payload)
+      if (result.ok === false) throw new Error(result.error || 'Email was not sent.')
+      setEmailNotice(`Plan sent to ${emailTo.trim()}.`)
+      setEmailNote('')
+      window.setTimeout(() => setEmailOpen(false), 900)
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Failed to send. Please try again.'
+      setEmailError(message)
+    } finally {
+      setSendingEmail(false)
+    }
+  }
 
   return (
     <main className="generate-page">
       <div className="tbr">
         <Link className="btn-tb" to="/fill-details">← Back to details</Link>
         <div className="tbr-r">
+          <button className="btn-tb pri" disabled={exporting} onClick={downloadPdf} type="button">
+            {exporting ? 'Preparing PDF...' : 'Download PDF'}
+          </button>
+          <button className="btn-tb" onClick={openEmailModal} type="button">Send Email</button>
           <button className="btn-tb" onClick={() => window.print()} type="button">Print</button>
           <Link className="btn-tb pri" to="/fill-details">+ New Plan</Link>
         </div>
@@ -201,6 +423,49 @@ export function GenerateFormPage() {
           />
         ))}
       </div>
+
+      {emailOpen && (
+        <div className="email-modal-overlay open" onClick={(event) => event.target === event.currentTarget && setEmailOpen(false)}>
+          <div className="email-modal" role="dialog" aria-modal="true" aria-labelledby="email-modal-title">
+            <div className="email-modal-head">
+              <div className="email-ico">✉</div>
+              <div>
+                <h3 id="email-modal-title">Send Onboarding Plan</h3>
+                <p>Email a formatted copy and attached landscape PDF.</p>
+              </div>
+            </div>
+            <div className="email-modal-body">
+              <div className="email-summary">
+                <strong>Plan:</strong> {nWeeks}-Week Onboarding · {role || '—'}<br />
+                <strong>From:</strong> onboarding@resend.dev<br />
+                <strong>Includes:</strong> {nWeeks * 5} training days across {nWeeks} weeks
+              </div>
+              <div className="demo-notice"><strong>Demo Mode:</strong> Resend test delivery is limited to the verified project-owner email.</div>
+              {emailError && <div className="modal-err show">{emailError}</div>}
+              {emailNotice && <div className="modal-ok show">{emailNotice}</div>}
+              <label className="email-field">
+                Recipient Email *
+                <input readOnly type="email" value={emailTo} onChange={(event) => setEmailTo(event.target.value)} />
+              </label>
+              <label className="email-field">
+                CC (Unavailable in demo mode)
+                <input disabled placeholder="Available after domain verification" type="email" value={emailCc} onChange={(event) => setEmailCc(event.target.value)} />
+              </label>
+              <label className="email-field">
+                Personal Note (Optional)
+                <textarea placeholder="Add a short message to include with the plan..." value={emailNote} onChange={(event) => setEmailNote(event.target.value)} />
+              </label>
+            </div>
+            <div className="email-modal-foot">
+              <button className="btn-tb" disabled={sendingEmail} onClick={() => setEmailOpen(false)} type="button">Cancel</button>
+              <button className={`btn-send ${sendingEmail ? 'loading' : ''}`} disabled={sendingEmail} onClick={sendEmail} type="button">
+                <span className="btn-send-spin" />
+                <span className="btn-send-txt">{sendingEmail ? 'Sending...' : 'Send Email'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

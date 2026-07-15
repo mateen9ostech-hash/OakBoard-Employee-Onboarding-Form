@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getValidSession } from '../lib/auth'
-import { supabase } from '../lib/supabase'
+import { supabase, supabaseEnvReady } from '../lib/supabase'
 
 type AuthTab = 'signin' | 'signup' | 'pending'
 type PasswordVisibility = {
@@ -143,6 +143,30 @@ export function LoginPage() {
     }
   }, [navigate])
 
+  if (!supabaseEnvReady || !supabase) {
+    return (
+      <main className="auth-wrap">
+        <section className="auth-card">
+          <div className="auth-card-hdr">
+            <div className="auth-logo-wrap">
+              <img src="/oakboard-logo.svg" alt="Oak Street Technologies" />
+            </div>
+            <div className="auth-title">Setup Required</div>
+            <div className="auth-sub">Supabase environment variables are missing.</div>
+          </div>
+          <div className="auth-body">
+            <div className="banner-err show">
+              <AlertIcon />
+              <span>Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> in <code>react-app/.env.local</code>, then restart Vite.</span>
+            </div>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
+  const supabaseClient = supabase
+
   function clearErrors() {
     setFieldErrors({})
     setSigninError(null)
@@ -176,7 +200,7 @@ export function LoginPage() {
     }
 
     setBusy('signin')
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
       email: signinEmail.trim(),
       password: signinPassword,
     })
@@ -224,7 +248,7 @@ export function LoginPage() {
     }
 
     setBusy('signup')
-    const { error } = await supabase.auth.signUp({
+    const { error } = await supabaseClient.auth.signUp({
       email: signupEmail.trim(),
       password: signupPassword,
       options: {
@@ -251,7 +275,7 @@ export function LoginPage() {
     }
 
     setBusy('forgot')
-    const { error } = await supabase.auth.resetPasswordForEmail(signinEmail.trim(), {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(signinEmail.trim(), {
       redirectTo: new URL('/login', window.location.origin).href,
     })
     setBusy(null)

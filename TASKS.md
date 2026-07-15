@@ -61,7 +61,7 @@ This file is the live checklist for OakBoard. After each completed task, update 
   - 12px gap.
   - 36px side padding.
   - 9px top/bottom spacing.
-- [ ] Preserve `ph`, `pw`, and `pd` merged wrapper layout rules:
+- [x] Preserve `ph`, `pw`, and `pd` merged wrapper layout rules:
   - centered alignment.
   - 1848px width.
   - 10px margin between divs.
@@ -81,12 +81,12 @@ This file is the live checklist for OakBoard. After each completed task, update 
 
 ### PDF and email output
 
-- [ ] Rebuild PDF generation in React so it matches the preview better.
-- [ ] Ensure browser print does not show date/title/path/page-number headers when using app PDF export.
-- [ ] Keep email output landscape-style and visually aligned with the preview.
-- [ ] Attach/generated email document should match the onboarding-form reference style.
-- [ ] Keep Resend secrets server-side only.
-- [ ] Keep demo mode for unverified Resend domain restrictions.
+- [x] Rebuild PDF generation in React so it matches the preview better.
+- [x] Ensure browser print does not show date/title/path/page-number headers when using app PDF export.
+- [x] Keep email output landscape-style and visually aligned with the preview.
+- [x] Attach/generated email document should match the onboarding-form reference style.
+- [x] Keep Resend secrets server-side only.
+- [x] Keep demo mode for unverified Resend domain restrictions.
 
 ### Backend and AI parser
 

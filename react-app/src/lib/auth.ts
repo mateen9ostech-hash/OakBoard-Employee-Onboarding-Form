@@ -39,6 +39,14 @@ export function isSessionFresh(session: Session): boolean {
 
 export async function getValidSession(): Promise<SessionCheck> {
   try {
+    if (!supabase) {
+      return {
+        ok: false,
+        reason: 'error',
+        message: 'Missing Supabase env. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in react-app/.env.local.',
+      }
+    }
+
     const { data, error } = await withTimeout(
       supabase.auth.getSession(),
       SESSION_CHECK_TIMEOUT_MS,
@@ -68,7 +76,7 @@ export async function getValidSession(): Promise<SessionCheck> {
 }
 
 export async function signOut() {
-  await supabase.auth.signOut()
+  if (supabase) await supabase.auth.signOut()
   localStorage.removeItem('obf_plan_data')
   sessionStorage.removeItem('obf_plan_data')
 }
@@ -84,6 +92,10 @@ export async function invokeAuthenticatedFunction<
 
   if (!sessionResult.ok) {
     throw new Error('Your session is no longer valid.')
+  }
+
+  if (!supabase) {
+    throw new Error('Supabase is not configured.')
   }
 
   const { data, error } = await supabase.functions.invoke<TResult>(name, {
