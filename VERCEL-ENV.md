@@ -11,8 +11,6 @@ Do not add server-side secrets to the React/Vercel frontend:
 
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `RESEND_API_KEY`
-- `OLLAMA_API_KEY`
-
 Those belong in Supabase Edge Function secrets only.
 
 ## Build settings
@@ -23,4 +21,3 @@ If Vercel asks for manual settings:
 - Install command: `cd react-app && npm ci`
 - Build command: `cd react-app && npm run build`
 - Output directory: `react-app/dist`
-

@@ -1,11 +1,7 @@
 import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import * as pdfjs from 'pdfjs-dist'
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url'
-import { invokeAuthenticatedFunction, signOut } from '../lib/auth'
+import { signOut } from '../lib/auth'
 import { type OnboardingPlan, type PlanWeek, writeStoredPlan } from '../types/plan'
-
-pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
 const DPW = 5
 const DAY_TITLE_MAX = 90
@@ -15,19 +11,7 @@ const DAY_TASK_COUNT_LONG = 4
 const DAY_TASK_COUNT_SHORT = 6
 const DAY_OUTCOME_MAX = 90
 
-type ImportPayload = {
-  sourceType: string
-  rawText: string
-  preferredWeeks?: number
-  sourceFilename?: string | null
-}
-
-type ImportSource = 'manual_text' | 'email_text' | 'pdf_text'
-
 type ImportResult = {
-  provider?: string
-  planId?: string | null
-  importId?: string | null
   plan: {
     role?: string
     reports?: string
@@ -131,6 +115,132 @@ function limitTasks(tasks: unknown) {
   return clean.slice(0, max)
 }
 
+function extractLabel(source: string, labels: string[]) {
+  for (const label of labels) {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const match = source.match(new RegExp(`^\\s*${escaped}\\s*:\\s*(.+)$`, 'im'))
+    if (match?.[1]) return match[1].trim()
+  }
+  return ''
+}
+
+function isMissingValue(value: unknown) {
+  const text = String(value ?? '').trim().toLowerCase()
+  return !text || ['n/a', 'not specified', 'not in source', 'untitled role', 'new role'].includes(text)
+}
+
+function fallbackRole(source: string) {
+  return extractLabel(source, ['Role', 'Position', 'Job Title', 'Designation'])
+    || source.match(/(?:Role|Position|Job Title|Designation)\s*[:\-]\s*([^\n]+)/i)?.[1]?.trim()
+    || ''
+}
+
+function fallbackReports(source: string) {
+  return extractLabel(source, ['Reports To', 'Reporting To', 'Manager', 'Supervisor'])
+    || source.match(/(?:reports?\s+to|reporting\s+to|manager|supervisor)\s*[:\-]\s*([^\n]+)/i)?.[1]?.trim()
+    || ''
+}
+
+function fallbackCollaborators(source: string) {
+  return extractLabel(source, ['Collaborates With', 'Collaborators', 'Works With', 'Stakeholders', 'Teams'])
+    || source.match(/(?:collaborates?\s+with|works?\s+with|stakeholders|teams)\s*[:\-]\s*([^\n]+)/i)?.[1]?.trim()
+    || ''
+}
+
+function cleanDayTitle(value: unknown, fallback = '') {
+  const cleaned = String(value ?? '')
+    .trim()
+    .replace(/^day\s+\d+\s*[:\-–—]?\s*/i, '')
+    .replace(/\s*-\s*day\s+\d+\s*:\s*/i, ': ')
+    .replace(/^training\s*[:\-–—]?\s*/i, '')
+    .replace(/\s+training$/i, '')
+    .replace(/\bday\s+\d+\s+training\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const isGeneric = /^(practice role focus|role-specific practice|progress review|daily onboarding progress)$/i.test(cleaned)
+  return limitText(!isGeneric && cleaned ? cleaned : fallback, DAY_TITLE_MAX)
+}
+
+function cleanOutcome(value: unknown, fallback = '') {
+  const cleaned = String(value ?? '')
+    .trim()
+    .replace(/^day\s+\d+\s+milestone\s*:\s*/i, '')
+    .replace(/^day\s+\d+\s*[:\-–—]?\s*/i, '')
+    .replace(/\s+day\s+\d+\s+milestone\s+completed$/i, ' completed')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return limitText(cleaned || fallback, DAY_OUTCOME_MAX)
+}
+
+function cleanWeekTitle(value: unknown, weekIndex: number) {
+  const cleaned = String(value ?? '')
+    .trim()
+    .replace(/^week\s+\d+\s*[:\-–—]?\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return limitText(cleaned ? `Week ${weekIndex + 1} — ${cleaned}` : '', 90)
+}
+
+function normalizeNotebookText(value: string) {
+  return value
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/\u00a0/g, ' ')
+    .replace(/â€”/g, '—')
+    .replace(/â€“/g, '–')
+    .trim()
+}
+
+function parseNotebookPlan(rawValue: string, preferredWeeks: string): ImportResult['plan'] {
+  const source = normalizeNotebookText(rawValue)
+  const weekRegex = /Week\s+Title\s*:\s*(?:Week\s+)?(\d+)?\s*[—–-]?\s*([^\n]+)\n(?:Objective|Goal)\s*:\s*([^\n]+)([\s\S]*?)(?=Week\s+Title\s*:|$)/gi
+  const weeks: ImportResult['plan']['weeks'] = []
+  let weekMatch: RegExpExecArray | null
+
+  while ((weekMatch = weekRegex.exec(source)) !== null) {
+    const weekNo = weekMatch[1] ? Number(weekMatch[1]) : weeks.length + 1
+    const weekTitle = cleanWeekTitle(`Week ${weekNo} — ${weekMatch[2].trim()}`, weekNo - 1)
+    const goal = limitText(weekMatch[3], 140)
+    const body = weekMatch[4].trim()
+    const dayStarts = [...body.matchAll(/^Day\s+(\d+)(?:\s+([0-9]{1,2}\s+[A-Za-z]+\s+[0-9]{4}\s+\([^)]+\)|[0-9]{4}-[0-9]{2}-[0-9]{2}))?.*$/gim)]
+    const days: NonNullable<ImportResult['plan']['weeks'][number]['days']> = []
+
+    dayStarts.forEach((dayStart, index) => {
+      const blockStart = dayStart.index ?? 0
+      const blockEnd = index + 1 < dayStarts.length ? dayStarts[index + 1].index ?? body.length : body.length
+      const block = body.slice(blockStart, blockEnd)
+      const title = block.match(/Day\s+Goal\s*:\s*([^\n]+)/i)?.[1] || ''
+      const taskBlock = block.match(/Tasks\s*:\s*([\s\S]*?)Day\s+Outcome\s*:/i)?.[1] || ''
+      const outcome = block.match(/Day\s+Outcome\s*:\s*([^\n]+)/i)?.[1] || ''
+      if (!title && !taskBlock && !outcome) return
+      const tasks = taskBlock
+        .split('\n')
+        .map((line) => line.replace(/^[-•*]\s*/, '').trim())
+        .filter(Boolean)
+      days.push({
+        title: cleanDayTitle(title),
+        tasks: limitTasks(tasks),
+        outcome: cleanOutcome(outcome),
+      })
+    })
+
+    weeks.push({ title: weekTitle, goal, days })
+  }
+
+  if (!weeks.length || weeks.every((week) => !week.days?.length)) {
+    throw new Error('NotebookLM data format was not recognized. Paste the output with Week Title, Objective, Day Goal, Tasks, and Day Outcome labels.')
+  }
+
+  const requestedWeeks = preferredWeeks === '4' ? 4 : preferredWeeks === '2' ? 2 : weeks.length > 2 ? 4 : 2
+  return {
+    role: fallbackRole(source),
+    reports: fallbackReports(source),
+    collab: fallbackCollaborators(source),
+    nWeeks: requestedWeeks,
+    weeks,
+  }
+}
+
 function nextWeekdayIso() {
   const date = new Date()
   while ([0, 6].includes(date.getDay())) date.setDate(date.getDate() + 1)
@@ -165,12 +275,9 @@ export function FillDetailsPage() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [importOpen, setImportOpen] = useState(false)
-  const [importSource, setImportSource] = useState<ImportSource>('manual_text')
   const [importWeeks, setImportWeeks] = useState('auto')
   const [importText, setImportText] = useState('')
-  const [importFileName, setImportFileName] = useState<string | null>(null)
   const [importStatus, setImportStatus] = useState<{ type: 'info' | 'error'; message: string } | null>(null)
-  const [importing, setImporting] = useState(false)
 
   const dates = useMemo(() => workdays(startDate, nWeeks * DPW), [startDate, nWeeks])
 
@@ -321,20 +428,24 @@ export function FillDetailsPage() {
 
   function applyImportedPlan(plan: ImportResult['plan']) {
     const importedWeeks = Number(plan.nWeeks) === 4 ? 4 : 2
+    const source = importText
     setDuration(importedWeeks)
-    setRole(limitText(plan.role, 80))
-    setReports(limitText(plan.reports, 120))
-    setCollab(limitText(plan.collab, 160))
+    setRole(limitText(isMissingValue(plan.role) ? fallbackRole(source) : plan.role, 80))
+    setReports(limitText(isMissingValue(plan.reports) ? fallbackReports(source) : plan.reports, 120))
+    setCollab(limitText(isMissingValue(plan.collab) ? fallbackCollaborators(source) : plan.collab, 160))
     const nextWeeks = makeWeeks(importedWeeks)
     plan.weeks.slice(0, importedWeeks).forEach((week, wi) => {
-      nextWeeks[wi].title = limitText(week.title, 90)
+      nextWeeks[wi].title = cleanWeekTitle(week.title, wi)
       nextWeeks[wi].goal = limitText(week.goal, 140)
       ;(week.days || []).slice(0, DPW).forEach((day, di) => {
+        const titleFallback = Array.isArray(day.tasks)
+          ? String(day.tasks[0] || '').replace(/^(complete|review|practice)\s+/i, '').split(/[.;:,-]/)[0].trim()
+          : ''
         nextWeeks[wi].days[di] = {
           ...nextWeeks[wi].days[di],
-          title: limitText(day.title, DAY_TITLE_MAX),
+          title: cleanDayTitle(day.title, titleFallback),
           tasks: limitTasks(day.tasks),
-          outcome: limitText(day.outcome, DAY_OUTCOME_MAX),
+          outcome: cleanOutcome(day.outcome),
         }
       })
     })
@@ -342,82 +453,37 @@ export function FillDetailsPage() {
     setOpenWeeks(new Set(Array.from({ length: importedWeeks }, (_, index) => index)))
   }
 
-  function setImportType(nextSource: ImportSource) {
-    setImportSource(nextSource)
-    setImportText('')
-    setImportFileName(null)
-    setImportStatus(null)
-  }
-
-  async function extractPdfText(file: File) {
-    const data = await file.arrayBuffer()
-    const pdf = await pdfjs.getDocument({ data }).promise
-    const pageTexts: string[] = []
-
-    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-      const page = await pdf.getPage(pageNumber)
-      const content = await page.getTextContent()
-      const text = content.items
-        .map((item) => ('str' in item ? item.str : ''))
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-      if (text) pageTexts.push(text)
-    }
-
-    return pageTexts.join('\n\n').trim()
-  }
-
   async function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
     try {
-      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
-      const text = isPdf ? await extractPdfText(file) : await file.text()
+      const text = await file.text()
       const cleanedText = text.replace(/\u0000/g, '').trim()
-      if (!cleanedText) {
-        throw new Error(isPdf
-          ? 'This PDF does not contain selectable text. Export/copy text from the PDF or use an OCR PDF.'
-          : 'This file does not contain readable text.')
-      }
-      if (isPdf && /^%PDF-\d/i.test(cleanedText)) {
-        throw new Error('This PDF could not be extracted as readable text. Please use a text-selectable PDF or OCR it first.')
-      }
+      if (!cleanedText) throw new Error('This file does not contain readable NotebookLM text.')
       setImportText(cleanedText.slice(0, 120000))
-      setImportFileName(file.name)
-      setImportSource(isPdf ? 'pdf_text' : file.name.toLowerCase().endsWith('.eml') ? 'email_text' : 'manual_text')
-      setImportStatus({ type: 'info', message: `${file.name} loaded and readable text was extracted. Now parse it.` })
+      setImportStatus({ type: 'info', message: `${file.name} loaded. Click Fill Form to import it.` })
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'The selected file could not be read.'
       setImportStatus({ type: 'error', message })
     }
   }
 
-  async function parseImportedPlan() {
+  function parseImportedPlan() {
     const rawText = importText.trim()
     if (rawText.length < 40) {
-      setImportStatus({ type: 'error', message: importSource === 'pdf_text' ? 'Please upload a readable PDF first.' : 'Please paste enough source content to build a useful plan.' })
+      setImportStatus({ type: 'error', message: 'Please paste the NotebookLM output first.' })
       return
     }
 
-    setImporting(true)
-    setImportStatus({ type: 'info', message: 'Structuring the content into OakBoard weeks and days...' })
     try {
-      const result = await invokeAuthenticatedFunction<ImportPayload, ImportResult>('parse-onboarding-plan', {
-        sourceType: importSource,
-        rawText,
-        preferredWeeks: importWeeks === 'auto' ? undefined : Number(importWeeks),
-        sourceFilename: importFileName,
-      })
-      applyImportedPlan(result.plan)
+      const plan = parseNotebookPlan(rawText, importWeeks)
+      applyImportedPlan(plan)
       setImportOpen(false)
-      setNotice(`Imported successfully using ${result.provider || 'the configured parser'}${result.planId ? ' and saved to your plans' : ''}. Please review before generating.`)
+      setNotice('NotebookLM data imported locally. Please review before generating.')
       setError('')
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : 'The plan could not be imported.'
+      const message = caught instanceof Error ? caught.message : 'The NotebookLM data could not be imported.'
       setImportStatus({ type: 'error', message })
-    } finally {
-      setImporting(false)
     }
   }
 
@@ -542,7 +608,7 @@ export function FillDetailsPage() {
         <div className="form-actions">
           <button className="btn-reset" onClick={resetAll} type="button">Reset</button>
           <button className="btn-tb sample" onClick={fillDemoData} type="button">Fill Sample Plan</button>
-          <button className="btn-tb" onClick={() => setImportOpen(true)} type="button">Import with AI</button>
+          <button className="btn-tb" onClick={() => setImportOpen(true)} type="button">Import NotebookLM Data</button>
           <button className="btn-gen" type="submit">Generate Plan</button>
         </div>
       </form>
@@ -551,48 +617,36 @@ export function FillDetailsPage() {
         <div className="import-overlay on" onClick={(event) => event.target === event.currentTarget && setImportOpen(false)}>
           <div className="import-modal" role="dialog" aria-modal="true" aria-labelledby="import-title">
             <div className="import-head">
-              <div><h2 id="import-title">Import onboarding plan</h2><p>Paste an email, PDF-extracted text, or onboarding notes. OakBoard will structure it into the current form.</p></div>
+              <div><h2 id="import-title">Import NotebookLM Data</h2><p>Paste the structured output from NotebookLM. OakBoard will place Role, Weeks, Day Goals, Tasks, and Outcomes into the form.</p></div>
               <button className="import-close" onClick={() => setImportOpen(false)} type="button">×</button>
             </div>
             <div className="import-body">
               <section className="import-step">
-                <div className="import-step-title"><span>1</span><strong>Select source type</strong></div>
-                <div className="import-choice-row" role="radiogroup" aria-label="Import source type">
-                  <button className={importSource === 'manual_text' ? 'active' : ''} onClick={() => setImportType('manual_text')} type="button">Text</button>
-                  <button className={importSource === 'email_text' ? 'active' : ''} onClick={() => setImportType('email_text')} type="button">Email</button>
-                  <button className={importSource === 'pdf_text' ? 'active' : ''} onClick={() => setImportType('pdf_text')} type="button">PDF</button>
-                </div>
-              </section>
-
-              <section className="import-step">
-                <div className="import-step-title"><span>2</span><strong>Select plan duration</strong></div>
+                <div className="import-step-title"><span>1</span><strong>Select plan duration</strong></div>
                 <div className="import-field"><select onChange={(event) => setImportWeeks(event.target.value)} value={importWeeks}><option value="auto">Detect automatically</option><option value="2">2 weeks</option><option value="4">4 weeks</option></select></div>
               </section>
 
               <section className="import-step">
-                <div className="import-step-title"><span>3</span><strong>{importSource === 'pdf_text' ? 'Upload PDF file' : importSource === 'email_text' ? 'Paste email text' : 'Paste text content'}</strong></div>
-                {importSource === 'pdf_text' ? (
-                  <div className="import-field">
-                    <label>PDF file *</label>
-                    <input className="import-file" accept=".pdf,application/pdf" onChange={handleImportFile} type="file" />
-                    <span className="import-help">{importFileName ? `${importFileName} ready for parsing.` : 'Upload a selectable-text PDF. Scanned image-only PDFs need OCR first.'}</span>
-                  </div>
-                ) : (
-                  <div className="import-field">
-                    <label>{importSource === 'email_text' ? 'Email content *' : 'Source content *'}</label>
-                    <textarea
-                      onChange={(event) => setImportText(event.target.value)}
-                      placeholder={importSource === 'email_text' ? 'Paste the complete onboarding email here...' : 'Paste the onboarding notes or copied PDF text here...'}
-                      value={importText}
-                    />
-                  </div>
-                )}
+                <div className="import-step-title"><span>2</span><strong>Paste NotebookLM output</strong></div>
+                <div className="import-field">
+                  <label>Optional .txt file</label>
+                  <input className="import-file" accept=".txt,text/plain" onChange={handleImportFile} type="file" />
+                  <span className="import-help">Use this only if you saved the NotebookLM response as a text file.</span>
+                </div>
+                <div className="import-field">
+                  <label>NotebookLM content *</label>
+                  <textarea
+                    onChange={(event) => setImportText(event.target.value)}
+                    placeholder="Paste NotebookLM output here. Expected labels: Role, Reports To, Collaborates With, Week Title, Objective, Day Goal, Tasks, Day Outcome..."
+                    value={importText}
+                  />
+                </div>
               </section>
               {importStatus && <div className={`import-status on ${importStatus.type}`}>{importStatus.message}</div>}
             </div>
             <div className="import-actions">
               <button className="import-cancel" onClick={() => setImportOpen(false)} type="button">Cancel</button>
-              <button className="import-submit" disabled={importing} onClick={parseImportedPlan} type="button">{importing ? 'Parsing...' : 'Parse & Fill Form'}</button>
+              <button className="import-submit" onClick={parseImportedPlan} type="button">Fill Form</button>
             </div>
           </div>
         </div>

@@ -15,10 +15,10 @@ This file is the live checklist for OakBoard. After each completed task, update 
 - [x] Preserve existing static app flow: Login -> Fill Details -> Generate Form.
 - [x] Add local Supabase SDK bundle usage for safer static-app auth loading.
 - [x] Add Supabase migration for onboarding plans/imports/email logs.
-- [x] Add `parse-onboarding-plan` Supabase Edge Function.
+- [x] Remove AI/Ollama parser flow after testing showed it was unreliable.
 - [x] Add `send-onboarding-email` Supabase Edge Function.
 - [x] Add demo-mode email behavior for Resend testing restrictions.
-- [x] Add root `.env.example` with Supabase, Ollama, and Resend placeholders.
+- [x] Add root `.env.example` with Supabase and Resend placeholders.
 - [x] Install Node.js locally for the project workflow.
 - [x] Scaffold React + TypeScript + Vite app in `react-app/`.
 - [x] Install React dependencies including Supabase JS and React Router.
@@ -26,7 +26,7 @@ This file is the live checklist for OakBoard. After each completed task, update 
 - [x] Replace Vite demo with initial OakBoard React app shell.
 - [x] Add React routes for `/login`, `/fill-details`, and `/generate-form`.
 - [x] Add React Supabase client setup.
-- [x] Add React auth/session guard with 2-minute session freshness.
+- [x] Add React auth/session guard with 15-minute session freshness.
 - [x] Add React plan storage helpers compatible with `obf_plan_data`.
 - [x] Add placeholder React Login, Fill Details, and Generate Form pages.
 - [x] Add `react-app/.env.example` for Vite Supabase variables.
@@ -44,11 +44,9 @@ This file is the live checklist for OakBoard. After each completed task, update 
 
 - [x] Migrate the real `Login.html` UI and behavior into React.
 - [x] Migrate the real `FillDetails.html` UI into React.
-- [x] Migrate the Import with AI modal into React.
-- [x] Connect React Import with AI flow to `parse-onboarding-plan`.
-- [x] Make Import with AI modal step-wise: choose Text, Email, or PDF first.
-- [x] Show PDF upload only for PDF imports and text boxes only for Text/Email imports.
-- [x] Extract readable PDF text before parsing instead of sending raw `%PDF` file bytes.
+- [x] Replace Import with AI with local NotebookLM Data import.
+- [x] Parse NotebookLM formatted text locally in the browser.
+- [x] Fill Role, Reports To, Collaborates With, Week Title, Objective, Day Goal, Tasks, and Day Outcome from NotebookLM output.
 - [x] Migrate the real `GenerateForm.html` preview into React.
 - [x] Preserve 16:9 / landscape print-preview layout in React.
 - [x] Preserve exact day-card sizing rules in React:
@@ -91,17 +89,12 @@ This file is the live checklist for OakBoard. After each completed task, update 
 - [x] Keep Resend secrets server-side only.
 - [x] Keep demo mode for unverified Resend domain restrictions.
 
-### Backend and AI parser
+### NotebookLM import
 
-- [x] Configure Supabase Edge Function secrets for AI provider.
-- [x] Configure `AI_PROVIDER=ollama` when ready.
-- [x] Add/verify Ollama API key in Supabase secrets, not frontend code.
-- [x] Improve parser so grouped day ranges do not duplicate same data across all days.
-- [x] Improve parser post-processing so repeated AI goals/tasks/outcomes are made day/week-specific.
-- [x] Add deterministic NotebookLM-style parser for Role, Reports To, Collaborates With, Week Title, Objective, Day Goal, Tasks, and Day Outcome content.
-- [x] Tune Ollama prompt with NotebookLM-style dynamic extraction framework instead of fixed role templates.
-- [x] Add parser validation for 2-week vs 4-week plan duration.
-- [x] Save parsed/imported plans into Supabase Postgres.
+- [x] Remove Supabase `parse-onboarding-plan` Edge Function from local code.
+- [x] Remove Ollama/AI provider env placeholders from local docs.
+- [x] Remove PDF parser dependency after dropping PDF-to-AI import.
+- [x] Keep import flow fully local for pasted NotebookLM text.
 - [ ] Add import history or reusable saved plans if required.
 
 ### Deployment and workflow
