@@ -93,9 +93,9 @@ This file is the live checklist for OakBoard. After each completed task, update 
 - [ ] Configure Supabase Edge Function secrets for AI provider.
 - [ ] Configure `AI_PROVIDER=ollama` when ready.
 - [ ] Add/verify Ollama API key in Supabase secrets, not frontend code.
-- [ ] Improve parser so grouped day ranges do not duplicate same data across all days.
-- [ ] Add parser validation for 2-week vs 4-week plan duration.
-- [ ] Save parsed/imported plans into Supabase Postgres.
+- [x] Improve parser so grouped day ranges do not duplicate same data across all days.
+- [x] Add parser validation for 2-week vs 4-week plan duration.
+- [x] Save parsed/imported plans into Supabase Postgres.
 - [ ] Add import history or reusable saved plans if required.
 
 ### Deployment and workflow

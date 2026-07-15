@@ -75,6 +75,46 @@ function limitTasks(tasks: unknown): string[] {
   return normalized.slice(0, hasLongTask ? 4 : 6);
 }
 
+function safeDayLabel(dayNo: number) {
+  return `Day ${dayNo}`;
+}
+
+function compactPhrase(value: string, fallback: string, max = DAY_TITLE_MAX) {
+  const cleaned = limitText(value, max);
+  return cleaned || fallback.slice(0, max);
+}
+
+function splitTasksAcrossRange(tasks: string[], rangeIndex: number, rangeSize: number, dayTitle: string, dayNo: number) {
+  if (!tasks.length) return [`Complete the ${safeDayLabel(dayNo)} portion of ${dayTitle}`];
+  if (rangeSize <= 1) return tasks;
+
+  const chunkSize = Math.max(1, Math.ceil(tasks.length / rangeSize));
+  const start = rangeIndex * chunkSize;
+  const chunk = tasks.slice(start, start + chunkSize);
+  const fallback = tasks[rangeIndex % tasks.length];
+  return (chunk.length ? chunk : [fallback]).slice(0, 6);
+}
+
+function dayTitleFromTasks(baseTitle: string, tasks: string[], dayNo: number, rangeIndex: number) {
+  const seed = tasks[0] || baseTitle;
+  const phrase = seed
+    .replace(/^complete\s+/i, "")
+    .replace(/^the\s+/i, "")
+    .split(/[.;:,-]/)[0]
+    .trim();
+  return compactPhrase(`${baseTitle} - Day ${rangeIndex + 1}: ${phrase || safeDayLabel(dayNo)} Focus`, `${baseTitle} - ${safeDayLabel(dayNo)} Focus`);
+}
+
+function dayOutcomeFromTasks(baseOutcome: string, tasks: string[], dayNo: number) {
+  const seed = tasks[tasks.length - 1] || tasks[0] || baseOutcome;
+  const phrase = seed
+    .replace(/^complete\s+/i, "")
+    .replace(/^review\s+/i, "")
+    .split(/[.;:,-]/)[0]
+    .trim();
+  return compactPhrase(`${safeDayLabel(dayNo)} milestone: ${phrase || "progress reviewed"}`, baseOutcome || `${safeDayLabel(dayNo)} milestone completed`, DAY_OUTCOME_MAX);
+}
+
 function blankDay(globalDay: number): PlanDay {
   return {
     g: globalDay,
@@ -82,6 +122,72 @@ function blankDay(globalDay: number): PlanDay {
     tasks: ["Review assigned onboarding material", "Practice role-specific workflow"],
     outcome: "Daily onboarding progress reviewed",
   };
+}
+
+function makeDaysDistinct(plan: OakBoardPlan): OakBoardPlan {
+  return {
+    ...plan,
+    weeks: plan.weeks.map((week) => {
+      const seen = new Set<string>();
+      return {
+        ...week,
+        days: week.days.map((day, index) => {
+          const signature = JSON.stringify({
+            title: day.title.toLowerCase(),
+            tasks: day.tasks.map((task) => task.toLowerCase()),
+            outcome: day.outcome.toLowerCase(),
+          });
+          if (!seen.has(signature)) {
+            seen.add(signature);
+            return day;
+          }
+
+          const rotatedTasks = day.tasks.length
+            ? day.tasks.slice(index % day.tasks.length).concat(day.tasks.slice(0, index % day.tasks.length))
+            : blankDay(day.g).tasks;
+          const tasks = limitTasks([
+            ...rotatedTasks.slice(0, Math.min(4, rotatedTasks.length)),
+            `Review ${safeDayLabel(day.g)} progress with the reporting manager`,
+          ]);
+          const updatedDay = {
+            ...day,
+            title: dayTitleFromTasks(day.title.replace(/\s+-\s+Day\s+\d+:.+$/i, ""), tasks, day.g, index),
+            tasks,
+            outcome: dayOutcomeFromTasks(day.outcome, tasks, day.g),
+          };
+          seen.add(JSON.stringify({
+            title: updatedDay.title.toLowerCase(),
+            tasks: updatedDay.tasks.map((task) => task.toLowerCase()),
+            outcome: updatedDay.outcome.toLowerCase(),
+          }));
+          return updatedDay;
+        }),
+      };
+    }),
+  };
+}
+
+function validatePlanShape(plan: OakBoardPlan, preferredWeeks?: number) {
+  const expectedWeeks = preferredWeeks === 2 || preferredWeeks === 4 ? preferredWeeks : plan.nWeeks;
+  if (plan.nWeeks !== expectedWeeks || plan.weeks.length !== expectedWeeks) {
+    throw new Error(`Parser produced ${plan.weeks.length} weeks, expected ${expectedWeeks}.`);
+  }
+
+  const expectedDays = expectedWeeks * 5;
+  const flattenedDays = plan.weeks.flatMap((week) => week.days);
+  if (flattenedDays.length !== expectedDays) {
+    throw new Error(`Parser produced ${flattenedDays.length} days, expected ${expectedDays}.`);
+  }
+
+  flattenedDays.forEach((day, index) => {
+    const expectedGlobalDay = index + 1;
+    if (day.g !== expectedGlobalDay) {
+      throw new Error(`Parser produced invalid day number ${day.g}, expected ${expectedGlobalDay}.`);
+    }
+    if (!day.title || !day.outcome || !day.tasks.length) {
+      throw new Error(`Parser produced incomplete content for Day ${expectedGlobalDay}.`);
+    }
+  });
 }
 
 function normalizePlan(input: Partial<OakBoardPlan>, preferredWeeks?: number): OakBoardPlan {
@@ -116,13 +222,17 @@ function normalizePlan(input: Partial<OakBoardPlan>, preferredWeeks?: number): O
     });
   }
 
-  return {
+  const plan = {
     role: limitText(input.role || "", 80),
     reports: limitText(input.reports || "", 120),
     collab: limitText(input.collab || "", 160),
     nWeeks,
     weeks,
   };
+
+  const normalized = makeDaysDistinct(plan);
+  validatePlanShape(normalized, preferredWeeks);
+  return normalized;
 }
 
 function extractRole(rawText: string) {
@@ -180,24 +290,15 @@ function parseWeekBlocks(rawText: string): PlanWeek[] {
       const rangeSize = Math.max(1, endDay - startDay + 1);
       for (let dayNo = startDay; dayNo <= endDay; dayNo++) {
         const rangeIndex = dayNo - startDay;
-        const assignedTasks = rangeSize === 1
-          ? tasks
-          : tasks.filter((_, taskIndex) => taskIndex % rangeSize === rangeIndex);
-        const dayTasks = assignedTasks.length
-          ? assignedTasks
-          : tasks.length
-          ? [tasks[rangeIndex % tasks.length]]
-          : [`Complete the Day ${dayNo} portion of ${dayTitle}`];
+        const dayTasks = splitTasksAcrossRange(tasks, rangeIndex, rangeSize, dayTitle, dayNo);
         const rangedTitle = rangeSize === 1
           ? dayTitle
-          : `${dayTitle} — Part ${rangeIndex + 1}`;
+          : dayTitleFromTasks(dayTitle, dayTasks, dayNo, rangeIndex);
         days.push({
           g: dayNo,
           title: rangedTitle,
           tasks: dayTasks,
-          outcome: outcome
-            ? `${outcome} (Day ${dayNo} milestone)`
-            : `${dayTitle} Day ${dayNo} milestone completed`,
+          outcome: dayOutcomeFromTasks(outcome, dayTasks, dayNo),
         });
       }
     }
@@ -361,6 +462,45 @@ async function saveImport(params: {
   return Array.isArray(rows) ? rows[0]?.id || null : null;
 }
 
+async function saveParsedPlan(params: {
+  ownerId: string;
+  parsedPlan: OakBoardPlan;
+  importId?: string | null;
+}) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRoleKey) return null;
+
+  const role = params.parsedPlan.role || "New Role";
+  const title = `${params.parsedPlan.nWeeks}-Week Onboarding Plan - ${role}`;
+  const response = await fetch(`${supabaseUrl}/rest/v1/onboarding_plans?select=id`, {
+    method: "POST",
+    headers: {
+      "apikey": serviceRoleKey,
+      "Authorization": `Bearer ${serviceRoleKey}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation",
+    },
+    body: JSON.stringify({
+      owner_id: params.ownerId,
+      title,
+      role: params.parsedPlan.role,
+      reports_to: params.parsedPlan.reports,
+      collaborates_with: params.parsedPlan.collab,
+      duration_weeks: params.parsedPlan.nWeeks,
+      plan_json: params.parsedPlan,
+      source_import_id: params.importId || null,
+    }),
+  });
+
+  if (!response.ok) {
+    console.error("Unable to save parsed onboarding plan:", await response.text());
+    return null;
+  }
+  const rows = await response.json();
+  return Array.isArray(rows) ? rows[0]?.id || null : null;
+}
+
 export default {
   fetch: async (request: Request) => {
     if (request.method === "OPTIONS") {
@@ -429,10 +569,16 @@ export default {
         preferredWeeks,
         sourceFilename,
       });
+      const planId = await saveParsedPlan({
+        ownerId: String(ownerId),
+        parsedPlan: plan,
+        importId,
+      });
 
       return jsonResponse({
         ok: true,
         importId,
+        planId,
         provider: usedProvider,
         model: usedModel || null,
         plan,

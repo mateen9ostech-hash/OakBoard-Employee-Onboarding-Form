@@ -20,6 +20,8 @@ type ImportPayload = {
 
 type ImportResult = {
   provider?: string
+  planId?: string | null
+  importId?: string | null
   plan: {
     role?: string
     reports?: string
@@ -368,7 +370,7 @@ export function FillDetailsPage() {
       })
       applyImportedPlan(result.plan)
       setImportOpen(false)
-      setNotice(`Imported successfully using ${result.provider || 'the configured parser'}. Please review before generating.`)
+      setNotice(`Imported successfully using ${result.provider || 'the configured parser'}${result.planId ? ' and saved to your plans' : ''}. Please review before generating.`)
       setError('')
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'The plan could not be imported.'
