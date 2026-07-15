@@ -56,6 +56,15 @@ function formatDate(date: unknown) {
   })
 }
 
+function cleanDisplayWeekTitle(value: unknown) {
+  const cleaned = String(value ?? '')
+    .trim()
+    .replace(/^week\s+\d+\s*[:\-–—]?\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return cleaned || 'Training Plan'
+}
+
 function escapeHtml(value: unknown) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -165,7 +174,7 @@ function PlanPage({
           return (
             <div className="week-block" key={weekNumber}>
               <div className="pw">
-                <div className="pw-pill">Week {weekNumber} — {week.title || `Training Plan`}</div>
+                <div className="pw-pill">Week {weekNumber} — {cleanDisplayWeekTitle(week.title)}</div>
                 {week.goal && <div className="pw-sub">{week.goal}</div>}
               </div>
               <div className="pd">
@@ -201,11 +210,11 @@ export function GenerateFormPage() {
       ? plan.weeks
       : [
           {
-            title: 'Week 1 — Training Plan',
+            title: 'Training Plan',
             days: (plan.days || []).slice(0, 5),
           },
           {
-            title: 'Week 2 — Training Plan',
+            title: 'Training Plan',
             days: (plan.days || []).slice(5, 10),
           },
         ]
@@ -313,7 +322,7 @@ export function GenerateFormPage() {
         return `
           <tr><td style="padding:24px 32px 0;">
             <div style="background:#24B34B;color:white;font-weight:700;font-size:13px;padding:6px 14px;border-radius:4px;display:inline-block;letter-spacing:.3px;">
-              Week ${weekIndex + 1} — ${escapeHtml(week.title || 'Training Plan')}
+              Week ${weekIndex + 1} — ${escapeHtml(cleanDisplayWeekTitle(week.title))}
             </div>
             ${week.goal ? `<p style="font-size:13px;color:#697282;margin:6px 0 0;">${escapeHtml(week.goal)}</p>` : ''}
           </td></tr>

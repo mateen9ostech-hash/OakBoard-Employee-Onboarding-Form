@@ -49,6 +49,9 @@ This file is the live checklist for OakBoard. After each completed task, update 
 - [x] Fill Role, Reports To, Collaborates With, Week Title, Objective, Day Goal, Tasks, and Day Outcome from NotebookLM output.
 - [x] Remove `.txt` upload from NotebookLM import and use pasted textbox content only.
 - [x] Auto-detect imported NotebookLM plan duration as 2-week or 4-week from pasted Week/Day labels.
+- [x] Prevent duplicated Week labels in preview/email output after NotebookLM import.
+- [x] Make React preview day cards fill the full `.pd` frame without shrinking from side padding.
+- [x] Re-align React preview styling with the previous static `GenerateForm.html` template CSS.
 - [x] Migrate the real `GenerateForm.html` preview into React.
 - [x] Preserve 16:9 / landscape print-preview layout in React.
 - [x] Preserve exact day-card sizing rules in React:

@@ -172,13 +172,13 @@ function cleanOutcome(value: unknown, fallback = '') {
   return limitText(cleaned || fallback, DAY_OUTCOME_MAX)
 }
 
-function cleanWeekTitle(value: unknown, weekIndex: number) {
+function cleanWeekTitle(value: unknown) {
   const cleaned = String(value ?? '')
     .trim()
     .replace(/^week\s+\d+\s*[:\-–—]?\s*/i, '')
     .replace(/\s+/g, ' ')
     .trim()
-  return limitText(cleaned ? `Week ${weekIndex + 1} — ${cleaned}` : '', 90)
+  return limitText(cleaned || `Training Plan`, 90)
 }
 
 function normalizeNotebookText(value: string) {
@@ -198,8 +198,7 @@ function parseNotebookPlan(rawValue: string): ImportResult['plan'] {
   let weekMatch: RegExpExecArray | null
 
   while ((weekMatch = weekRegex.exec(source)) !== null) {
-    const weekNo = weekMatch[1] ? Number(weekMatch[1]) : weeks.length + 1
-    const weekTitle = cleanWeekTitle(`Week ${weekNo} — ${weekMatch[2].trim()}`, weekNo - 1)
+    const weekTitle = cleanWeekTitle(weekMatch[2].trim())
     const goal = limitText(weekMatch[3], 140)
     const body = weekMatch[4].trim()
     const dayStarts = [...body.matchAll(/^Day\s+(\d+)(?:\s+([0-9]{1,2}\s+[A-Za-z]+\s+[0-9]{4}\s+\([^)]+\)|[0-9]{4}-[0-9]{2}-[0-9]{2}))?.*$/gim)]
@@ -379,7 +378,7 @@ export function FillDetailsPage() {
     const planDates = workdays(startDate, nWeeks * DPW)
     const normalizedWeeks = weeks.slice(0, nWeeks).map((week, wi) => ({
       ...week,
-      title: week.title || `Week ${wi + 1} — Training Plan`,
+      title: cleanWeekTitle(week.title || 'Training Plan'),
       days: week.days.slice(0, DPW).map((day, di) => {
         const g = wi * DPW + di + 1
         return {
@@ -435,7 +434,7 @@ export function FillDetailsPage() {
     setCollab(limitText(isMissingValue(plan.collab) ? fallbackCollaborators(source) : plan.collab, 160))
     const nextWeeks = makeWeeks(importedWeeks)
     plan.weeks.slice(0, importedWeeks).forEach((week, wi) => {
-      nextWeeks[wi].title = cleanWeekTitle(week.title, wi)
+      nextWeeks[wi].title = cleanWeekTitle(week.title)
       nextWeeks[wi].goal = limitText(week.goal, 140)
       ;(week.days || []).slice(0, DPW).forEach((day, di) => {
         const titleFallback = Array.isArray(day.tasks)
