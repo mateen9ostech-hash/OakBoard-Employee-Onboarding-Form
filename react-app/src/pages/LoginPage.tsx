@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { BrandLogo } from '../components/ui'
 import { getValidSession } from '../lib/auth'
 import { supabase, supabaseEnvReady } from '../lib/supabase'
 
@@ -95,7 +96,6 @@ function CheckIcon() {
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
   const [tab, setTab] = useState<AuthTab>('signin')
   const [signinEmail, setSigninEmail] = useState('')
   const [signinPassword, setSigninPassword] = useState('')
@@ -110,11 +110,7 @@ export function LoginPage() {
     confirm: false,
   })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
-  const [signinError, setSigninError] = useState<string | null>(
-    searchParams.get('reason') === 'session-timeout'
-      ? 'Your session is no longer valid. Please sign in again.'
-      : null,
-  )
+  const [signinError, setSigninError] = useState<string | null>(null)
   const [signinOk, setSigninOk] = useState<string | null>(null)
   const [signupError, setSignupError] = useState<string | null>(null)
   const [busy, setBusy] = useState<'signin' | 'signup' | 'forgot' | null>(null)
@@ -288,29 +284,24 @@ export function LoginPage() {
     setSigninOk(`Password reset link sent to ${signinEmail.trim()}`)
   }
 
+  const visualTitle =
+    tab === 'signup'
+      ? 'Create your OakBoard account'
+      : tab === 'pending'
+        ? 'Almost there'
+        : 'Welcome Back to OakBoard'
+  const visualSubtitle =
+    tab === 'signup'
+      ? 'Create a secure work account to start building onboarding plans.'
+      : tab === 'pending'
+        ? 'Confirm your email address, then return here to sign in.'
+        : 'Sign in to continue creating and sharing onboarding plans.'
+
   return (
     <main className="auth-wrap">
       <section className="auth-card" aria-label="OakBoard authentication">
-        <div className="auth-card-hdr">
-          <div className="auth-logo-wrap">
-            <img src="/oakboard-logo.svg" alt="Oak Street Technologies" />
-          </div>
-          <div className="auth-title">Welcome to OakBoard</div>
-          <div className="auth-sub">Sign in with your work email to continue</div>
-        </div>
-
-        {tab !== 'pending' && (
-          <div className="tab-row">
-            <button className={`tab-btn ${tab === 'signin' ? 'active' : ''}`} onClick={() => switchTab('signin')} type="button">
-              Sign In
-            </button>
-            <button className={`tab-btn ${tab === 'signup' ? 'active' : ''}`} onClick={() => switchTab('signup')} type="button">
-              Create Account
-            </button>
-          </div>
-        )}
-
-        <div className="auth-body">
+        <div className="auth-form-side">
+          <BrandLogo />
           {tab === 'signin' && (
             <form className="form-panel active" onSubmit={handleSignIn}>
               {signinError && (
@@ -370,6 +361,10 @@ export function LoginPage() {
               </div>
 
               <div className="forgot-row">
+                <label className="remember-me">
+                  <input type="checkbox" />
+                  <span>Remember me</span>
+                </label>
                 <button className="link-btn" disabled={busy === 'forgot'} onClick={handleForgotPassword} type="button">
                   {busy === 'forgot' ? 'Sending...' : 'Forgot password?'}
                 </button>
@@ -382,6 +377,10 @@ export function LoginPage() {
                   <path d="M3 8h10M9 4l4 4-4 4" />
                 </svg>
               </button>
+              <p className="auth-switch-line">
+                Not registered yet?{' '}
+                <button className="link-btn inline" onClick={() => switchTab('signup')} type="button">Create account</button>
+              </p>
             </form>
           )}
 
@@ -500,6 +499,10 @@ export function LoginPage() {
                 <br />
                 <a href="/login">Terms of Service</a> &amp; <a href="/login">Privacy Policy</a> of 9ostech.
               </p>
+              <p className="auth-switch-line">
+                Already registered?{' '}
+                <button className="link-btn inline" onClick={() => switchTab('signin')} type="button">Sign in</button>
+              </p>
             </form>
           )}
 
@@ -546,6 +549,15 @@ export function LoginPage() {
             <a href="/login">Privacy</a>
           </div>
         </div>
+        <aside className="auth-visual" aria-hidden="true">
+          <div className="auth-grid-pattern" />
+          <div className="auth-ring auth-ring-top" />
+          <div className="auth-ring auth-ring-bottom" />
+          <div className="auth-visual-copy">
+            <h1>{visualTitle}</h1>
+            <p>{visualSubtitle}</p>
+          </div>
+        </aside>
       </section>
     </main>
   )

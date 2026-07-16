@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Button } from '../components/ui'
 import { signOut } from '../lib/auth'
 import { type OnboardingPlan, type PlanWeek, writeStoredPlan } from '../types/plan'
 
@@ -486,7 +487,7 @@ export function FillDetailsPage() {
             <div className="hdr-sep" />
             <div className="hdr-step"><div className="hdr-sn">2</div><span className="hdr-sl">Preview & Export</span></div>
           </div>
-          <button className="btn-tb" onClick={handleSignOut} type="button">Sign out</button>
+          <Button onClick={handleSignOut} type="button" variant="secondary">Sign out</Button>
         </div>
       </header>
 
@@ -590,10 +591,10 @@ export function FillDetailsPage() {
         {(error || notice) && <div className={`err on ${notice ? 'ok' : ''}`}>{error || notice}</div>}
 
         <div className="form-actions">
-          <button className="btn-reset" onClick={resetAll} type="button">Reset</button>
-          <button className="btn-tb sample" onClick={fillDemoData} type="button">Fill Sample Plan</button>
-          <button className="btn-tb" onClick={() => setImportOpen(true)} type="button">Import NotebookLM Data</button>
-          <button className="btn-gen" type="submit">Generate Plan</button>
+          <Button onClick={resetAll} type="button" variant="secondary">Reset</Button>
+          <Button icon="check" onClick={fillDemoData} type="button" variant="soft">Fill Sample Plan</Button>
+          <Button icon="download" onClick={() => setImportOpen(true)} type="button" variant="secondary">Import NotebookLM Data</Button>
+          <Button icon="plus" type="submit" variant="primary">Generate Plan</Button>
         </div>
       </form>
 

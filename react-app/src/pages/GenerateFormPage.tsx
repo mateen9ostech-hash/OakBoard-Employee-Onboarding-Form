@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { toPng } from 'html-to-image'
 import { jsPDF } from 'jspdf'
+import { Button, Modal, PageToolbar, StatusBanner, TextField } from '../components/ui'
 import { invokeAuthenticatedFunction } from '../lib/auth'
 import { type PlanDay, type PlanWeek, readStoredPlan } from '../types/plan'
 
@@ -407,17 +408,22 @@ export function GenerateFormPage() {
 
   return (
     <main className="generate-page">
-      <div className="tbr">
-        <Link className="btn-tb" to="/fill-details">← Back to details</Link>
-        <div className="tbr-r">
-          <button className="btn-tb pri" disabled={exporting} onClick={downloadPdf} type="button">
-            {exporting ? 'Preparing PDF...' : 'Download PDF'}
-          </button>
-          <button className="btn-tb" onClick={openEmailModal} type="button">Send Email</button>
-          <button className="btn-tb" onClick={() => window.print()} type="button">Print</button>
-          <Link className="btn-tb pri" to="/fill-details">+ New Plan</Link>
-        </div>
-      </div>
+      <PageToolbar
+        backLabel="Back to details"
+        backTo="/fill-details"
+        subtitle={`${role || 'New role'} / Preview & export`}
+        title={`${nWeeks}-Week Onboarding Plan`}
+        actions={(
+          <>
+            <Button icon="print" onClick={() => window.print()} type="button" variant="secondary">Print</Button>
+            <Button icon="email" onClick={openEmailModal} type="button" variant="secondary">Send Email</Button>
+            <Button disabled={exporting} icon="download" onClick={downloadPdf} type="button" variant="primary">
+              {exporting ? 'Preparing PDF...' : 'Download PDF'}
+            </Button>
+            <Button icon="plus" to="/fill-details" variant="soft">New Plan</Button>
+          </>
+        )}
+      />
 
       <div className="plan-wrap-react">
         {pageGroups.map((pageWeeks, pageIndex) => (
@@ -433,48 +439,33 @@ export function GenerateFormPage() {
         ))}
       </div>
 
-      {emailOpen && (
-        <div className="email-modal-overlay open" onClick={(event) => event.target === event.currentTarget && setEmailOpen(false)}>
-          <div className="email-modal" role="dialog" aria-modal="true" aria-labelledby="email-modal-title">
-            <div className="email-modal-head">
-              <div className="email-ico">✉</div>
-              <div>
-                <h3 id="email-modal-title">Send Onboarding Plan</h3>
-                <p>Email a formatted copy and attached landscape PDF.</p>
-              </div>
-            </div>
-            <div className="email-modal-body">
-              <div className="email-summary">
-                <strong>Plan:</strong> {nWeeks}-Week Onboarding · {role || '—'}<br />
-                <strong>From:</strong> onboarding@resend.dev<br />
-                <strong>Includes:</strong> {nWeeks * 5} training days across {nWeeks} weeks
-              </div>
-              <div className="demo-notice"><strong>Demo Mode:</strong> Resend test delivery is limited to the verified project-owner email.</div>
-              {emailError && <div className="modal-err show">{emailError}</div>}
-              {emailNotice && <div className="modal-ok show">{emailNotice}</div>}
-              <label className="email-field">
-                Recipient Email *
-                <input readOnly type="email" value={emailTo} onChange={(event) => setEmailTo(event.target.value)} />
-              </label>
-              <label className="email-field">
-                CC (Unavailable in demo mode)
-                <input disabled placeholder="Available after domain verification" type="email" value={emailCc} onChange={(event) => setEmailCc(event.target.value)} />
-              </label>
-              <label className="email-field">
-                Personal Note (Optional)
-                <textarea placeholder="Add a short message to include with the plan..." value={emailNote} onChange={(event) => setEmailNote(event.target.value)} />
-              </label>
-            </div>
-            <div className="email-modal-foot">
-              <button className="btn-tb" disabled={sendingEmail} onClick={() => setEmailOpen(false)} type="button">Cancel</button>
-              <button className={`btn-send ${sendingEmail ? 'loading' : ''}`} disabled={sendingEmail} onClick={sendEmail} type="button">
-                <span className="btn-send-spin" />
-                <span className="btn-send-txt">{sendingEmail ? 'Sending...' : 'Send Email'}</span>
-              </button>
-            </div>
-          </div>
+      <Modal
+        icon="email"
+        onClose={() => setEmailOpen(false)}
+        open={emailOpen}
+        subtitle="Email a formatted copy and attached landscape PDF."
+        title="Send Onboarding Plan"
+        footer={(
+          <>
+            <Button disabled={sendingEmail} onClick={() => setEmailOpen(false)} type="button" variant="secondary">Cancel</Button>
+            <Button disabled={sendingEmail} icon="email" onClick={sendEmail} type="button" variant="primary">
+              {sendingEmail ? 'Sending...' : 'Send Email'}
+            </Button>
+          </>
+        )}
+      >
+        <div className="email-summary">
+          <strong>Plan:</strong> {nWeeks}-Week Onboarding · {role || '—'}<br />
+          <strong>From:</strong> onboarding@resend.dev<br />
+          <strong>Includes:</strong> {nWeeks * 5} training days across {nWeeks} weeks
         </div>
-      )}
+        <StatusBanner tone="warning"><strong>Demo Mode:</strong> Resend test delivery is limited to the verified project-owner email.</StatusBanner>
+        {emailError && <StatusBanner tone="error">{emailError}</StatusBanner>}
+        {emailNotice && <StatusBanner tone="success">{emailNotice}</StatusBanner>}
+        <TextField label="Recipient Email *" readOnly type="email" value={emailTo} onChange={(event) => setEmailTo(event.target.value)} />
+        <TextField label="CC (Unavailable in demo mode)" disabled placeholder="Available after domain verification" type="email" value={emailCc} onChange={(event) => setEmailCc(event.target.value)} />
+        <TextField label="Personal Note (Optional)" multiline placeholder="Add a short message to include with the plan..." value={emailNote} onChange={(event) => setEmailNote(event.target.value)} />
+      </Modal>
     </main>
   )
 }

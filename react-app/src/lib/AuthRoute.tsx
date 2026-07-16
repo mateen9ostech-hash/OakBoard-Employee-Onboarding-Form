@@ -31,7 +31,7 @@ export function AuthRoute({ children }: { children: ReactNode }) {
   }
 
   if (state === 'invalid') {
-    return <Navigate to="/login?reason=session-timeout" replace />
+    return <Navigate to="/login" replace />
   }
 
   return <>{children}</>

@@ -91,7 +91,7 @@ export async function invokeAuthenticatedFunction<
   const sessionResult = await getValidSession()
 
   if (!sessionResult.ok) {
-    throw new Error('Your session is no longer valid.')
+    throw new Error('Please sign in again to continue.')
   }
 
   if (!supabase) {
