@@ -2,7 +2,15 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui'
 import { signOut } from '../lib/auth'
-import { type OnboardingPlan, type PlanWeek, writeStoredPlan } from '../types/plan'
+import {
+  deletePlanFromHistory,
+  readPlanHistory,
+  savePlanToHistory,
+  type OnboardingPlan,
+  type PlanWeek,
+  type SavedOnboardingPlan,
+  writeStoredPlan,
+} from '../types/plan'
 
 const DPW = 5
 const DAY_TITLE_MAX = 90
@@ -278,6 +286,7 @@ export function FillDetailsPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [importText, setImportText] = useState('')
   const [importStatus, setImportStatus] = useState<{ type: 'info' | 'error'; message: string } | null>(null)
+  const [savedPlans, setSavedPlans] = useState<SavedOnboardingPlan[]>(() => readPlanHistory())
 
   const dates = useMemo(() => workdays(startDate, nWeeks * DPW), [startDate, nWeeks])
 
@@ -370,6 +379,39 @@ export function FillDetailsPage() {
     setNotice('')
   }
 
+  function loadSavedPlan(saved: SavedOnboardingPlan) {
+    const plan = saved.plan
+    const loadedWeeks = Number(plan.nWeeks) === 4 ? 4 : 2
+    setDuration(loadedWeeks)
+    setRole(plan.role || '')
+    setReports(plan.reportsTo || plan.reports || '')
+    setCollab(plan.collaboratesWith || plan.collab || '')
+    setStartDate(plan.startDate || nextWeekdayIso())
+
+    const restoredWeeks = makeWeeks(loadedWeeks)
+    ;(plan.weeks || []).slice(0, loadedWeeks).forEach((week, wi) => {
+      restoredWeeks[wi].title = week.title || ''
+      restoredWeeks[wi].goal = week.goal || ''
+      week.days.slice(0, DPW).forEach((day, di) => {
+        restoredWeeks[wi].days[di] = {
+          ...restoredWeeks[wi].days[di],
+          title: day.title || '',
+          tasks: day.tasks?.length ? day.tasks : ['', '', '', ''],
+          outcome: day.outcome || '',
+        }
+      })
+    })
+    setWeeks(restoredWeeks)
+    setOpenWeeks(new Set(Array.from({ length: loadedWeeks }, (_, index) => index)))
+    setOpenDays(new Set())
+    setError('')
+    setNotice(`Loaded saved plan: ${saved.name}`)
+  }
+
+  function removeSavedPlan(id: string) {
+    setSavedPlans(deletePlanFromHistory(id))
+  }
+
   async function handleSignOut() {
     await signOut()
     navigate('/login', { replace: true })
@@ -423,6 +465,7 @@ export function FillDetailsPage() {
     }
 
     writeStoredPlan(plan)
+    setSavedPlans(savePlanToHistory(plan))
     navigate('/generate-form')
   }
 
@@ -487,17 +530,74 @@ export function FillDetailsPage() {
             <div className="hdr-sep" />
             <div className="hdr-step"><div className="hdr-sn">2</div><span className="hdr-sl">Preview & Export</span></div>
           </div>
-          <Button onClick={handleSignOut} type="button" variant="secondary">Sign out</Button>
         </div>
       </header>
 
-      <form className="fo" onSubmit={handleSubmit}>
+      <div className="fill-shell">
+        <aside className="recent-sidebar" aria-label="OakBoard sidebar">
+          <div className="side-brand">
+            <div className="side-logo"><img src="/oakboard-logo.svg" alt="" /></div>
+            <div>
+              <strong>OakBoard</strong>
+              <span>Onboarding Forms</span>
+            </div>
+          </div>
+
+          <div className="side-workspace">
+            <span className="side-dot" />
+            <div>
+              <strong>Oak Street Workspace</strong>
+              <span>Local draft mode</span>
+            </div>
+          </div>
+
+          <nav className="side-nav" aria-label="Form sections">
+            <span className="side-label">Main Menu</span>
+            <a className="side-nav-item active" href="#plan-duration"><span>□</span>Plan setup</a>
+            <a className="side-nav-item" href="#role-info"><span>◇</span>Role information</a>
+            <a className="side-nav-item" href="#weekly-plans"><span>☰</span>Weeks & days</a>
+            <button className="side-nav-item" onClick={() => setImportOpen(true)} type="button"><span>⇣</span>Import NotebookLM</button>
+          </nav>
+
+          <div className="recent-sidebar-head">
+            <span className="side-label">Recent Plans</span>
+            <span>{savedPlans.length ? 'Load previous work' : 'No saved plans yet'}</span>
+          </div>
+
+          <div className="recent-plans">
+            {savedPlans.length > 0 &&
+              savedPlans.map((saved) => (
+                <article className="recent-card" key={saved.id}>
+                  <button className="recent-load" onClick={() => loadSavedPlan(saved)} type="button">
+                    <strong>{saved.name}</strong>
+                    <span>
+                      {new Date(saved.updatedAt).toLocaleString(undefined, {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                      })}
+                    </span>
+                  </button>
+                  <button className="recent-remove" onClick={() => removeSavedPlan(saved.id)} title="Remove saved plan" type="button">×</button>
+                </article>
+              ))}
+            {savedPlans.length === 0 && (
+              <div className="recent-empty">Generate a plan once and it will appear here for quick reuse.</div>
+            )}
+          </div>
+
+          <div className="side-footer">
+            <button className="side-footer-item" onClick={resetAll} type="button">Reset form</button>
+            <button className="side-footer-item danger" onClick={handleSignOut} type="button">Sign out</button>
+          </div>
+        </aside>
+
+        <form className="fo" onSubmit={handleSubmit}>
         <div className="fi">
           <h1>Create Onboarding Plan</h1>
           <p>Fill in role details and expand each day to add topic, tasks and outcome. The PDF output matches your exact template design.</p>
         </div>
 
-        <section className="sec">
+        <section className="sec" id="plan-duration">
           <div className="sec-h"><div className="sec-ic">+</div><span className="sec-t">Plan Duration</span></div>
           <div className="sec-b">
             <div className="dur-row">
@@ -511,7 +611,7 @@ export function FillDetailsPage() {
           </div>
         </section>
 
-        <section className="sec">
+        <section className="sec" id="role-info">
           <div className="sec-h"><div className="sec-ic">i</div><span className="sec-t">Role Information</span></div>
           <div className="sec-b">
             <div className="row r3">
@@ -523,7 +623,7 @@ export function FillDetailsPage() {
           </div>
         </section>
 
-        <section className="sec">
+        <section className="sec" id="weekly-plans">
           <div className="sec-h"><div className="sec-ic">≡</div><span className="sec-t">Weeks & Daily Plans</span></div>
           <div className="sec-b">
             {weeks.slice(0, nWeeks).map((week, wi) => (
@@ -596,7 +696,8 @@ export function FillDetailsPage() {
           <Button icon="download" onClick={() => setImportOpen(true)} type="button" variant="secondary">Import NotebookLM Data</Button>
           <Button icon="plus" type="submit" variant="primary">Generate Plan</Button>
         </div>
-      </form>
+        </form>
+      </div>
 
       {importOpen && (
         <div className="import-overlay on" onClick={(event) => event.target === event.currentTarget && setImportOpen(false)}>

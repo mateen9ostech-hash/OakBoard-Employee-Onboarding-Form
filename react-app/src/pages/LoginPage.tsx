@@ -12,6 +12,7 @@ type PasswordVisibility = {
 }
 
 const orgDomain = '@9ostech.com'
+const REMEMBER_EMAIL_KEY = 'oakboard_remembered_email'
 
 function isOrgEmail(email: string) {
   return email.trim().toLowerCase().endsWith(orgDomain)
@@ -99,6 +100,7 @@ export function LoginPage() {
   const [tab, setTab] = useState<AuthTab>('signin')
   const [signinEmail, setSigninEmail] = useState('')
   const [signinPassword, setSigninPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [signupName, setSignupName] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
   const [signupPassword, setSignupPassword] = useState('')
@@ -128,6 +130,12 @@ export function LoginPage() {
   }, [signupPassword])
 
   useEffect(() => {
+    const rememberedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY)
+    if (rememberedEmail) {
+      setSigninEmail(rememberedEmail)
+      setRememberMe(true)
+    }
+
     let active = true
     getValidSession().then((result) => {
       if (active && result.ok) {
@@ -209,6 +217,11 @@ export function LoginPage() {
 
     setSigninOk('Signed in! Redirecting...')
     try {
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_EMAIL_KEY, signinEmail.trim())
+      } else {
+        localStorage.removeItem(REMEMBER_EMAIL_KEY)
+      }
       localStorage.setItem(
         'obf_session_cache',
         JSON.stringify({
@@ -362,7 +375,7 @@ export function LoginPage() {
 
               <div className="forgot-row">
                 <label className="remember-me">
-                  <input type="checkbox" />
+                  <input checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} type="checkbox" />
                   <span>Remember me</span>
                 </label>
                 <button className="link-btn" disabled={busy === 'forgot'} onClick={handleForgotPassword} type="button">

@@ -1,6 +1,6 @@
 # OakBoard Project Task List
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
 This file is the live checklist for OakBoard. After each completed task, update the relevant checkbox and add any important notes.
 
@@ -101,7 +101,7 @@ This file is the live checklist for OakBoard. After each completed task, update 
 - [x] Remove PDF parser dependency after dropping PDF-to-AI import.
 - [x] Keep import flow fully local for pasted NotebookLM text.
 - [x] Keep NotebookLM import duration automatic, without requiring the user to choose 2-week or 4-week manually.
-- [ ] Add import history or reusable saved plans if required.
+- [x] Add local recent/reusable saved plans so generated plans can be loaded again from Fill Details.
 
 ### Deployment and workflow
 
