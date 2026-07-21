@@ -317,6 +317,9 @@ export default function FillDetailsPage() {
   const [wizardStep, setWizardStep] = useState(0)
   const [durationChosen, setDurationChosen] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [openPlanMenuId, setOpenPlanMenuId] = useState<string | null>(null)
+  const [deleteCandidate, setDeleteCandidate] = useState<SavedOnboardingPlan | null>(null)
+  const [planActionBusy, setPlanActionBusy] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -337,6 +340,7 @@ export default function FillDetailsPage() {
         .from('onboarding_plans')
         .select('id,title,role,duration_weeks,updated_at,plan_json')
         .eq('owner_id', ownerId)
+        .is('archived_at', null)
         .order('updated_at', { ascending: false })
         .limit(8)
 
@@ -357,6 +361,13 @@ export default function FillDetailsPage() {
       active = false
     }
   }, [])
+
+  useEffect(() => {
+    if (!openPlanMenuId) return
+    const closeMenu = () => setOpenPlanMenuId(null)
+    document.addEventListener('click', closeMenu)
+    return () => document.removeEventListener('click', closeMenu)
+  }, [openPlanMenuId])
 
   const dates = useMemo(() => workdays(startDate, nWeeks * DPW), [startDate, nWeeks])
   const completion = useMemo(() => {
@@ -566,12 +577,38 @@ export default function FillDetailsPage() {
     setNotice(`Loaded saved plan: ${saved.name}`)
   }
 
+  async function archiveSavedPlan(id: string) {
+    if (!supabase || !historyOwnerId) {
+      setHistoryStatus('The database is unavailable. Please try again.')
+      return
+    }
+
+    setPlanActionBusy(true)
+    const { error: archiveError } = await supabase
+      .from('onboarding_plans')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('owner_id', historyOwnerId)
+
+    if (archiveError) {
+      setHistoryStatus('This plan could not be archived. Please try again.')
+      setPlanActionBusy(false)
+      return
+    }
+
+    setSavedPlans((current) => current.filter((plan) => plan.id !== id))
+    setHistoryStatus('')
+    setOpenPlanMenuId(null)
+    setPlanActionBusy(false)
+  }
+
   async function removeSavedPlan(id: string) {
     if (!supabase || !historyOwnerId) {
       setHistoryStatus('The database is unavailable. Please try again.')
       return
     }
 
+    setPlanActionBusy(true)
     const { error: removeError } = await supabase
       .from('onboarding_plans')
       .delete()
@@ -580,11 +617,14 @@ export default function FillDetailsPage() {
 
     if (removeError) {
       setHistoryStatus('This plan could not be removed. Please try again.')
+      setPlanActionBusy(false)
       return
     }
 
     setSavedPlans((current) => current.filter((plan) => plan.id !== id))
     setHistoryStatus('')
+    setDeleteCandidate(null)
+    setPlanActionBusy(false)
   }
 
   async function handleSignOut() {
@@ -751,7 +791,7 @@ export default function FillDetailsPage() {
           <div className="recent-plans">
             {savedPlans.length > 0 &&
               savedPlans.map((saved) => (
-                <article className="recent-card" key={saved.id}>
+                <article className={`recent-card ${openPlanMenuId === saved.id ? 'menu-open' : ''}`} key={saved.id}>
                   <button className="recent-load" onClick={() => loadSavedPlan(saved)} type="button">
                     <span className="recent-plan-copy">
                       <strong title={saved.role}>{saved.role}</strong>
@@ -763,7 +803,24 @@ export default function FillDetailsPage() {
                       </span>
                     </span>
                   </button>
-                  <button aria-label={`Remove ${saved.name}`} className="recent-remove" onClick={() => removeSavedPlan(saved.id)} title="Remove saved plan" type="button">×</button>
+                  <div className="recent-plan-actions" onClick={(event) => event.stopPropagation()}>
+                    <button
+                      aria-expanded={openPlanMenuId === saved.id}
+                      aria-haspopup="menu"
+                      aria-label={`Options for ${saved.name}`}
+                      className="recent-menu-button"
+                      onClick={() => setOpenPlanMenuId((current) => current === saved.id ? null : saved.id)}
+                      title="Plan options"
+                      type="button"
+                    >•••</button>
+                    {openPlanMenuId === saved.id && (
+                      <div className="recent-plan-menu" role="menu">
+                        <button onClick={() => { setOpenPlanMenuId(null); loadSavedPlan(saved) }} role="menuitem" type="button">Edit</button>
+                        <button disabled={planActionBusy} onClick={() => void archiveSavedPlan(saved.id)} role="menuitem" type="button">Archive</button>
+                        <button className="danger" onClick={() => { setOpenPlanMenuId(null); setDeleteCandidate(saved) }} role="menuitem" type="button">Delete</button>
+                      </div>
+                    )}
+                  </div>
                 </article>
               ))}
             {historyStatus && <div className="recent-history-status">{historyStatus}</div>}
@@ -998,6 +1055,23 @@ export default function FillDetailsPage() {
           </div>
         )}
       </div>
+
+      {deleteCandidate && (
+        <div className="delete-plan-overlay" onClick={(event) => event.target === event.currentTarget && !planActionBusy && setDeleteCandidate(null)}>
+          <div aria-describedby="delete-plan-description" aria-labelledby="delete-plan-title" aria-modal="true" className="delete-plan-dialog" role="alertdialog">
+            <div className="delete-plan-icon" aria-hidden="true">!</div>
+            <h2 id="delete-plan-title">Delete plan?</h2>
+            <p id="delete-plan-description">Are you sure you want to delete this plan?</p>
+            <strong>{deleteCandidate.role}</strong>
+            <div className="delete-plan-actions">
+              <button disabled={planActionBusy} onClick={() => setDeleteCandidate(null)} type="button">No</button>
+              <button className="danger" disabled={planActionBusy} onClick={() => void removeSavedPlan(deleteCandidate.id)} type="button">
+                {planActionBusy ? 'Deleting…' : 'Yes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </main>
   )

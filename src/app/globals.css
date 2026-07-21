@@ -2610,7 +2610,7 @@ textarea:focus {
   gap: 8px;
   align-content: start;
   max-height: none;
-  overflow: auto;
+  overflow: visible;
   padding: 0 0 12px;
 }
 
@@ -2686,7 +2686,14 @@ textarea:focus {
   line-height: 1.2;
 }
 
-.recent-remove {
+.recent-plan-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recent-menu-button {
   display: inline-flex;
   width: 26px;
   height: 26px;
@@ -2696,18 +2703,68 @@ textarea:focus {
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: #a2aaa5;
-  font-size: 17px;
+  color: #8d9790;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
   line-height: 1;
   padding: 0;
 }
 
-.recent-remove:hover {
-  border-color: #fecaca;
-  background: #fff1f1;
+.recent-menu-button:hover,
+.recent-menu-button[aria-expanded='true'] {
+  background: #eef3ef;
   box-shadow: none;
-  color: var(--danger);
+  color: #34443a;
   transform: none;
+}
+
+.recent-card.menu-open {
+  z-index: 8;
+  border-color: #cbdacf;
+}
+
+.recent-plan-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 7px);
+  right: -4px;
+  display: grid;
+  width: 132px;
+  overflow: hidden;
+  border: 1px solid #e0e7e2;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 12px 30px rgb(16 24 40 / 14%);
+  padding: 5px;
+}
+
+.recent-plan-menu button {
+  min-height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #34423a;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 0 10px;
+  text-align: left;
+}
+
+.recent-plan-menu button:hover {
+  background: #f2f6f3;
+  box-shadow: none;
+  color: #1c5b31;
+  transform: none;
+}
+
+.recent-plan-menu button.danger {
+  color: #b42318;
+}
+
+.recent-plan-menu button.danger:hover {
+  background: #fff1f0;
+  color: #9b1c14;
 }
 
 .recent-empty {
@@ -2728,6 +2785,99 @@ textarea:focus {
   font-size: 10.5px;
   line-height: 1.45;
   padding: 11px 12px;
+}
+
+.delete-plan-overlay {
+  position: fixed;
+  z-index: 700;
+  inset: 0;
+  display: grid;
+  background: rgb(17 24 39 / 45%);
+  backdrop-filter: blur(3px);
+  padding: 20px;
+  place-items: center;
+}
+
+.delete-plan-dialog {
+  width: min(100%, 390px);
+  border: 1px solid #eadfdd;
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0 24px 70px rgb(15 23 42 / 24%);
+  padding: 26px;
+  text-align: center;
+}
+
+.delete-plan-icon {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #fff0ef;
+  color: #b42318;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.delete-plan-dialog h2 {
+  margin: 14px 0 7px;
+  color: #171d19;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.delete-plan-dialog p {
+  margin: 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.delete-plan-dialog > strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 8px;
+  color: #34423a;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.delete-plan-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.delete-plan-actions button {
+  min-height: 40px;
+  border: 1px solid #dfe5e0;
+  border-radius: 10px;
+  background: white;
+  color: #34423a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.delete-plan-actions button:hover {
+  background: #f7f9f7;
+  box-shadow: none;
+  transform: none;
+}
+
+.delete-plan-actions button.danger {
+  border-color: #c9342b;
+  background: #c9342b;
+  color: white;
+}
+
+.delete-plan-actions button.danger:hover {
+  border-color: #ad251d;
+  background: #ad251d;
 }
 
 .side-footer {
