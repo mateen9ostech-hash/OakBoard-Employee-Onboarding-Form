@@ -2,8 +2,6 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
 import { SESSION_CHECK_TIMEOUT_MS, SESSION_MAX_AGE_MS } from './constants'
 
-export { SESSION_CHECK_TIMEOUT_MS, SESSION_MAX_AGE_MS } from './constants'
-
 export type SessionCheck =
   | { ok: true; session: Session }
   | { ok: false; reason: 'missing' | 'expired' | 'timeout' | 'error'; message?: string }
@@ -25,7 +23,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   })
 }
 
-export function isSessionFresh(session: Session): boolean {
+function isSessionFresh(session: Session): boolean {
   const signedInAt = session.user.last_sign_in_at
     ? new Date(session.user.last_sign_in_at).getTime()
     : session.expires_at

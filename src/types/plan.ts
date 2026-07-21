@@ -28,8 +28,8 @@ export type OnboardingPlan = {
   days?: PlanDay[]
 }
 
-export const PLAN_STORAGE_KEY = 'obf_plan_data'
-export const PLAN_HISTORY_KEY = 'obf_plan_history'
+const PLAN_STORAGE_KEY = 'obf_plan_data'
+const PLAN_HISTORY_KEY = 'obf_plan_history'
 
 export type SavedOnboardingPlan = {
   id: string

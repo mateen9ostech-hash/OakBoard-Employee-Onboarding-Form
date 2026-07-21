@@ -26,7 +26,7 @@ type ButtonBaseProps = {
 type ButtonAsButton = ButtonBaseProps & ButtonHTMLAttributes<HTMLButtonElement> & { to?: never }
 type ButtonAsLink = ButtonBaseProps & AnchorHTMLAttributes<HTMLAnchorElement> & { to: string; disabled?: boolean }
 
-export function Icon({ name, className = '' }: { name: IconName; className?: string }) {
+function Icon({ name, className = '' }: { name: IconName; className?: string }) {
   const common = {
     className: `ob-icon ${className}`.trim(),
     viewBox: '0 0 16 16',
