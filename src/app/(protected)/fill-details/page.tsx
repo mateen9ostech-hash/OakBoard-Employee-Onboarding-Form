@@ -944,18 +944,6 @@ export default function FillDetailsPage() {
 
   return (
     <main className={`form-page ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-      <header className="hdr">
-        <div className="hdr-brand">
-          <div className="hdr-icon">
-            <Image src="/oakboard-logo.svg" alt="" height={40} width={40} priority />
-          </div>
-          OakBoard
-        </div>
-        <div className="hdr-actions">
-          <span className="dashboard-status">{savedPlans.length} saved {savedPlans.length === 1 ? 'plan' : 'plans'}</span>
-        </div>
-      </header>
-
       <div className="fill-shell">
         <aside className="recent-sidebar" aria-label="OakBoard sidebar" id="oakboard-sidebar">
           <button

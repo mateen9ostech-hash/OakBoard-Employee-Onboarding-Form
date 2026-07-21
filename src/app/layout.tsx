@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { VividRegistry } from '@/components/vivid'
+import '@fontsource-variable/raleway'
+import '@fontsource-variable/raleway/wght-italic.css'
 import './globals.css'
 
 export const metadata: Metadata = {
