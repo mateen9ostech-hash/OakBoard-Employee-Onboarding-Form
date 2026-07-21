@@ -1,6 +1,10 @@
 # OakBoard Employee Onboarding Form
 
+> **READ FIRST:** To continue development on this or a new laptop, follow [`START-HERE.md`](START-HERE.md).
+
 This is the canonical OakBoard employee onboarding project.
+
+Production: <https://oak-board-employee-onboarding-form.vercel.app>
 
 The canonical application is the Next.js App Router project at the repository root. The previous Vite application was removed after the approved Next.js cutover.
 
@@ -37,6 +41,7 @@ GitHub calculates the sidebar language bar automatically; percentages may change
 
 ## Local development
 
+For complete new-laptop setup and project handoff notes, see `START-HERE.md`.
 For a complete dependency and service inventory, see `REQUIREMENTS.md`.
 For release gates and rollback steps, see `NEXTJS-CUTOVER.md`.
 
@@ -75,7 +80,7 @@ npm audit
 - The Resend API key is no longer present in browser code.
 - The Next.js Generate Form page calls the authenticated `send-onboarding-email` Supabase Edge Function.
 - The function permits authenticated `@9ostech.com` users, validates the payload, and reads `RESEND_API_KEY` only from server-side environment secrets.
-- Deployment and secret configuration are intentionally not performed from this workspace.
+- The Next.js application is deployed on Vercel; server-side email secrets remain in Supabase only.
 
 ## Environment configuration
 

@@ -33,6 +33,8 @@ This runbook records the release gates for the completed local cutover to the ro
 - [x] The temporary `react-app/` fallback was removed after explicit deletion approval.
 - [x] Redundant exports were removed and generated Next.js type declarations are ignored and regenerated during typecheck.
 - [x] The migration is reviewed, committed, and pushed to the private repository after explicit Git approval.
+- [x] Public Supabase configuration is added to Vercel Production and Preview.
+- [x] The production deployment is live at `https://oak-board-employee-onboarding-form.vercel.app`.
 
 ## External release gates
 
@@ -40,7 +42,7 @@ These actions are intentionally outside the completed local code migration:
 
 - [ ] Add the approved local and production `/auth/callback` URLs in Supabase Auth settings.
 - [ ] Perform another live NotebookLM import and email-delivery acceptance test if requested.
-- [ ] Deploy to production only after separate explicit deployment approval.
+- [x] Deploy to production only after separate explicit deployment approval.
 
 ## Supabase URL configuration
 
@@ -48,7 +50,7 @@ Before signup confirmation is enabled for an environment, add its callback URL i
 
 ```text
 http://127.0.0.1:3000/auth/callback
-https://your-production-domain.example/auth/callback
+https://oak-board-employee-onboarding-form.vercel.app/auth/callback
 ```
 
 Use the actual production domain when deployment is approved. Do not place `RESEND_API_KEY` or `SUPABASE_SERVICE_ROLE_KEY` in Next.js public environment variables.

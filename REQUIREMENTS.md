@@ -3,8 +3,8 @@
 ## Runtime
 
 - Windows 10/11, macOS, or Linux for normal Node.js development.
-- Node.js `24.18.0` (pinned in `.nvmrc`).
-- npm `11.16.0` (pinned in the root `package.json`).
+- Node.js 24.x is supported; `24.18.0` is the preferred local version pinned in `.nvmrc`.
+- npm 11.x is supported; `11.16.0` is the preferred local version pinned in `package.json`.
 - A modern browser such as Microsoft Edge, Chrome, Firefox, or Safari.
 
 Windows users without administrator access can run `scripts/setup.ps1`. It installs the pinned official Node.js ZIP under the current user's profile, verifies its SHA-256 checksum, installs exact npm dependencies, and runs the project checks.
@@ -50,9 +50,9 @@ Never place server-side secrets in browser-exposed `NEXT_PUBLIC_*` variables.
 
 - Supabase project for authentication and Edge Functions
 - Resend account for email delivery
-- Vercel account only when deployment is required
+- Vercel account for production and preview deployments
 
-Account sign-in, production secrets, Supabase deployment, email-domain verification, and Vercel deployment are intentionally not automated by the local setup script.
+Account sign-in, production secrets, Supabase deployment, email-domain verification, and Vercel deployment are intentionally not automated by the local setup script. The current production app is available at <https://oak-board-employee-onboarding-form.vercel.app>.
 
 Supabase Authentication URL Configuration must allow `/auth/callback` for every active local or production origin. See `NEXTJS-CUTOVER.md` for the exact cutover gates.
 

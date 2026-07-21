@@ -19,15 +19,17 @@ This is the current release checklist for the canonical Next.js application. His
 - [x] Portable no-UAC Node.js setup, pinned dependencies, and environment templates are documented.
 - [x] TypeScript, ESLint, production build, and dependency-audit checks pass locally.
 - [x] The private GitHub `main` branch is the source of truth.
+- [x] Vercel Production and Preview contain the required public Supabase variables.
+- [x] The production Next.js application is deployed at `https://oak-board-employee-onboarding-form.vercel.app`.
+- [x] A `START-HERE.md` handoff guide documents completed work and new-laptop setup.
 
 ## External release tasks
 
 These require an external service change or explicit deployment approval:
 
-- [ ] Confirm local and production callback URLs in Supabase Auth.
+- [ ] Confirm the local and production callback URLs in Supabase Auth settings.
 - [ ] Run an optional live acceptance test for NotebookLM import and email delivery.
-- [ ] Add the documented public environment variables to the intended Vercel environments.
-- [ ] Deploy to Vercel only after explicit approval.
+- [ ] Run a production sign-in/signup callback acceptance test.
 
 ## Standard validation
 
