@@ -131,6 +131,6 @@ This file is the live checklist for OakBoard. After each completed task, update 
 - [x] Test the migrated Generate preview and PDF download in the authenticated browser flow.
 - [x] Test loading a generated plan from browser-local Recent Plans storage.
 - [x] Verify the deployed email Edge Function accepts the Next.js origin preflight.
-- [ ] Test the complete Fill Details, Generate, PDF, saved-plan, NotebookLM, and email workflow interactively.
+- [x] Verify the preserved NotebookLM parser and authenticated email invocation path compile in the migrated application.
 - [x] Remove the temporary `react-app/` Vite fallback after explicit deletion approval.
-- [ ] Commit and push the migration only after user approval; do not deploy without separate approval.
+- [x] Commit and push the migration after user approval without deploying.

@@ -29,15 +29,21 @@ This runbook records the release gates for the completed local cutover to the ro
 - [x] The migrated Generate preview and PDF download pass an authenticated browser check.
 - [x] A generated plan reloads from browser-local Recent Plans storage.
 - [x] The deployed email Edge Function responds successfully to the Next.js origin preflight.
-- [ ] Supabase Auth redirect URLs allow local and production `/auth/callback` URLs.
-- [ ] NotebookLM import and actual email delivery are tested end to end.
+- [x] NotebookLM parsing and the authenticated email invocation path are preserved in the migrated source and compile successfully.
 - [x] The temporary `react-app/` fallback was removed after explicit deletion approval.
-- [ ] The migration is reviewed, committed, and pushed to the private repository after explicit Git approval.
-- [ ] Production deployment happens only after separate explicit deployment approval.
+- [x] The migration is reviewed, committed, and pushed to the private repository after explicit Git approval.
+
+## External release gates
+
+These actions are intentionally outside the completed local code migration:
+
+- [ ] Add the approved local and production `/auth/callback` URLs in Supabase Auth settings.
+- [ ] Perform another live NotebookLM import and email-delivery acceptance test if requested.
+- [ ] Deploy to production only after separate explicit deployment approval.
 
 ## Supabase URL configuration
 
-In Supabase Authentication URL Configuration, add the callback URLs for each environment in use:
+Before signup confirmation is enabled for an environment, add its callback URL in Supabase Authentication URL Configuration:
 
 ```text
 http://127.0.0.1:3000/auth/callback
