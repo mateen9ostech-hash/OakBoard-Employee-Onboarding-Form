@@ -4,16 +4,37 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui'
-import { signOut } from '@/lib/auth/client'
+import { getValidSession, signOut } from '@/lib/auth/client'
+import { supabase } from '@/lib/supabase/client'
 import {
-  deletePlanFromHistory,
-  readPlanHistory,
-  savePlanToHistory,
   type OnboardingPlan,
   type PlanWeek,
   type SavedOnboardingPlan,
   writeStoredPlan,
 } from '@/types/plan'
+
+type CreationMode = 'manual' | 'import'
+
+type OnboardingPlanRow = {
+  id: string
+  title: string
+  role: string
+  duration_weeks: number
+  updated_at: string
+  plan_json: OnboardingPlan
+}
+
+function savedPlanFromRow(row: OnboardingPlanRow): SavedOnboardingPlan {
+  const nWeeks = Number(row.duration_weeks) === 4 ? 4 : 2
+  return {
+    id: row.id,
+    name: row.title || `${nWeeks}-Week · ${row.role || 'Untitled role'}`,
+    role: row.role || 'Untitled role',
+    nWeeks,
+    updatedAt: row.updated_at,
+    plan: row.plan_json,
+  }
+}
 
 const DPW = 5
 const DAY_TITLE_MAX = 90
@@ -286,18 +307,92 @@ export default function FillDetailsPage() {
   const [openDays, setOpenDays] = useState(() => new Set<number>())
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [importOpen, setImportOpen] = useState(false)
   const [importText, setImportText] = useState('')
   const [importStatus, setImportStatus] = useState<{ type: 'info' | 'error'; message: string } | null>(null)
   const [savedPlans, setSavedPlans] = useState<SavedOnboardingPlan[]>([])
+  const [historyOwnerId, setHistoryOwnerId] = useState('')
+  const [historyStatus, setHistoryStatus] = useState('')
+  const [wizardOpen, setWizardOpen] = useState(false)
+  const [creationMode, setCreationMode] = useState<CreationMode | null>(null)
+  const [wizardStep, setWizardStep] = useState(0)
+  const [durationChosen, setDurationChosen] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
 
   useEffect(() => {
-    queueMicrotask(() => setSavedPlans(readPlanHistory()))
+    let active = true
+
+    async function loadUserHistory() {
+      const sessionResult = await getValidSession()
+      if (!active) return
+      if (!sessionResult.ok || !supabase) {
+        setSavedPlans([])
+        setHistoryStatus('Recent plans could not be loaded from the database.')
+        return
+      }
+
+      const ownerId = sessionResult.session.user.id
+      setHistoryOwnerId(ownerId)
+
+      const { data, error: historyError } = await supabase
+        .from('onboarding_plans')
+        .select('id,title,role,duration_weeks,updated_at,plan_json')
+        .eq('owner_id', ownerId)
+        .order('updated_at', { ascending: false })
+        .limit(8)
+
+      if (!active) return
+      if (historyError || !data) {
+        setSavedPlans([])
+        setHistoryStatus('Recent plans could not be loaded from the database.')
+        return
+      }
+
+      const remoteHistory = (data as unknown as OnboardingPlanRow[]).map(savedPlanFromRow)
+      setSavedPlans(remoteHistory)
+      setHistoryStatus('')
+    }
+
+    void loadUserHistory()
+    return () => {
+      active = false
+    }
   }, [])
 
   const dates = useMemo(() => workdays(startDate, nWeeks * DPW), [startDate, nWeeks])
+  const completion = useMemo(() => {
+    const visibleWeeks = weeks.slice(0, nWeeks)
+    const total = 4 + nWeeks * (1 + DPW * 3)
+    let completed = 0
+
+    if (creationMode) completed += 1
+    if (durationChosen) completed += 1
+    if (role.trim()) completed += 1
+    if (startDate) completed += 1
+
+    visibleWeeks.forEach((week) => {
+      if (week.title.trim()) completed += 1
+      week.days.slice(0, DPW).forEach((day) => {
+        if (day.title.trim()) completed += 1
+        if (day.tasks.some((task) => task.trim())) completed += 1
+        if (day.outcome.trim()) completed += 1
+      })
+    })
+
+    return {
+      completed,
+      total,
+      percent: Math.round((completed / total) * 100),
+    }
+  }, [creationMode, durationChosen, nWeeks, role, startDate, weeks])
+
+  const wizardSteps = creationMode === 'import'
+    ? ['Method', 'Import Data', 'Review & Generate']
+    : ['Method', 'Duration', 'Role Information', 'Weeks & Days']
+
+  const activeWizardStep = creationMode === 'import' && wizardStep === 3 ? 2 : wizardStep
 
   function setDuration(next: 2 | 4) {
+    setDurationChosen(true)
     setNWeeks(next)
     setWeeks((current) => {
       const target = makeWeeks(next)
@@ -386,6 +481,58 @@ export default function FillDetailsPage() {
     setNotice('')
   }
 
+  function openNewPlan() {
+    setRole('')
+    setReports('')
+    setCollab('')
+    setStartDate(nextWeekdayIso())
+    setNWeeks(2)
+    setWeeks(makeWeeks(2))
+    setOpenWeeks(new Set([0]))
+    setOpenDays(new Set())
+    setCreationMode(null)
+    setWizardStep(0)
+    setDurationChosen(false)
+    setImportText('')
+    setImportStatus(null)
+    setError('')
+    setNotice('')
+    setWizardOpen(true)
+  }
+
+  function chooseCreationMode(mode: CreationMode) {
+    setCreationMode(mode)
+    setWizardStep(1)
+    setError('')
+    setNotice('')
+    setImportStatus(null)
+  }
+
+  function closeWizard() {
+    setWizardOpen(false)
+    setError('')
+    setImportStatus(null)
+  }
+
+  function goToRoleStep() {
+    if (!durationChosen) {
+      setError('Choose a 2-week or 4-week plan to continue.')
+      return
+    }
+    setError('')
+    setWizardStep(2)
+  }
+
+  function goToPlanStep() {
+    if (!role.trim()) {
+      setError('Please enter the Job Title / Role to continue.')
+      return
+    }
+    setError('')
+    setWizardStep(3)
+    setOpenWeeks(new Set([0]))
+  }
+
   function loadSavedPlan(saved: SavedOnboardingPlan) {
     const plan = saved.plan
     const loadedWeeks = Number(plan.nWeeks) === 4 ? 4 : 2
@@ -411,12 +558,33 @@ export default function FillDetailsPage() {
     setWeeks(restoredWeeks)
     setOpenWeeks(new Set(Array.from({ length: loadedWeeks }, (_, index) => index)))
     setOpenDays(new Set())
+    setCreationMode('manual')
+    setWizardStep(3)
+    setDurationChosen(true)
+    setWizardOpen(true)
     setError('')
     setNotice(`Loaded saved plan: ${saved.name}`)
   }
 
-  function removeSavedPlan(id: string) {
-    setSavedPlans(deletePlanFromHistory(id))
+  async function removeSavedPlan(id: string) {
+    if (!supabase || !historyOwnerId) {
+      setHistoryStatus('The database is unavailable. Please try again.')
+      return
+    }
+
+    const { error: removeError } = await supabase
+      .from('onboarding_plans')
+      .delete()
+      .eq('id', id)
+      .eq('owner_id', historyOwnerId)
+
+    if (removeError) {
+      setHistoryStatus('This plan could not be removed. Please try again.')
+      return
+    }
+
+    setSavedPlans((current) => current.filter((plan) => plan.id !== id))
+    setHistoryStatus('')
   }
 
   async function handleSignOut() {
@@ -458,7 +626,7 @@ export default function FillDetailsPage() {
     }
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const plan = collect()
     if (!plan.role) {
@@ -471,8 +639,36 @@ export default function FillDetailsPage() {
       return
     }
 
+    setIsGenerating(true)
+    if (!supabase || !historyOwnerId) {
+      setError('Your database session is unavailable. Please sign in again and retry.')
+      setIsGenerating(false)
+      return
+    }
+
+    const { data: savedRow, error: saveError } = await supabase
+      .from('onboarding_plans')
+      .insert({
+        owner_id: historyOwnerId,
+        title: `${plan.nWeeks}-Week · ${plan.role}`,
+        role: plan.role,
+        reports_to: plan.reportsTo,
+        collaborates_with: plan.collaboratesWith,
+        duration_weeks: plan.nWeeks,
+        plan_json: plan,
+      })
+      .select('id,title,role,duration_weeks,updated_at,plan_json')
+      .single()
+
+    if (saveError || !savedRow) {
+      setError('Your plan could not be saved to the database. Please try again.')
+      setIsGenerating(false)
+      return
+    }
+
+    const savedPlan = savedPlanFromRow(savedRow as unknown as OnboardingPlanRow)
+    setSavedPlans((current) => [savedPlan, ...current].slice(0, 8))
     writeStoredPlan(plan)
-    setSavedPlans(savePlanToHistory(plan))
     router.push('/generate-form')
   }
 
@@ -513,7 +709,8 @@ export default function FillDetailsPage() {
     try {
       const plan = parseNotebookPlan(rawText)
       applyImportedPlan(plan)
-      setImportOpen(false)
+      setDurationChosen(true)
+      setWizardStep(3)
       setNotice(`${plan.nWeeks}-week NotebookLM data imported locally. Please review before generating.`)
       setError('')
     } catch (caught) {
@@ -532,11 +729,7 @@ export default function FillDetailsPage() {
           OakBoard
         </div>
         <div className="hdr-actions">
-          <div className="hdr-steps">
-            <div className="hdr-step active"><div className="hdr-sn">1</div><span className="hdr-sl">Fill Details</span></div>
-            <div className="hdr-sep" />
-            <div className="hdr-step"><div className="hdr-sn">2</div><span className="hdr-sl">Preview & Export</span></div>
-          </div>
+          <span className="dashboard-status">{savedPlans.length} saved {savedPlans.length === 1 ? 'plan' : 'plans'}</span>
         </div>
       </header>
 
@@ -550,22 +743,6 @@ export default function FillDetailsPage() {
             </div>
           </div>
 
-          <div className="side-workspace">
-            <span className="side-dot" />
-            <div>
-              <strong>Oak Street Workspace</strong>
-              <span>Local draft mode</span>
-            </div>
-          </div>
-
-          <nav className="side-nav" aria-label="Form sections">
-            <span className="side-label">Main Menu</span>
-            <a className="side-nav-item active" href="#plan-duration"><span>□</span>Plan setup</a>
-            <a className="side-nav-item" href="#role-info"><span>◇</span>Role information</a>
-            <a className="side-nav-item" href="#weekly-plans"><span>☰</span>Weeks & days</a>
-            <button className="side-nav-item" onClick={() => setImportOpen(true)} type="button"><span>⇣</span>Import NotebookLM</button>
-          </nav>
-
           <div className="recent-sidebar-head">
             <span className="side-label">Recent Plans</span>
             <span>{savedPlans.length ? 'Load previous work' : 'No saved plans yet'}</span>
@@ -576,33 +753,85 @@ export default function FillDetailsPage() {
               savedPlans.map((saved) => (
                 <article className="recent-card" key={saved.id}>
                   <button className="recent-load" onClick={() => loadSavedPlan(saved)} type="button">
-                    <strong>{saved.name}</strong>
-                    <span>
-                      {new Date(saved.updatedAt).toLocaleString(undefined, {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                      })}
+                    <span className="recent-plan-copy">
+                      <strong title={saved.role}>{saved.role}</strong>
+                      <span className="recent-plan-date">
+                        {new Date(saved.updatedAt).toLocaleString(undefined, {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                      </span>
                     </span>
                   </button>
-                  <button className="recent-remove" onClick={() => removeSavedPlan(saved.id)} title="Remove saved plan" type="button">×</button>
+                  <button aria-label={`Remove ${saved.name}`} className="recent-remove" onClick={() => removeSavedPlan(saved.id)} title="Remove saved plan" type="button">×</button>
                 </article>
               ))}
-            {savedPlans.length === 0 && (
+            {historyStatus && <div className="recent-history-status">{historyStatus}</div>}
+            {savedPlans.length === 0 && !historyStatus && (
               <div className="recent-empty">Generate a plan once and it will appear here for quick reuse.</div>
             )}
           </div>
 
           <div className="side-footer">
-            <button className="side-footer-item" onClick={resetAll} type="button">Reset form</button>
             <button className="side-footer-item danger" onClick={handleSignOut} type="button">Sign out</button>
           </div>
         </aside>
 
-        <form className="fo" onSubmit={handleSubmit}>
-        <div className="fi">
-          <h1>Create Onboarding Plan</h1>
-          <p>Fill in role details and expand each day to add topic, tasks and outcome. The PDF output matches your exact template design.</p>
-        </div>
+        <section className="plan-home" aria-labelledby="plan-home-title">
+          <div className="plan-home-card">
+            <div className="plan-home-copy">
+              <span className="plan-home-kicker">Onboarding plan builder</span>
+              <h1 id="plan-home-title">Create Onboarding Plan</h1>
+              <p>Create a clear, role specific onboarding plan in minutes. Add daily goals, activities, and expected outcomes, then export a polished PDF that follows your approved template.</p>
+            </div>
+            <button className="create-plan-button" onClick={openNewPlan} type="button">
+              <span aria-hidden="true">+</span>
+              Create New
+            </button>
+          </div>
+        </section>
+
+        {wizardOpen && (
+          <div className="plan-wizard-overlay" onClick={(event) => event.target === event.currentTarget && closeWizard()}>
+            <form className="fo plan-wizard" onSubmit={handleSubmit}>
+              <div className="plan-wizard-head">
+                <div>
+                  <span className="plan-wizard-eyebrow">Create onboarding plan</span>
+                  <h2>{wizardStep === 0 ? 'How would you like to start?' : wizardSteps[activeWizardStep]}</h2>
+                </div>
+                <button aria-label="Close plan builder" className="plan-wizard-close" onClick={closeWizard} type="button">×</button>
+              </div>
+
+              <div className="plan-progress" aria-label={`Plan ${completion.percent}% complete`}>
+                <div className="plan-progress-steps">
+                  {wizardSteps.map((step, index) => (
+                    <span className={index <= activeWizardStep ? 'active' : ''} key={step}>{step}</span>
+                  ))}
+                </div>
+                <div className="plan-progress-track"><span style={{ width: `${completion.percent}%` }} /></div>
+                <div className="plan-progress-meta">
+                  <span>{completion.completed} of {completion.total} plan details completed</span>
+                  <strong>{completion.percent}%</strong>
+                </div>
+              </div>
+
+              <div className="plan-wizard-body">
+                {wizardStep === 0 && (
+                  <section className="creation-methods" aria-label="Choose how to create the plan">
+                    <button onClick={() => chooseCreationMode('manual')} type="button">
+                      <span className="creation-method-icon">✎</span>
+                      <span><strong>Fill Manually</strong><small>Build the plan step by step with guided fields.</small></span>
+                      <span className="creation-method-arrow">→</span>
+                    </button>
+                    <button onClick={() => chooseCreationMode('import')} type="button">
+                      <span className="creation-method-icon">↓</span>
+                      <span><strong>Import Data</strong><small>Paste structured NotebookLM data and review the filled plan.</small></span>
+                      <span className="creation-method-arrow">→</span>
+                    </button>
+                  </section>
+                )}
+
+                {creationMode === 'manual' && wizardStep === 1 && (
 
         <section className="sec" id="plan-duration">
           <div className="sec-h"><div className="sec-ic">+</div><span className="sec-t">Plan Duration</span></div>
@@ -618,6 +847,31 @@ export default function FillDetailsPage() {
           </div>
         </section>
 
+                )}
+
+                {creationMode === 'import' && wizardStep === 1 && (
+                  <section className="wizard-import" aria-labelledby="wizard-import-title">
+                    <div className="wizard-import-intro">
+                      <span className="creation-method-icon">↓</span>
+                      <div>
+                        <h3 id="wizard-import-title">Import your plan data</h3>
+                        <p>Paste the structured NotebookLM output. OakBoard will detect the duration and fill role, week, task, and outcome fields.</p>
+                      </div>
+                    </div>
+                    <div className="import-field">
+                      <label>NotebookLM content *</label>
+                      <textarea
+                        onChange={(event) => setImportText(event.target.value)}
+                        placeholder="Paste NotebookLM output here. Expected labels: Role, Reports To, Collaborates With, Week Title, Objective, Day Goal, Tasks, Day Outcome..."
+                        value={importText}
+                      />
+                      <span className="import-help">The plan stays local until you review and generate it.</span>
+                    </div>
+                    {importStatus && <div className={`import-status on ${importStatus.type}`}>{importStatus.message}</div>}
+                  </section>
+                )}
+
+                {creationMode === 'manual' && wizardStep === 2 && (
         <section className="sec" id="role-info">
           <div className="sec-h"><div className="sec-ic">i</div><span className="sec-t">Role Information</span></div>
           <div className="sec-b">
@@ -630,6 +884,9 @@ export default function FillDetailsPage() {
           </div>
         </section>
 
+                )}
+
+                {wizardStep === 3 && (
         <section className="sec" id="weekly-plans">
           <div className="sec-h"><div className="sec-ic">≡</div><span className="sec-t">Weeks & Daily Plans</span></div>
           <div className="sec-b">
@@ -695,46 +952,53 @@ export default function FillDetailsPage() {
           </div>
         </section>
 
-        {(error || notice) && <div className={`err on ${notice ? 'ok' : ''}`}>{error || notice}</div>}
+                )}
 
-        <div className="form-actions">
-          <Button onClick={resetAll} type="button" variant="secondary">Reset</Button>
-          <Button icon="check" onClick={fillDemoData} type="button" variant="soft">Fill Sample Plan</Button>
-          <Button icon="download" onClick={() => setImportOpen(true)} type="button" variant="secondary">Import NotebookLM Data</Button>
-          <Button icon="plus" type="submit" variant="primary">Generate Plan</Button>
-        </div>
-        </form>
+                {(error || notice) && <div className={`err on ${notice ? 'ok' : ''}`}>{error || notice}</div>}
+              </div>
+
+              <div className="plan-wizard-actions">
+                {wizardStep === 0 && <Button onClick={closeWizard} type="button" variant="secondary">Cancel</Button>}
+
+                {creationMode === 'manual' && wizardStep === 1 && (
+                  <>
+                    <Button onClick={() => { setCreationMode(null); setWizardStep(0); setError('') }} type="button" variant="secondary">Back</Button>
+                    <Button onClick={goToRoleStep} type="button" variant="primary">Next: Role Information</Button>
+                  </>
+                )}
+
+                {creationMode === 'manual' && wizardStep === 2 && (
+                  <>
+                    <Button onClick={() => { setWizardStep(1); setError('') }} type="button" variant="secondary">Back</Button>
+                    <Button onClick={goToPlanStep} type="button" variant="primary">Next: Weeks &amp; Days</Button>
+                  </>
+                )}
+
+                {creationMode === 'import' && wizardStep === 1 && (
+                  <>
+                    <Button onClick={() => { setCreationMode(null); setWizardStep(0); setImportStatus(null) }} type="button" variant="secondary">Back</Button>
+                    <Button icon="download" onClick={parseImportedPlan} type="button" variant="primary">Import &amp; Review</Button>
+                  </>
+                )}
+
+                {wizardStep === 3 && (
+                  <>
+                    <div className="plan-wizard-tools">
+                      <Button onClick={() => { setWizardStep(creationMode === 'import' ? 1 : 2); setNotice(''); setError('') }} type="button" variant="secondary">Back</Button>
+                      {creationMode === 'manual' && <Button icon="check" onClick={fillDemoData} type="button" variant="soft">Fill Sample</Button>}
+                      <Button onClick={resetAll} type="button" variant="secondary">Clear</Button>
+                    </div>
+                    <Button disabled={isGenerating} icon="plus" type="submit" variant="primary">
+                      {isGenerating ? 'Generating…' : 'Generate Plan'}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </form>
+          </div>
+        )}
       </div>
 
-      {importOpen && (
-        <div className="import-overlay on" onClick={(event) => event.target === event.currentTarget && setImportOpen(false)}>
-          <div className="import-modal" role="dialog" aria-modal="true" aria-labelledby="import-title">
-            <div className="import-head">
-              <div><h2 id="import-title">Import NotebookLM Data</h2><p>Paste the structured output from NotebookLM. OakBoard will place Role, Weeks, Day Goals, Tasks, and Outcomes into the form.</p></div>
-              <button className="import-close" onClick={() => setImportOpen(false)} type="button">×</button>
-            </div>
-            <div className="import-body">
-              <section className="import-step">
-                <div className="import-step-title"><span>1</span><strong>Paste NotebookLM output</strong></div>
-                <div className="import-field">
-                  <label>NotebookLM content *</label>
-                  <textarea
-                    onChange={(event) => setImportText(event.target.value)}
-                    placeholder="Paste NotebookLM output here. Expected labels: Role, Reports To, Collaborates With, Week Title, Objective, Day Goal, Tasks, Day Outcome..."
-                    value={importText}
-                  />
-                  <span className="import-help">OakBoard will auto-detect 2-week or 4-week plans from the pasted Week and Day labels.</span>
-                </div>
-              </section>
-              {importStatus && <div className={`import-status on ${importStatus.type}`}>{importStatus.message}</div>}
-            </div>
-            <div className="import-actions">
-              <button className="import-cancel" onClick={() => setImportOpen(false)} type="button">Cancel</button>
-              <button className="import-submit" onClick={parseImportedPlan} type="button">Fill Form</button>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   )
 }

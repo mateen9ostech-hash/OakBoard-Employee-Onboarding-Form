@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { BrandLogo } from '@/components/ui'
-import { getValidSession } from '@/lib/auth/client'
+import { getValidSession, setRememberSessionPreference } from '@/lib/auth/client'
 import { supabase } from '@/lib/supabase/client'
 import { supabaseEnvReady } from '@/lib/supabase/env'
 
@@ -229,6 +229,7 @@ export default function LoginPage() {
     }
 
     setSigninOk('Signed in! Redirecting...')
+    setRememberSessionPreference(rememberMe)
     try {
       if (rememberMe) {
         localStorage.setItem(REMEMBER_EMAIL_KEY, signinEmail.trim())
@@ -387,9 +388,9 @@ export default function LoginPage() {
               </div>
 
               <div className="forgot-row">
-                <label className="remember-me">
+                <label className="remember-me" title="Keep me signed in on this device for up to 30 days">
                   <input checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} type="checkbox" />
-                  <span>Remember me</span>
+                  <span>Remember Me</span>
                 </label>
                 <button className="link-btn" disabled={busy === 'forgot'} onClick={handleForgotPassword} type="button">
                   {busy === 'forgot' ? 'Sending...' : 'Forgot password?'}

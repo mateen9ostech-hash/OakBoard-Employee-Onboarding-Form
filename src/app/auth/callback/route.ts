@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
+import { CURRENT_SESSION_VALUE, REMEMBER_SESSION_COOKIE } from '@/lib/auth/constants'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { supabaseEnvReady } from '@/lib/supabase/env'
 
@@ -13,7 +15,15 @@ export async function GET(request: Request) {
   if (code && supabaseEnvReady) {
     const supabase = await createSupabaseServerClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) return NextResponse.redirect(new URL(next, requestUrl.origin))
+    if (!error) {
+      const cookieStore = await cookies()
+      cookieStore.set(REMEMBER_SESSION_COOKIE, CURRENT_SESSION_VALUE, {
+        path: '/',
+        sameSite: 'lax',
+        secure: requestUrl.protocol === 'https:',
+      })
+      return NextResponse.redirect(new URL(next, requestUrl.origin))
+    }
   }
 
   return NextResponse.redirect(new URL('/login?auth_error=callback', requestUrl.origin))

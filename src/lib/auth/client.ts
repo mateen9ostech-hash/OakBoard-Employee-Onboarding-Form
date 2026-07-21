@@ -1,6 +1,13 @@
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
-import { SESSION_CHECK_TIMEOUT_MS, SESSION_MAX_AGE_MS } from './constants'
+import {
+  CURRENT_SESSION_VALUE,
+  REMEMBER_SESSION_COOKIE,
+  REMEMBER_SESSION_MAX_AGE_SECONDS,
+  REMEMBER_SESSION_VALUE,
+  SESSION_CHECK_TIMEOUT_MS,
+  SESSION_MAX_AGE_MS,
+} from './constants'
 
 export type SessionCheck =
   | { ok: true; session: Session }
@@ -23,7 +30,21 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   })
 }
 
+function getSessionPreference() {
+  const prefix = `${REMEMBER_SESSION_COOKIE}=`
+  const cookie = document.cookie
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix))
+
+  return cookie?.slice(prefix.length) ?? null
+}
+
 function isSessionFresh(session: Session): boolean {
+  const preference = getSessionPreference()
+  if (preference === REMEMBER_SESSION_VALUE) return true
+  if (preference !== CURRENT_SESSION_VALUE) return false
+
   const signedInAt = session.user.last_sign_in_at
     ? new Date(session.user.last_sign_in_at).getTime()
     : session.expires_at
@@ -31,6 +52,19 @@ function isSessionFresh(session: Session): boolean {
       : Date.now()
 
   return Date.now() - signedInAt <= SESSION_MAX_AGE_MS
+}
+
+export function setRememberSessionPreference(remember: boolean) {
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  const persistence = remember ? `; Max-Age=${REMEMBER_SESSION_MAX_AGE_SECONDS}` : ''
+  const value = remember ? REMEMBER_SESSION_VALUE : CURRENT_SESSION_VALUE
+
+  document.cookie = `${REMEMBER_SESSION_COOKIE}=${value}; Path=/; SameSite=Lax${persistence}${secure}`
+}
+
+export function clearRememberSessionPreference() {
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  document.cookie = `${REMEMBER_SESSION_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`
 }
 
 export async function getValidSession(): Promise<SessionCheck> {
@@ -65,6 +99,7 @@ export async function getValidSession(): Promise<SessionCheck> {
 
 export async function signOut() {
   if (supabase) await supabase.auth.signOut()
+  clearRememberSessionPreference()
   localStorage.removeItem('obf_plan_data')
   sessionStorage.removeItem('obf_plan_data')
 }

@@ -29,7 +29,6 @@ export type OnboardingPlan = {
 }
 
 const PLAN_STORAGE_KEY = 'obf_plan_data'
-const PLAN_HISTORY_KEY = 'obf_plan_history'
 
 export type SavedOnboardingPlan = {
   id: string
@@ -61,48 +60,4 @@ export function writeStoredPlan(plan: OnboardingPlan) {
   const serialized = JSON.stringify(plan)
   localStorage.setItem(PLAN_STORAGE_KEY, serialized)
   sessionStorage.setItem(PLAN_STORAGE_KEY, serialized)
-}
-
-export function readPlanHistory(): SavedOnboardingPlan[] {
-  if (typeof window === 'undefined') return []
-
-  const raw = localStorage.getItem(PLAN_HISTORY_KEY)
-  if (!raw) return []
-
-  try {
-    const parsed = JSON.parse(raw) as SavedOnboardingPlan[]
-    if (!Array.isArray(parsed)) return []
-    return parsed
-      .filter((item) => item?.id && item?.plan)
-      .slice(0, 12)
-  } catch {
-    return []
-  }
-}
-
-export function savePlanToHistory(plan: OnboardingPlan) {
-  if (typeof window === 'undefined') return []
-
-  const role = plan.role?.trim() || 'Untitled role'
-  const startDate = plan.startDate || ''
-  const id = `${role.toLowerCase()}__${plan.nWeeks}__${startDate}`.replace(/[^a-z0-9_/-]+/g, '-')
-  const entry: SavedOnboardingPlan = {
-    id,
-    name: `${plan.nWeeks}-Week · ${role}`,
-    role,
-    nWeeks: plan.nWeeks,
-    updatedAt: new Date().toISOString(),
-    plan,
-  }
-  const history = [entry, ...readPlanHistory().filter((item) => item.id !== id)].slice(0, 8)
-  localStorage.setItem(PLAN_HISTORY_KEY, JSON.stringify(history))
-  return history
-}
-
-export function deletePlanFromHistory(id: string) {
-  if (typeof window === 'undefined') return []
-
-  const history = readPlanHistory().filter((item) => item.id !== id)
-  localStorage.setItem(PLAN_HISTORY_KEY, JSON.stringify(history))
-  return history
 }
