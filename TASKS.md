@@ -1,6 +1,6 @@
 # OakBoard Project Task List
 
-Last updated: 2026-07-16
+Last updated: 2026-07-21
 
 This file is the live checklist for OakBoard. After each completed task, update the relevant checkbox and add any important notes.
 
@@ -18,7 +18,7 @@ This file is the live checklist for OakBoard. After each completed task, update 
 - [x] Remove AI/Ollama parser flow after testing showed it was unreliable.
 - [x] Add `send-onboarding-email` Supabase Edge Function.
 - [x] Add demo-mode email behavior for Resend testing restrictions.
-- [x] Add root `.env.example` with Supabase and Resend placeholders.
+- [x] Add `supabase/functions/.env.example` with server-side Resend placeholders.
 - [x] Install Node.js locally for the project workflow.
 - [x] Scaffold React + TypeScript + Vite app in `react-app/`.
 - [x] Install React dependencies including Supabase JS and React Router.
@@ -33,10 +33,8 @@ This file is the live checklist for OakBoard. After each completed task, update 
 - [x] Verify React app builds after routing/auth foundation.
 - [x] Create this live project task list.
 - [x] Add workspace-level project index and VS Code workspace entries so OakBoard GitHub repo is discoverable after a fresh VS Code/Codex setup.
-
-## In progress
-
-- [ ] React migration from static HTML app to full production React app.
+- [x] Complete the React migration from the static HTML app and verify the end-to-end flow.
+- [x] Add pinned Node/npm metadata, requirements documentation, and a no-UAC setup script for portable recovery.
 
 ## Pending
 
@@ -80,7 +78,7 @@ This file is the live checklist for OakBoard. After each completed task, update 
   - `DayTitleIcon` at 16 x 16px.
   - `DayTasksIcon` at 16 x 16px.
   - `DayOutcomeIcon` at 16 x 16px.
-  - replace task icon with `Assets/Task icon.svg`.
+  - use the migrated task icon at `react-app/public/task-icon.svg`.
 - [x] Use the correct logo assets and proportions in React preview/PDF/email.
 - [x] Ensure 2-week plans generate only 10 days on 1 page.
 - [x] Ensure 4-week plans generate 20 days across 2 pages.
@@ -114,6 +112,6 @@ This file is the live checklist for OakBoard. After each completed task, update 
 
 ### Cleanup
 
-- [ ] Remove unused Vite starter assets if no longer needed.
-- [ ] Remove or archive old static HTML files only after React app fully replaces them and user approves.
-- [ ] Keep project folder clean and avoid duplicate OakBoard copies.
+- [x] Remove unused Vite starter assets.
+- [x] Remove old static HTML app after React replacement and user approval.
+- [x] Keep project folder clean and avoid duplicate OakBoard copies.

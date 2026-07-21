@@ -140,19 +140,19 @@ function isMissingValue(value: unknown) {
 
 function fallbackRole(source: string) {
   return extractLabel(source, ['Role', 'Position', 'Job Title', 'Designation'])
-    || source.match(/(?:Role|Position|Job Title|Designation)\s*[:\-]\s*([^\n]+)/i)?.[1]?.trim()
+    || source.match(/(?:Role|Position|Job Title|Designation)\s*[:-]\s*([^\n]+)/i)?.[1]?.trim()
     || ''
 }
 
 function fallbackReports(source: string) {
   return extractLabel(source, ['Reports To', 'Reporting To', 'Manager', 'Supervisor'])
-    || source.match(/(?:reports?\s+to|reporting\s+to|manager|supervisor)\s*[:\-]\s*([^\n]+)/i)?.[1]?.trim()
+    || source.match(/(?:reports?\s+to|reporting\s+to|manager|supervisor)\s*[:-]\s*([^\n]+)/i)?.[1]?.trim()
     || ''
 }
 
 function fallbackCollaborators(source: string) {
   return extractLabel(source, ['Collaborates With', 'Collaborators', 'Works With', 'Stakeholders', 'Teams'])
-    || source.match(/(?:collaborates?\s+with|works?\s+with|stakeholders|teams)\s*[:\-]\s*([^\n]+)/i)?.[1]?.trim()
+    || source.match(/(?:collaborates?\s+with|works?\s+with|stakeholders|teams)\s*[:-]\s*([^\n]+)/i)?.[1]?.trim()
     || ''
 }
 

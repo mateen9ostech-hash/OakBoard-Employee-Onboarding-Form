@@ -2,6 +2,11 @@
   "name": "react-app",
   "private": true,
   "version": "0.0.0",
+  "packageManager": "npm@11.16.0",
+  "engines": {
+    "node": ">=24.18.0 <25",
+    "npm": ">=11.16.0 <12"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
