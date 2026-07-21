@@ -3,10 +3,14 @@
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Button } from '@/components/ui'
+import { Button, Icon } from '@/components/ui'
+import { VividButton } from '@/components/vivid'
 import { getValidSession, signOut } from '@/lib/auth/client'
 import { supabase } from '@/lib/supabase/client'
 import {
+  clearStoredPlanEditIntent,
+  hasStoredPlanEditIntent,
+  readStoredPlan,
   type OnboardingPlan,
   type PlanWeek,
   type SavedOnboardingPlan,
@@ -34,6 +38,33 @@ function savedPlanFromRow(row: OnboardingPlanRow): SavedOnboardingPlan {
     updatedAt: row.updated_at,
     plan: row.plan_json,
   }
+}
+
+function SidebarIcon({ name }: { name: 'recent' | 'archive' | 'signout' }) {
+  if (name === 'archive') {
+    return (
+      <svg aria-hidden="true" className="sidebar-action-icon" fill="none" viewBox="0 0 24 24">
+        <path d="M4 8h16v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z" />
+        <path d="M3 3h18v5H3V3Zm7 9h4" />
+      </svg>
+    )
+  }
+
+  if (name === 'signout') {
+    return (
+      <svg aria-hidden="true" className="sidebar-action-icon" fill="none" viewBox="0 0 24 24">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+        <path d="m16 17 5-5-5-5m5 5H9" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg aria-hidden="true" className="sidebar-action-icon" fill="none" viewBox="0 0 24 24">
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 3v5h5m4-1v5l3 2" />
+    </svg>
+  )
 }
 
 const DPW = 5
@@ -295,8 +326,30 @@ function fmtShort(date?: Date) {
   return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
+function titleCaseName(value: string) {
+  return value
+    .trim()
+    .split(/[._\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ')
+}
+
+function getUserDisplayName(user: { email?: string; user_metadata?: Record<string, unknown> }) {
+  const metadataName = [
+    user.user_metadata?.full_name,
+    user.user_metadata?.name,
+    user.user_metadata?.display_name,
+  ].find((value) => typeof value === 'string' && value.trim())
+
+  if (typeof metadataName === 'string') return metadataName.trim()
+  return titleCaseName(user.email?.split('@')[0] || 'there')
+}
+
 export default function FillDetailsPage() {
   const router = useRouter()
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null)
   const [role, setRole] = useState('')
   const [startDate, setStartDate] = useState(nextWeekdayIso())
   const [reports, setReports] = useState('')
@@ -310,6 +363,9 @@ export default function FillDetailsPage() {
   const [importText, setImportText] = useState('')
   const [importStatus, setImportStatus] = useState<{ type: 'info' | 'error'; message: string } | null>(null)
   const [savedPlans, setSavedPlans] = useState<SavedOnboardingPlan[]>([])
+  const [archivedPlans, setArchivedPlans] = useState<SavedOnboardingPlan[]>([])
+  const [archiveView, setArchiveView] = useState(false)
+  const [archiveLoading, setArchiveLoading] = useState(false)
   const [historyOwnerId, setHistoryOwnerId] = useState('')
   const [historyStatus, setHistoryStatus] = useState('')
   const [wizardOpen, setWizardOpen] = useState(false)
@@ -320,6 +376,49 @@ export default function FillDetailsPage() {
   const [openPlanMenuId, setOpenPlanMenuId] = useState<string | null>(null)
   const [deleteCandidate, setDeleteCandidate] = useState<SavedOnboardingPlan | null>(null)
   const [planActionBusy, setPlanActionBusy] = useState(false)
+  const [displayName, setDisplayName] = useState('')
+
+  useEffect(() => {
+    if (!hasStoredPlanEditIntent()) return
+    const plan = readStoredPlan()
+    if (!plan) return
+
+    const loadedWeeks = Number(plan.nWeeks) === 4 ? 4 : 2
+    const restoredWeeks = makeWeeks(loadedWeeks)
+    ;(plan.weeks || []).slice(0, loadedWeeks).forEach((week, wi) => {
+      restoredWeeks[wi].title = week.title || ''
+      restoredWeeks[wi].goal = week.goal || ''
+      week.days.slice(0, DPW).forEach((day, di) => {
+        restoredWeeks[wi].days[di] = {
+          ...restoredWeeks[wi].days[di],
+          title: day.title || '',
+          tasks: day.tasks?.length ? day.tasks : ['', '', '', ''],
+          outcome: day.outcome || '',
+        }
+      })
+    })
+
+    const timer = window.setTimeout(() => {
+      clearStoredPlanEditIntent()
+      setEditingPlanId(plan.id || null)
+      setNWeeks(loadedWeeks)
+      setRole(plan.role || '')
+      setReports(plan.reportsTo || plan.reports || '')
+      setCollab(plan.collaboratesWith || plan.collab || '')
+      setStartDate(plan.startDate || nextWeekdayIso())
+      setWeeks(restoredWeeks)
+      setOpenWeeks(new Set(Array.from({ length: loadedWeeks }, (_, index) => index)))
+      setOpenDays(new Set())
+      setCreationMode('manual')
+      setWizardStep(1)
+      setDurationChosen(true)
+      setWizardOpen(true)
+      setError('')
+      setNotice('Editing saved plan')
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -335,6 +434,7 @@ export default function FillDetailsPage() {
 
       const ownerId = sessionResult.session.user.id
       setHistoryOwnerId(ownerId)
+      setDisplayName(getUserDisplayName(sessionResult.session.user))
 
       const { data, error: historyError } = await supabase
         .from('onboarding_plans')
@@ -493,6 +593,7 @@ export default function FillDetailsPage() {
   }
 
   function openNewPlan() {
+    setEditingPlanId(null)
     setRole('')
     setReports('')
     setCollab('')
@@ -547,6 +648,7 @@ export default function FillDetailsPage() {
   function loadSavedPlan(saved: SavedOnboardingPlan) {
     const plan = saved.plan
     const loadedWeeks = Number(plan.nWeeks) === 4 ? 4 : 2
+    setEditingPlanId(saved.id)
     setDuration(loadedWeeks)
     setRole(plan.role || '')
     setReports(plan.reportsTo || plan.reports || '')
@@ -570,11 +672,17 @@ export default function FillDetailsPage() {
     setOpenWeeks(new Set(Array.from({ length: loadedWeeks }, (_, index) => index)))
     setOpenDays(new Set())
     setCreationMode('manual')
-    setWizardStep(3)
+    setWizardStep(1)
     setDurationChosen(true)
     setWizardOpen(true)
     setError('')
     setNotice(`Loaded saved plan: ${saved.name}`)
+  }
+
+  function previewSavedPlan(saved: SavedOnboardingPlan) {
+    writeStoredPlan({ ...saved.plan, id: saved.id })
+    setOpenPlanMenuId(null)
+    router.push('/generate-form')
   }
 
   async function archiveSavedPlan(id: string) {
@@ -596,9 +704,75 @@ export default function FillDetailsPage() {
       return
     }
 
+    const archivedPlan = savedPlans.find((plan) => plan.id === id)
     setSavedPlans((current) => current.filter((plan) => plan.id !== id))
+    if (archivedPlan) {
+      setArchivedPlans((current) => [archivedPlan, ...current.filter((plan) => plan.id !== id)])
+    }
     setHistoryStatus('')
     setOpenPlanMenuId(null)
+    setPlanActionBusy(false)
+  }
+
+  async function showArchivedPlans() {
+    setArchiveView(true)
+    setArchiveLoading(true)
+    setOpenPlanMenuId(null)
+    setHistoryStatus('')
+
+    if (!supabase || !historyOwnerId) {
+      setArchivedPlans([])
+      setHistoryStatus('The database is unavailable. Please try again.')
+      setArchiveLoading(false)
+      return
+    }
+
+    const { data, error: archiveError } = await supabase
+      .from('onboarding_plans')
+      .select('id,title,role,duration_weeks,updated_at,plan_json')
+      .eq('owner_id', historyOwnerId)
+      .not('archived_at', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(20)
+
+    if (archiveError || !data) {
+      setArchivedPlans([])
+      setHistoryStatus('Archived plans could not be loaded. Please try again.')
+      setArchiveLoading(false)
+      return
+    }
+
+    setArchivedPlans((data as unknown as OnboardingPlanRow[]).map(savedPlanFromRow))
+    setHistoryStatus('')
+    setArchiveLoading(false)
+  }
+
+  async function restoreArchivedPlan(id: string) {
+    if (!supabase || !historyOwnerId) {
+      setHistoryStatus('The database is unavailable. Please try again.')
+      return
+    }
+
+    setPlanActionBusy(true)
+    const { error: restoreError } = await supabase
+      .from('onboarding_plans')
+      .update({ archived_at: null })
+      .eq('id', id)
+      .eq('owner_id', historyOwnerId)
+
+    if (restoreError) {
+      setHistoryStatus('This plan could not be restored. Please try again.')
+      setPlanActionBusy(false)
+      return
+    }
+
+    const restoredPlan = archivedPlans.find((plan) => plan.id === id)
+    setArchivedPlans((current) => current.filter((plan) => plan.id !== id))
+    if (restoredPlan) {
+      setSavedPlans((current) => [restoredPlan, ...current.filter((plan) => plan.id !== id)].slice(0, 8))
+    }
+    setOpenPlanMenuId(null)
+    setHistoryStatus('')
     setPlanActionBusy(false)
   }
 
@@ -622,6 +796,7 @@ export default function FillDetailsPage() {
     }
 
     setSavedPlans((current) => current.filter((plan) => plan.id !== id))
+    setArchivedPlans((current) => current.filter((plan) => plan.id !== id))
     setHistoryStatus('')
     setDeleteCandidate(null)
     setPlanActionBusy(false)
@@ -686,17 +861,25 @@ export default function FillDetailsPage() {
       return
     }
 
-    const { data: savedRow, error: saveError } = await supabase
-      .from('onboarding_plans')
-      .insert({
-        owner_id: historyOwnerId,
-        title: `${plan.nWeeks}-Week · ${plan.role}`,
-        role: plan.role,
-        reports_to: plan.reportsTo,
-        collaborates_with: plan.collaboratesWith,
-        duration_weeks: plan.nWeeks,
-        plan_json: plan,
-      })
+    const planPayload = {
+      title: `${plan.nWeeks}-Week · ${plan.role}`,
+      role: plan.role,
+      reports_to: plan.reportsTo,
+      collaborates_with: plan.collaboratesWith,
+      duration_weeks: plan.nWeeks,
+      plan_json: plan,
+    }
+    const saveQuery = editingPlanId
+      ? supabase
+          .from('onboarding_plans')
+          .update(planPayload)
+          .eq('id', editingPlanId)
+          .eq('owner_id', historyOwnerId)
+      : supabase
+          .from('onboarding_plans')
+          .insert({ owner_id: historyOwnerId, ...planPayload })
+
+    const { data: savedRow, error: saveError } = await saveQuery
       .select('id,title,role,duration_weeks,updated_at,plan_json')
       .single()
 
@@ -707,8 +890,8 @@ export default function FillDetailsPage() {
     }
 
     const savedPlan = savedPlanFromRow(savedRow as unknown as OnboardingPlanRow)
-    setSavedPlans((current) => [savedPlan, ...current].slice(0, 8))
-    writeStoredPlan(plan)
+    setSavedPlans((current) => [savedPlan, ...current.filter((saved) => saved.id !== savedPlan.id)].slice(0, 8))
+    writeStoredPlan({ ...plan, id: savedPlan.id })
     router.push('/generate-form')
   }
 
@@ -760,7 +943,7 @@ export default function FillDetailsPage() {
   }
 
   return (
-    <main className="form-page">
+    <main className={`form-page ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <header className="hdr">
         <div className="hdr-brand">
           <div className="hdr-icon">
@@ -774,25 +957,59 @@ export default function FillDetailsPage() {
       </header>
 
       <div className="fill-shell">
-        <aside className="recent-sidebar" aria-label="OakBoard sidebar">
+        <aside className="recent-sidebar" aria-label="OakBoard sidebar" id="oakboard-sidebar">
+          <button
+            aria-controls="oakboard-sidebar"
+            aria-expanded={!sidebarCollapsed}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="sidebar-toggle"
+            onClick={() => {
+              setSidebarCollapsed((current) => !current)
+              setOpenPlanMenuId(null)
+            }}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            type="button"
+          >
+            <Icon name={sidebarCollapsed ? 'panel-expand' : 'panel-collapse'} />
+          </button>
+
           <div className="side-brand">
-            <div className="side-logo"><Image src="/oakboard-logo.svg" alt="" height={40} width={40} /></div>
+            <div className="side-logo" title="OakBoard"><Image src="/oakboard-logo.svg" alt="" height={40} width={40} /></div>
             <div>
               <strong>OakBoard</strong>
-              <span>Onboarding Forms</span>
+              <span>Onboarding Plans</span>
             </div>
           </div>
 
           <div className="recent-sidebar-head">
-            <span className="side-label">Recent Plans</span>
-            <span>{savedPlans.length ? 'Load previous work' : 'No saved plans yet'}</span>
+            <div className="recent-title-row">
+              <div className="recent-title-label" title="Recent plans">
+                <SidebarIcon name="recent" />
+                <span className="side-label">Recent Plans</span>
+              </div>
+            </div>
+            <span>{savedPlans.length ? 'Select a plan to view or edit' : 'No saved plans yet'}</span>
+          </div>
+
+          <div className="collapsed-recent-plans" aria-label="Recent plans">
+            {savedPlans.map((saved) => (
+              <button
+                aria-label={`View ${saved.role}`}
+                key={saved.id}
+                onClick={() => previewSavedPlan(saved)}
+                title={`View ${saved.role}`}
+                type="button"
+              >
+                <Icon name="chat" />
+              </button>
+            ))}
           </div>
 
           <div className="recent-plans">
             {savedPlans.length > 0 &&
               savedPlans.map((saved) => (
                 <article className={`recent-card ${openPlanMenuId === saved.id ? 'menu-open' : ''}`} key={saved.id}>
-                  <button className="recent-load" onClick={() => loadSavedPlan(saved)} type="button">
+                  <button className="recent-load" onClick={() => previewSavedPlan(saved)} type="button">
                     <span className="recent-plan-copy">
                       <strong title={saved.role}>{saved.role}</strong>
                       <span className="recent-plan-date">
@@ -812,9 +1029,10 @@ export default function FillDetailsPage() {
                       onClick={() => setOpenPlanMenuId((current) => current === saved.id ? null : saved.id)}
                       title="Plan options"
                       type="button"
-                    >•••</button>
+                    ><Icon name="more" /></button>
                     {openPlanMenuId === saved.id && (
                       <div className="recent-plan-menu" role="menu">
+                        <button onClick={() => previewSavedPlan(saved)} role="menuitem" type="button">View</button>
                         <button onClick={() => { setOpenPlanMenuId(null); loadSavedPlan(saved) }} role="menuitem" type="button">Edit</button>
                         <button disabled={planActionBusy} onClick={() => void archiveSavedPlan(saved.id)} role="menuitem" type="button">Archive</button>
                         <button className="danger" onClick={() => { setOpenPlanMenuId(null); setDeleteCandidate(saved) }} role="menuitem" type="button">Delete</button>
@@ -830,33 +1048,49 @@ export default function FillDetailsPage() {
           </div>
 
           <div className="side-footer">
-            <button className="side-footer-item danger" onClick={handleSignOut} type="button">Sign out</button>
+            <button
+              aria-label="Open archived plans"
+              aria-pressed={archiveView}
+              className={`side-footer-item archive ${archiveView ? 'active' : ''}`}
+              onClick={() => void showArchivedPlans()}
+              title="Archive"
+              type="button"
+            >
+              <SidebarIcon name="archive" />
+              <span>Archive</span>
+            </button>
+            <button aria-label="Sign out" className="side-footer-item danger" onClick={handleSignOut} title="Sign out" type="button">
+              <SidebarIcon name="signout" />
+              <span>Sign out</span>
+            </button>
           </div>
         </aside>
 
         <section className="plan-home" aria-labelledby="plan-home-title">
-          <div className="plan-home-card">
-            <div className="plan-home-copy">
-              <span className="plan-home-kicker">Onboarding plan builder</span>
-              <h1 id="plan-home-title">Create Onboarding Plan</h1>
-              <p>Create a clear, role specific onboarding plan in minutes. Add daily goals, activities, and expected outcomes, then export a polished PDF that follows your approved template.</p>
+          <div className="plan-home-frame">
+            <header className="plan-home-welcome">
+              <span className="plan-home-kicker">Your onboarding workspace</span>
+              <h1 id="plan-home-title">Welcome{displayName ? `, ${displayName}` : ' back'}!</h1>
+            </header>
+            <div className="plan-home-card">
+              <div className="plan-home-copy">
+                <h2>Create onboarding plan</h2>
+                <p>Build a clear, role-specific plan with guided daily goals, activities, and outcomes—then export a polished PDF ready to share.</p>
+              </div>
+              <VividButton className="create-plan-button vivid-create-button" icon={<Icon name="plus" />} label="Create new plan" onClick={openNewPlan} />
             </div>
-            <button className="create-plan-button" onClick={openNewPlan} type="button">
-              <span aria-hidden="true">+</span>
-              Create New
-            </button>
           </div>
         </section>
 
         {wizardOpen && (
-          <div className="plan-wizard-overlay" onClick={(event) => event.target === event.currentTarget && closeWizard()}>
+          <div className="plan-wizard-overlay" onPointerDown={(event) => event.target === event.currentTarget && closeWizard()}>
             <form className="fo plan-wizard" onSubmit={handleSubmit}>
               <div className="plan-wizard-head">
                 <div>
                   <span className="plan-wizard-eyebrow">Create onboarding plan</span>
                   <h2>{wizardStep === 0 ? 'How would you like to start?' : wizardSteps[activeWizardStep]}</h2>
                 </div>
-                <button aria-label="Close plan builder" className="plan-wizard-close" onClick={closeWizard} type="button">×</button>
+                <button aria-label="Close plan builder" className="plan-wizard-close" onClick={closeWizard} type="button"><Icon name="close" /></button>
               </div>
 
               <div className="plan-progress" aria-label={`Plan ${completion.percent}% complete`}>
@@ -876,14 +1110,14 @@ export default function FillDetailsPage() {
                 {wizardStep === 0 && (
                   <section className="creation-methods" aria-label="Choose how to create the plan">
                     <button onClick={() => chooseCreationMode('manual')} type="button">
-                      <span className="creation-method-icon">✎</span>
+                      <span className="creation-method-icon"><Icon name="pencil" /></span>
                       <span><strong>Fill Manually</strong><small>Build the plan step by step with guided fields.</small></span>
-                      <span className="creation-method-arrow">→</span>
+                      <span className="creation-method-arrow"><Icon name="arrow-right" /></span>
                     </button>
                     <button onClick={() => chooseCreationMode('import')} type="button">
-                      <span className="creation-method-icon">↓</span>
+                      <span className="creation-method-icon"><Icon name="arrow-down" /></span>
                       <span><strong>Import Data</strong><small>Paste structured NotebookLM data and review the filled plan.</small></span>
-                      <span className="creation-method-arrow">→</span>
+                      <span className="creation-method-arrow"><Icon name="arrow-right" /></span>
                     </button>
                   </section>
                 )}
@@ -891,11 +1125,11 @@ export default function FillDetailsPage() {
                 {creationMode === 'manual' && wizardStep === 1 && (
 
         <section className="sec" id="plan-duration">
-          <div className="sec-h"><div className="sec-ic">+</div><span className="sec-t">Plan Duration</span></div>
+          <div className="sec-h"><div className="sec-ic"><Icon name="plus" /></div><span className="sec-t">Plan Duration</span></div>
           <div className="sec-b">
             <div className="dur-row">
               {[2, 4].map((value) => (
-                <button className={`dur-opt ${nWeeks === value ? 'sel' : ''}`} key={value} onClick={() => setDuration(value as 2 | 4)} type="button">
+                <button className={`dur-opt ${durationChosen && nWeeks === value ? 'sel' : ''}`} key={value} onClick={() => setDuration(value as 2 | 4)} type="button">
                   <span className="dur-rd"><span className="dur-dot" /></span>
                   <span className="dur-txt"><strong>{value}-Week Plan</strong><span>{value * 5} working days</span></span>
                 </button>
@@ -909,7 +1143,7 @@ export default function FillDetailsPage() {
                 {creationMode === 'import' && wizardStep === 1 && (
                   <section className="wizard-import" aria-labelledby="wizard-import-title">
                     <div className="wizard-import-intro">
-                      <span className="creation-method-icon">↓</span>
+                      <span className="creation-method-icon"><Icon name="arrow-down" /></span>
                       <div>
                         <h3 id="wizard-import-title">Import your plan data</h3>
                         <p>Paste the structured NotebookLM output. OakBoard will detect the duration and fill role, week, task, and outcome fields.</p>
@@ -930,7 +1164,7 @@ export default function FillDetailsPage() {
 
                 {creationMode === 'manual' && wizardStep === 2 && (
         <section className="sec" id="role-info">
-          <div className="sec-h"><div className="sec-ic">i</div><span className="sec-t">Role Information</span></div>
+          <div className="sec-h"><div className="sec-ic"><Icon name="info" /></div><span className="sec-t">Role Information</span></div>
           <div className="sec-b">
             <div className="row r3">
               <div className="fld"><label>Job Title / Role *</label><input onChange={(event) => setRole(event.target.value)} placeholder="Job title" value={role} /></div>
@@ -945,14 +1179,14 @@ export default function FillDetailsPage() {
 
                 {wizardStep === 3 && (
         <section className="sec" id="weekly-plans">
-          <div className="sec-h"><div className="sec-ic">≡</div><span className="sec-t">Weeks & Daily Plans</span></div>
+          <div className="sec-h"><div className="sec-ic"><Icon name="list" /></div><span className="sec-t">Weeks & Daily Plans</span></div>
           <div className="sec-b">
             {weeks.slice(0, nWeeks).map((week, wi) => (
               <div className="wb" key={wi}>
                 <button className="wt" onClick={() => toggleWeek(wi)} type="button">
                   <span className="wbg">Week {wi + 1}</span>
                   <span className="wp">{week.title || 'Expand to fill week details'}</span>
-                  <span className={`wa ${openWeeks.has(wi) ? 'open' : ''}`}>⌄</span>
+                  <span className={`wa ${openWeeks.has(wi) ? 'open' : ''}`}><Icon name="chevron-down" /></span>
                 </button>
                 {openWeeks.has(wi) && (
                   <div className="wi open">
@@ -972,7 +1206,7 @@ export default function FillDetailsPage() {
                             <span className="ddl">{fmtShort(dates[globalDay - 1])}</span>
                             <span className="dtp">{day.title || 'Click to fill day details'}</span>
                             <span className={`dcd ${day.title && day.outcome ? 'filled' : ''}`} />
-                            <span className={`da ${openDays.has(globalDay) ? 'open' : ''}`}>⌄</span>
+                            <span className={`da ${openDays.has(globalDay) ? 'open' : ''}`}><Icon name="chevron-down" /></span>
                           </button>
                           {openDays.has(globalDay) && (
                             <div className="din open">
@@ -986,7 +1220,7 @@ export default function FillDetailsPage() {
                                 <div className="tr2" key={`${globalDay}-${ti}`}>
                                   <span className="tn">{ti + 1}</span>
                                   <input maxLength={DAY_TASK_MAX} onChange={(event) => updateTask(wi, di, ti, event.target.value)} placeholder="Type here" value={task} />
-                                  <button className="btn-del-task" onClick={() => removeTask(wi, di, ti)} title="Remove task" type="button">×</button>
+                                  <button aria-label="Remove task" className="btn-del-task" onClick={() => removeTask(wi, di, ti)} title="Remove task" type="button"><Icon name="close" /></button>
                                 </div>
                               ))}
                               <button className="btn-at" disabled={day.tasks.length >= maxTasks} onClick={() => addTask(wi, di)} type="button">+ Add another task</button>
@@ -1020,14 +1254,14 @@ export default function FillDetailsPage() {
                 {creationMode === 'manual' && wizardStep === 1 && (
                   <>
                     <Button onClick={() => { setCreationMode(null); setWizardStep(0); setError('') }} type="button" variant="secondary">Back</Button>
-                    <Button onClick={goToRoleStep} type="button" variant="primary">Next: Role Information</Button>
+                    <Button onClick={goToRoleStep} type="button" variant="primary">Next</Button>
                   </>
                 )}
 
                 {creationMode === 'manual' && wizardStep === 2 && (
                   <>
                     <Button onClick={() => { setWizardStep(1); setError('') }} type="button" variant="secondary">Back</Button>
-                    <Button onClick={goToPlanStep} type="button" variant="primary">Next: Weeks &amp; Days</Button>
+                    <Button onClick={goToPlanStep} type="button" variant="primary">Next</Button>
                   </>
                 )}
 
@@ -1056,10 +1290,55 @@ export default function FillDetailsPage() {
         )}
       </div>
 
+      {archiveView && (
+        <div
+          className="archive-plans-overlay"
+          onPointerDown={(event) => event.target === event.currentTarget && !planActionBusy && setArchiveView(false)}
+        >
+          <section aria-labelledby="archive-plans-title" aria-modal="true" className="archive-plans-dialog" role="dialog">
+            <header className="archive-plans-head">
+              <div>
+                <span>Saved history</span>
+                <h2 id="archive-plans-title">Archived Plans</h2>
+              </div>
+              <button aria-label="Close archived plans" onClick={() => setArchiveView(false)} title="Close" type="button">
+                <Icon name="close" />
+              </button>
+            </header>
+
+            <div className="archive-plans-body">
+              {archiveLoading && <div className="archive-plans-message">Loading archived plans…</div>}
+              {!archiveLoading && historyStatus && <div className="archive-plans-message error">{historyStatus}</div>}
+              {!archiveLoading && !historyStatus && archivedPlans.length === 0 && (
+                <div className="archive-plans-message">No archived plans yet.</div>
+              )}
+              {!archiveLoading && archivedPlans.map((saved) => (
+                <article className="archive-plan-row" key={saved.id}>
+                  <div className="archive-plan-copy">
+                    <strong>{saved.role}</strong>
+                    <span>{new Date(saved.updatedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                  </div>
+                  <div className="archive-plan-actions">
+                    <button disabled={planActionBusy} onClick={() => void restoreArchivedPlan(saved.id)} type="button">
+                      <Icon name="archive" />
+                      <span>Restore</span>
+                    </button>
+                    <button className="danger" disabled={planActionBusy} onClick={() => setDeleteCandidate(saved)} type="button">
+                      <Icon name="trash" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+
       {deleteCandidate && (
-        <div className="delete-plan-overlay" onClick={(event) => event.target === event.currentTarget && !planActionBusy && setDeleteCandidate(null)}>
+        <div className="delete-plan-overlay" onPointerDown={(event) => event.target === event.currentTarget && !planActionBusy && setDeleteCandidate(null)}>
           <div aria-describedby="delete-plan-description" aria-labelledby="delete-plan-title" aria-modal="true" className="delete-plan-dialog" role="alertdialog">
-            <div className="delete-plan-icon" aria-hidden="true">!</div>
+            <div className="delete-plan-icon" aria-hidden="true"><Icon name="warning" /></div>
             <h2 id="delete-plan-title">Delete plan?</h2>
             <p id="delete-plan-description">Are you sure you want to delete this plan?</p>
             <strong>{deleteCandidate.role}</strong>

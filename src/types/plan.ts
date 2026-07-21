@@ -16,6 +16,7 @@ export type PlanWeek = {
 }
 
 export type OnboardingPlan = {
+  id?: string
   company?: string
   role: string
   reports?: string
@@ -29,6 +30,7 @@ export type OnboardingPlan = {
 }
 
 const PLAN_STORAGE_KEY = 'obf_plan_data'
+const PLAN_EDIT_INTENT_KEY = 'obf_edit_plan'
 
 export type SavedOnboardingPlan = {
   id: string
@@ -60,4 +62,19 @@ export function writeStoredPlan(plan: OnboardingPlan) {
   const serialized = JSON.stringify(plan)
   localStorage.setItem(PLAN_STORAGE_KEY, serialized)
   sessionStorage.setItem(PLAN_STORAGE_KEY, serialized)
+}
+
+export function requestStoredPlanEdit() {
+  if (typeof window === 'undefined') return
+  sessionStorage.setItem(PLAN_EDIT_INTENT_KEY, '1')
+}
+
+export function hasStoredPlanEditIntent() {
+  if (typeof window === 'undefined') return false
+  return sessionStorage.getItem(PLAN_EDIT_INTENT_KEY) === '1'
+}
+
+export function clearStoredPlanEditIntent() {
+  if (typeof window === 'undefined') return
+  sessionStorage.removeItem(PLAN_EDIT_INTENT_KEY)
 }

@@ -6,8 +6,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { toPng } from 'html-to-image'
 import { jsPDF } from 'jspdf'
 import { Button, Modal, PageToolbar, StatusBanner, TextField } from '@/components/ui'
-import { invokeAuthenticatedFunction } from '@/lib/auth/client'
-import { type PlanDay, type PlanWeek, readStoredPlan } from '@/types/plan'
+import { getValidSession, invokeAuthenticatedFunction } from '@/lib/auth/client'
+import { supabase } from '@/lib/supabase/client'
+import { type OnboardingPlan, type PlanDay, type PlanWeek, readStoredPlan, requestStoredPlanEdit, writeStoredPlan } from '@/types/plan'
 
 const DAY_TITLE_MAX = 90
 const DAY_TASK_MAX = 90
@@ -189,6 +190,7 @@ function PlanPage({
 export default function GenerateFormClient() {
   const router = useRouter()
   const plan = useMemo(() => readStoredPlan(), [])
+  const [resolvedPlanId, setResolvedPlanId] = useState(plan?.id || null)
   const [exporting, setExporting] = useState(false)
   const [emailOpen, setEmailOpen] = useState(false)
   const [emailTo, setEmailTo] = useState(DEMO_RECIPIENT_EMAIL)
@@ -197,10 +199,47 @@ export default function GenerateFormClient() {
   const [emailError, setEmailError] = useState('')
   const [emailNotice, setEmailNotice] = useState('')
   const [sendingEmail, setSendingEmail] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [planActionBusy, setPlanActionBusy] = useState<'archive' | 'delete' | null>(null)
+  const [planActionError, setPlanActionError] = useState('')
 
   useEffect(() => {
     if (!plan) router.replace('/fill-details')
   }, [plan, router])
+
+  useEffect(() => {
+    if (!plan || resolvedPlanId || !supabase) return
+    let active = true
+    const storedPlanSnapshot = plan
+
+    async function resolveStoredPlanId() {
+      const sessionResult = await getValidSession()
+      if (!active || !sessionResult.ok || !supabase) return
+
+      const { id: ignoredId, ...storedPlan } = storedPlanSnapshot
+      void ignoredId
+      const { data } = await supabase
+        .from('onboarding_plans')
+        .select('id,plan_json')
+        .eq('owner_id', sessionResult.session.user.id)
+        .order('updated_at', { ascending: false })
+        .limit(50)
+
+      if (!active || !data) return
+      const match = (data as Array<{ id: string; plan_json: OnboardingPlan }>).find(
+        (candidate) => JSON.stringify(candidate.plan_json) === JSON.stringify(storedPlan),
+      )
+      if (!match) return
+
+      setResolvedPlanId(match.id)
+      writeStoredPlan({ ...storedPlanSnapshot, id: match.id })
+    }
+
+    void resolveStoredPlanId()
+    return () => {
+      active = false
+    }
+  }, [plan, resolvedPlanId])
 
   if (!plan) {
     return (
@@ -211,6 +250,7 @@ export default function GenerateFormClient() {
     )
   }
 
+  const planId = resolvedPlanId
   const weeks =
     plan.weeks && plan.weeks.length > 0
       ? plan.weeks
@@ -306,6 +346,53 @@ export default function GenerateFormClient() {
     setEmailOpen(true)
   }
 
+  function editPlan() {
+    setPlanActionError('')
+    if (!planId) {
+      setPlanActionError('Please return to Recent Plans and reopen this plan before editing it.')
+      return
+    }
+    requestStoredPlanEdit()
+    router.push('/fill-details')
+  }
+
+  async function mutatePlan(action: 'archive' | 'delete') {
+    setPlanActionError('')
+    if (!planId) {
+      setPlanActionError('Please return to Recent Plans and reopen this plan before changing it.')
+      return
+    }
+
+    const sessionResult = await getValidSession()
+    if (!sessionResult.ok || !supabase) {
+      setPlanActionError('Your database session is unavailable. Please sign in again.')
+      return
+    }
+
+    setPlanActionBusy(action)
+    const ownerId = sessionResult.session.user.id
+    const result = action === 'archive'
+      ? await supabase
+          .from('onboarding_plans')
+          .update({ archived_at: new Date().toISOString() })
+          .eq('id', planId)
+          .eq('owner_id', ownerId)
+      : await supabase
+          .from('onboarding_plans')
+          .delete()
+          .eq('id', planId)
+          .eq('owner_id', ownerId)
+
+    if (result.error) {
+      setPlanActionError(action === 'archive' ? 'This plan could not be archived.' : 'This plan could not be deleted.')
+      setPlanActionBusy(null)
+      return
+    }
+
+    setDeleteOpen(false)
+    router.replace('/fill-details')
+  }
+
   async function sendEmail() {
     setEmailError('')
     setEmailNotice('')
@@ -351,15 +438,20 @@ export default function GenerateFormClient() {
         title={`${nWeeks}-Week Onboarding Plan`}
         actions={(
           <>
-            <Button icon="print" onClick={() => window.print()} type="button" variant="secondary">Print</Button>
+            <Button disabled={planActionBusy !== null} icon="pencil" onClick={editPlan} type="button" variant="secondary">Edit</Button>
+            <Button disabled={planActionBusy !== null} icon="archive" onClick={() => void mutatePlan('archive')} type="button" variant="soft">
+              {planActionBusy === 'archive' ? 'Archiving...' : 'Archive'}
+            </Button>
+            <Button disabled={planActionBusy !== null} icon="trash" onClick={() => setDeleteOpen(true)} type="button" variant="danger">Delete</Button>
             <Button icon="email" onClick={openEmailModal} type="button" variant="secondary">Send Email</Button>
             <Button disabled={exporting} icon="download" onClick={downloadPdf} type="button" variant="primary">
               {exporting ? 'Preparing PDF...' : 'Download PDF'}
             </Button>
-            <Button icon="plus" to="/fill-details" variant="soft">New Plan</Button>
           </>
         )}
       />
+
+      {planActionError && <div className="generate-action-status"><StatusBanner tone="error">{planActionError}</StatusBanner></div>}
 
       <div className="plan-wrap-react">
         {pageGroups.map((pageWeeks, pageIndex) => (
@@ -401,6 +493,24 @@ export default function GenerateFormClient() {
         <TextField label="Recipient Email *" readOnly type="email" value={emailTo} onChange={(event) => setEmailTo(event.target.value)} />
         <TextField label="CC (Unavailable in demo mode)" disabled placeholder="Available after domain verification" type="email" value={emailCc} onChange={(event) => setEmailCc(event.target.value)} />
         <TextField label="Personal Note (Optional)" multiline placeholder="Add a short message to include with the plan..." value={emailNote} onChange={(event) => setEmailNote(event.target.value)} />
+      </Modal>
+
+      <Modal
+        icon="warning"
+        onClose={() => !planActionBusy && setDeleteOpen(false)}
+        open={deleteOpen}
+        subtitle="This will permanently remove the plan from your account."
+        title="Delete Onboarding Plan?"
+        footer={(
+          <>
+            <Button disabled={planActionBusy !== null} onClick={() => setDeleteOpen(false)} type="button" variant="secondary">No</Button>
+            <Button disabled={planActionBusy !== null} icon="trash" onClick={() => void mutatePlan('delete')} type="button" variant="danger">
+              {planActionBusy === 'delete' ? 'Deleting...' : 'Yes, Delete'}
+            </Button>
+          </>
+        )}
+      >
+        <p>Are you sure you want to delete the onboarding plan for <strong>{role || 'this role'}</strong>?</p>
       </Modal>
     </main>
   )
