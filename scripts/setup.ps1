@@ -7,9 +7,8 @@ Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
-$AppRoot = Join-Path $RepoRoot 'react-app'
 $VersionFile = Join-Path $RepoRoot '.nvmrc'
-$PackageFile = Join-Path $AppRoot 'package.json'
+$PackageFile = Join-Path $RepoRoot 'package.json'
 
 if (-not (Test-Path -LiteralPath $VersionFile -PathType Leaf)) {
     throw "Missing Node.js version file: $VersionFile"
@@ -107,7 +106,7 @@ if ($InstalledNpmVersion -ne $RequiredNpmVersion) {
 
 Write-Host "Node.js $InstalledNodeVersion and npm $InstalledNpmVersion are ready." -ForegroundColor Green
 
-Push-Location $AppRoot
+Push-Location $RepoRoot
 try {
     Invoke-ExternalCommand -FilePath $NpmCmd -ArgumentList @('ci')
     if (-not $SkipChecks) {
@@ -120,4 +119,4 @@ finally {
 }
 
 Write-Host 'OakBoard setup completed successfully.' -ForegroundColor Green
-Write-Host 'Create react-app\.env.local from react-app\.env.example before starting the app.' -ForegroundColor Yellow
+Write-Host 'Create .env.local from .env.example before starting the app.' -ForegroundColor Yellow

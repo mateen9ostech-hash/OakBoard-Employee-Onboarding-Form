@@ -6,6 +6,14 @@ This file is the live checklist for OakBoard. After each completed task, update 
 
 ## Completed
 
+- [x] Create a root Next.js App Router foundation on a dedicated migration branch.
+- [x] Migrate Login, Fill Details, Generate Form, local saved plans, and NotebookLM import to Next.js.
+- [x] Migrate Supabase auth to cookie-based browser/server clients with a Next.js 16 proxy.
+- [x] Preserve PDF download and authenticated email Edge Function behavior in a browser-only dynamic bundle.
+- [x] Verify the Next.js app with TypeScript, ESLint, and a production build.
+- [x] Add a Next.js cutover and rollback runbook with explicit environment, Git, deletion, and deployment gates.
+- [x] Remove the inherited Vite favicon and use the OakBoard logo for Next.js browser metadata.
+
 - [x] Merge recovered OakBoard UI/functionality into the canonical project baseline.
 - [x] Shift current OakBoard project into the active workspace path.
 - [x] Rename/normalize project folder to `OakBoard-Employee-Onboarding-Form`.
@@ -78,7 +86,7 @@ This file is the live checklist for OakBoard. After each completed task, update 
   - `DayTitleIcon` at 16 x 16px.
   - `DayTasksIcon` at 16 x 16px.
   - `DayOutcomeIcon` at 16 x 16px.
-  - use the migrated task icon at `react-app/public/task-icon.svg`.
+  - use the migrated task icon at `public/task-icon.svg`.
 - [x] Use the correct logo assets and proportions in React preview/PDF/email.
 - [x] Ensure 2-week plans generate only 10 days on 1 page.
 - [x] Ensure 4-week plans generate 20 days across 2 pages.
@@ -115,3 +123,14 @@ This file is the live checklist for OakBoard. After each completed task, update 
 - [x] Remove unused Vite starter assets.
 - [x] Remove old static HTML app after React replacement and user approval.
 - [x] Keep project folder clean and avoid duplicate OakBoard copies.
+
+### Next.js final cutover
+
+- [x] Add the existing Supabase public URL/key to the new root `.env.local` names and verify Supabase Auth connectivity.
+- [x] Test real sign-in, verified JWT claims, and authenticated protected-route rendering with an approved account.
+- [x] Test the migrated Generate preview and PDF download in the authenticated browser flow.
+- [x] Test loading a generated plan from browser-local Recent Plans storage.
+- [x] Verify the deployed email Edge Function accepts the Next.js origin preflight.
+- [ ] Test the complete Fill Details, Generate, PDF, saved-plan, NotebookLM, and email workflow interactively.
+- [x] Remove the temporary `react-app/` Vite fallback after explicit deletion approval.
+- [ ] Commit and push the migration only after user approval; do not deploy without separate approval.

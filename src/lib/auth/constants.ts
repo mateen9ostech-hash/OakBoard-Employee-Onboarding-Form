@@ -1,0 +1,2 @@
+export const SESSION_MAX_AGE_MS = 15 * 60 * 1000
+export const SESSION_CHECK_TIMEOUT_MS = 10_000
