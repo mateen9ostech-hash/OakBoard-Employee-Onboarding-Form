@@ -1,136 +1,50 @@
-# OakBoard Project Task List
+# OakBoard Project Status
 
 Last updated: 2026-07-21
 
-This file is the live checklist for OakBoard. After each completed task, update the relevant checkbox and add any important notes.
+This is the current release checklist for the canonical Next.js application. Historical Vite and static HTML migration tasks have been removed because those implementations are no longer part of the repository.
 
-## Completed
+## Current state
 
-- [x] Create a root Next.js App Router foundation on a dedicated migration branch.
-- [x] Migrate Login, Fill Details, Generate Form, local saved plans, and NotebookLM import to Next.js.
-- [x] Migrate Supabase auth to cookie-based browser/server clients with a Next.js 16 proxy.
-- [x] Preserve PDF download and authenticated email Edge Function behavior in a browser-only dynamic bundle.
-- [x] Verify the Next.js app with TypeScript, ESLint, and a production build.
-- [x] Add a Next.js cutover and rollback runbook with explicit environment, Git, deletion, and deployment gates.
-- [x] Remove the inherited Vite favicon and use the OakBoard logo for Next.js browser metadata.
+- [x] Next.js 16 App Router is the canonical root application.
+- [x] The Vite, React Router, and legacy static HTML implementations are removed.
+- [x] Supabase authentication uses SSR cookies and a Next.js proxy with a 15-minute session-freshness rule.
+- [x] Login, signup, signout, protected routes, and authenticated form access are implemented.
+- [x] Fill Details supports 2-week and 4-week onboarding plans.
+- [x] NotebookLM text import runs locally in the browser.
+- [x] Recent plans can be saved and restored from browser storage.
+- [x] Preview, print, PDF export, and authenticated email delivery are implemented.
+- [x] Supabase database migrations and the `send-onboarding-email` Edge Function are retained.
+- [x] OakBoard branding and browser metadata are configured.
+- [x] Portable no-UAC Node.js setup, pinned dependencies, and environment templates are documented.
+- [x] TypeScript, ESLint, production build, and dependency-audit checks pass locally.
+- [x] The private GitHub `main` branch is the source of truth.
 
-- [x] Merge recovered OakBoard UI/functionality into the canonical project baseline.
-- [x] Shift current OakBoard project into the active workspace path.
-- [x] Rename/normalize project folder to `OakBoard-Employee-Onboarding-Form`.
-- [x] Clean old duplicate OakBoard project copies from the local workspace.
-- [x] Fix major `Verifying session...` loop issues in the static app auth guard.
-- [x] Set local session freshness window to 15 minutes minimum.
-- [x] Preserve existing static app flow: Login -> Fill Details -> Generate Form.
-- [x] Add local Supabase SDK bundle usage for safer static-app auth loading.
-- [x] Add Supabase migration for onboarding plans/imports/email logs.
-- [x] Remove AI/Ollama parser flow after testing showed it was unreliable.
-- [x] Add `send-onboarding-email` Supabase Edge Function.
-- [x] Add demo-mode email behavior for Resend testing restrictions.
-- [x] Add `supabase/functions/.env.example` with server-side Resend placeholders.
-- [x] Install Node.js locally for the project workflow.
-- [x] Scaffold React + TypeScript + Vite app in `react-app/`.
-- [x] Install React dependencies including Supabase JS and React Router.
-- [x] Verify React scaffold production build.
-- [x] Replace Vite demo with initial OakBoard React app shell.
-- [x] Add React routes for `/login`, `/fill-details`, and `/generate-form`.
-- [x] Add React Supabase client setup.
-- [x] Add React auth/session guard with 15-minute session freshness.
-- [x] Add React plan storage helpers compatible with `obf_plan_data`.
-- [x] Add placeholder React Login, Fill Details, and Generate Form pages.
-- [x] Add `react-app/.env.example` for Vite Supabase variables.
-- [x] Verify React app builds after routing/auth foundation.
-- [x] Create this live project task list.
-- [x] Add workspace-level project index and VS Code workspace entries so OakBoard GitHub repo is discoverable after a fresh VS Code/Codex setup.
-- [x] Complete the React migration from the static HTML app and verify the end-to-end flow.
-- [x] Add pinned Node/npm metadata, requirements documentation, and a no-UAC setup script for portable recovery.
+## External release tasks
 
-## Pending
+These require an external service change or explicit deployment approval:
 
-### React migration
+- [ ] Confirm local and production callback URLs in Supabase Auth.
+- [ ] Run an optional live acceptance test for NotebookLM import and email delivery.
+- [ ] Add the documented public environment variables to the intended Vercel environments.
+- [ ] Deploy to Vercel only after explicit approval.
 
-- [x] Migrate the real `Login.html` UI and behavior into React.
-- [x] Migrate the real `FillDetails.html` UI into React.
-- [x] Replace Import with AI with local NotebookLM Data import.
-- [x] Parse NotebookLM formatted text locally in the browser.
-- [x] Fill Role, Reports To, Collaborates With, Week Title, Objective, Day Goal, Tasks, and Day Outcome from NotebookLM output.
-- [x] Remove `.txt` upload from NotebookLM import and use pasted textbox content only.
-- [x] Auto-detect imported NotebookLM plan duration as 2-week or 4-week from pasted Week/Day labels.
-- [x] Prevent duplicated Week labels in preview/email output after NotebookLM import.
-- [x] Make React preview day cards fill the full `.pd` frame without shrinking from side padding.
-- [x] Re-align React preview styling with the previous static `GenerateForm.html` template CSS.
-- [x] Migrate the real `GenerateForm.html` preview into React.
-- [x] Preserve 16:9 / landscape print-preview layout in React.
-- [x] Preserve exact day-card sizing rules in React:
-  - 360 x 306 day cards.
-  - 14px border radius.
-  - 16px padding.
-  - 12px minimum text size.
-  - 4px vertical spacing where requested.
-- [x] Preserve week/day frame layout rules:
-  - 5 day cards per frame.
-  - frame width 1848px.
-  - frame height 306px.
-  - 12px gap.
-  - 36px side padding.
-  - 9px top/bottom spacing.
-- [x] Preserve `ph`, `pw`, and `pd` merged wrapper layout rules:
-  - centered alignment.
-  - 1848px width.
-  - 10px margin between divs.
-- [x] Enforce day content limits in React:
-  - day title max 90 characters.
-  - each task max 90 characters.
-  - outcome max 90 characters.
-  - allow 5-6 tasks only when shorter text allows it.
-- [x] Use correct icons in React:
-  - `DayTitleIcon` at 16 x 16px.
-  - `DayTasksIcon` at 16 x 16px.
-  - `DayOutcomeIcon` at 16 x 16px.
-  - use the migrated task icon at `public/task-icon.svg`.
-- [x] Use the correct logo assets and proportions in React preview/PDF/email.
-- [x] Ensure 2-week plans generate only 10 days on 1 page.
-- [x] Ensure 4-week plans generate 20 days across 2 pages.
+## Standard validation
 
-### PDF and email output
+Run from the repository root:
 
-- [x] Rebuild PDF generation in React so it matches the preview better.
-- [x] Ensure browser print does not show date/title/path/page-number headers when using app PDF export.
-- [x] Keep email output landscape-style and visually aligned with the preview.
-- [x] Attach/generated email document should match the onboarding-form reference style.
-- [x] Keep Resend secrets server-side only.
-- [x] Keep demo mode for unverified Resend domain restrictions.
+```powershell
+npm ci
+npm run typecheck
+npm run lint
+npm run build
+npm audit
+```
 
-### NotebookLM import
+For local development:
 
-- [x] Remove Supabase `parse-onboarding-plan` Edge Function from local code.
-- [x] Remove Ollama/AI provider env placeholders from local docs.
-- [x] Remove PDF parser dependency after dropping PDF-to-AI import.
-- [x] Keep import flow fully local for pasted NotebookLM text.
-- [x] Keep NotebookLM import duration automatic, without requiring the user to choose 2-week or 4-week manually.
-- [x] Add local recent/reusable saved plans so generated plans can be loaded again from Fill Details.
+```powershell
+npm run dev -- --hostname 127.0.0.1
+```
 
-### Deployment and workflow
-
-- [x] Add Vercel configuration for React deployment if needed.
-- [x] Add Vercel environment variable instructions.
-- [x] Decide final deployment target for React app.
-- [x] Test production build locally before every deploy.
-- [x] Push current React migration changes after user says `push`.
-- [x] Deploy only after explicit user approval.
-
-### Cleanup
-
-- [x] Remove unused Vite starter assets.
-- [x] Remove old static HTML app after React replacement and user approval.
-- [x] Keep project folder clean and avoid duplicate OakBoard copies.
-
-### Next.js final cutover
-
-- [x] Add the existing Supabase public URL/key to the new root `.env.local` names and verify Supabase Auth connectivity.
-- [x] Test real sign-in, verified JWT claims, and authenticated protected-route rendering with an approved account.
-- [x] Test the migrated Generate preview and PDF download in the authenticated browser flow.
-- [x] Test loading a generated plan from browser-local Recent Plans storage.
-- [x] Verify the deployed email Edge Function accepts the Next.js origin preflight.
-- [x] Verify the preserved NotebookLM parser and authenticated email invocation path compile in the migrated application.
-- [x] Remove the temporary `react-app/` Vite fallback after explicit deletion approval.
-- [x] Commit and push the migration after user approval without deploying.
+See `README.md`, `REQUIREMENTS.md`, `NEXTJS-CUTOVER.md`, and `VERCEL-ENV.md` for setup and release details.

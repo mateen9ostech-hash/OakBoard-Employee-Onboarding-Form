@@ -2,6 +2,8 @@
 
 Add these public variables in Vercel for the Next.js frontend:
 
+Apply them to the environments you intend to use (Preview and/or Production), then trigger a new build.
+
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key

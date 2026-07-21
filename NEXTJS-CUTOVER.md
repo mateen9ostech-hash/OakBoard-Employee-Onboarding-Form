@@ -31,6 +31,7 @@ This runbook records the release gates for the completed local cutover to the ro
 - [x] The deployed email Edge Function responds successfully to the Next.js origin preflight.
 - [x] NotebookLM parsing and the authenticated email invocation path are preserved in the migrated source and compile successfully.
 - [x] The temporary `react-app/` fallback was removed after explicit deletion approval.
+- [x] Redundant exports were removed and generated Next.js type declarations are ignored and regenerated during typecheck.
 - [x] The migration is reviewed, committed, and pushed to the private repository after explicit Git approval.
 
 ## External release gates

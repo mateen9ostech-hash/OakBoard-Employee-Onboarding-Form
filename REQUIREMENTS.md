@@ -71,10 +71,11 @@ npm ci
 npm run build
 npm run lint
 npm run typecheck
+npm audit
 ```
 
 Start local development:
 
 ```powershell
-npm run dev -- --host 127.0.0.1
+npm run dev -- --hostname 127.0.0.1
 ```

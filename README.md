@@ -8,15 +8,17 @@ The canonical application is the Next.js App Router project at the repository ro
 
 ```mermaid
 flowchart LR
-    User["Employee / Manager"] --> UI["Next.js + React + TypeScript"]
-    UI --> Auth["Supabase cookie-based authentication"]
-    UI --> Storage["Browser plan storage"]
-    UI --> PDF["jsPDF + html-to-image"]
-    UI --> Function["Supabase Edge Function"]
+    User["Employee / Manager"] --> App["Next.js App Router"]
+    Vercel["Vercel hosting"] --> App
+    App --> Client["React client UI"]
+    App --> Server["Server layouts + auth proxy"]
+    Client --> Storage["Browser plan storage"]
+    Client --> PDF["jsPDF + html-to-image"]
+    Client --> Function["Supabase Edge Function"]
+    Server --> Auth["Supabase cookie authentication"]
     Function --> Resend["Resend email delivery"]
     Auth --> PostgreSQL["Supabase PostgreSQL"]
     Function --> PostgreSQL
-    Vercel["Vercel hosting"] --> UI
 ```
 
 ### Repository language profile
@@ -25,11 +27,11 @@ GitHub language statistics snapshot (July 21, 2026):
 
 | Language | Share |
 |---|---:|
-| TypeScript | 59.2% |
-| CSS | 33.8% |
+| TypeScript | 60.3% |
+| CSS | 32.9% |
 | PL/pgSQL | 3.6% |
-| PowerShell | 3.2% |
-| HTML | 0.2% |
+| PowerShell | 3.1% |
+| JavaScript | 0.2% |
 
 GitHub calculates the sidebar language bar automatically; percentages may change as the codebase evolves.
 
@@ -57,6 +59,7 @@ Validation commands:
 npm run build
 npm run lint
 npm run typecheck
+npm audit
 ```
 
 ## Authentication integration
@@ -78,7 +81,7 @@ npm run typecheck
 
 - Copy `.env.example` to root `.env.local` for local Next.js development.
 - Configure the server-side variables listed in `supabase/functions/.env.example` as Supabase Edge Function secrets.
-- Never place `RESEND_API_KEY` or `SUPABASE_SERVICE_ROLE_KEY` in the React app or Vercel frontend variables.
+- Never place `RESEND_API_KEY` or `SUPABASE_SERVICE_ROLE_KEY` in the Next.js app or Vercel frontend variables.
 - Do not copy `.env.local`, `node_modules/`, or `.next/` between machines; recreate them from the template and lockfile.
 
 ## Demo Mode
