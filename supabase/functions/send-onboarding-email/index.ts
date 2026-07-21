@@ -47,7 +47,7 @@ export default {
       const to = typeof body.to === "string" ? body.to.trim() : "";
       const cc = typeof body.cc === "string" ? body.cc.trim() : "";
       const subject = typeof body.subject === "string" ? body.subject.trim() : "";
-      const html = typeof body.html === "string" ? body.html : "";
+      const text = typeof body.text === "string" ? body.text.trim() : "";
       const attachment = body.attachment && typeof body.attachment === "object"
         ? body.attachment as { filename?: unknown; content?: unknown }
         : null;
@@ -63,7 +63,7 @@ export default {
         );
       }
 
-      if (!subject || subject.length > 200 || !html || html.length > 200_000) {
+      if (!subject || subject.length > 200 || !text || text.length > 10_000) {
         return jsonResponse({ ok: false, error: "The email content is invalid." }, 400);
       }
 
@@ -86,7 +86,7 @@ export default {
         from: senderEmail,
         to: [to],
         subject,
-        html,
+        text,
         attachments: [{
           filename: attachmentFilename,
           content: attachmentContent,

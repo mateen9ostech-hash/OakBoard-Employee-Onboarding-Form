@@ -21,7 +21,7 @@ type EmailPayload = {
   to: string
   cc?: string
   subject: string
-  html: string
+  text: string
   attachment: {
     filename: string
     content: string
@@ -67,14 +67,6 @@ function cleanDisplayWeekTitle(value: unknown) {
     .replace(/\s+/g, ' ')
     .trim()
   return cleaned || 'Training Plan'
-}
-
-function escapeHtml(value: unknown) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
 }
 
 function fitClass(title: string, tasks: string[], outcome: string) {
@@ -300,78 +292,9 @@ export default function GenerateFormClient() {
     }
   }
 
-  function buildEmailHtml(note: string) {
-    const planLabel = nWeeks === 4 ? 'Four-Week' : 'Two-Week'
-    const noteBlock = note
-      ? `<tr><td style="padding:16px 32px 0;"><div style="background:#f0fdf4;border-left:4px solid #24B34B;border-radius:4px;padding:12px 16px;font-size:14px;color:#354152;line-height:1.6;"><strong style="color:#01621C;">Note from sender:</strong><br>${escapeHtml(note)}</div></td></tr>`
-      : ''
-
-    const weekRows = weeks
-      .slice(0, nWeeks)
-      .map((week, weekIndex) => {
-        const dayRows = week.days
-          .slice(0, 5)
-          .map((day) => {
-            const tasks = limitTasks(day.tasks)
-            const taskRows = tasks
-              .map((task) => `<li style="font-size:12px;color:#495565;margin-bottom:4px;line-height:1.5;">${escapeHtml(task)}</li>`)
-              .join('')
-            return `
-              <tr><td style="padding:10px 32px 0;">
-                <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #e4e8e3;border-radius:10px;overflow:hidden;">
-                  <tr><td style="background:#f8faf7;padding:8px 14px;border-bottom:1px solid #e4e8e3;">
-                    <span style="background:#24B34B;color:white;font-size:11px;font-weight:600;padding:2px 9px;border-radius:6px;">Day ${day.g || day.day}</span>
-                    ${day.date ? `<span style="font-size:11px;color:#697282;margin-left:8px;">${escapeHtml(formatDate(day.date))}</span>` : ''}
-                  </td></tr>
-                  <tr><td style="padding:12px 14px;">
-                    <p style="font-size:13px;font-weight:600;color:#101727;margin:0 0 8px;">${escapeHtml(limitText(day.title, DAY_TITLE_MAX))}</p>
-                    ${taskRows ? `<ul style="margin:0 0 8px;padding-left:18px;">${taskRows}</ul>` : ''}
-                    ${day.outcome ? `<div style="background:#f0fdf4;border-radius:4px;padding:8px 10px;font-size:12px;color:#354152;line-height:1.5;">✓ ${escapeHtml(limitText(day.outcome, DAY_OUTCOME_MAX))}</div>` : ''}
-                  </td></tr>
-                </table>
-              </td></tr>`
-          })
-          .join('')
-
-        return `
-          <tr><td style="padding:24px 32px 0;">
-            <div style="background:#24B34B;color:white;font-weight:700;font-size:13px;padding:6px 14px;border-radius:4px;display:inline-block;letter-spacing:.3px;">
-              Week ${weekIndex + 1} — ${escapeHtml(cleanDisplayWeekTitle(week.title))}
-            </div>
-            ${week.goal ? `<p style="font-size:13px;color:#697282;margin:6px 0 0;">${escapeHtml(week.goal)}</p>` : ''}
-          </td></tr>
-          ${dayRows}`
-      })
-      .join('')
-
-    return `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#f8faf7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8faf7;padding:32px 0;">
-<tr><td align="center"><table width="680" cellpadding="0" cellspacing="0" style="max-width:680px;width:100%;">
-  <tr><td style="background:#24B34B;border-radius:12px 12px 0 0;padding:24px 32px;">
-    <div style="color:white;font-size:22px;font-weight:800;">OakBoard</div>
-    <div style="color:#dcfce7;font-size:13px;margin-top:4px;">Oak Street Technologies</div>
-  </td></tr>
-  <tr><td style="background:white;padding:26px 32px 8px;">
-    <h1 style="font-size:22px;color:#101727;margin:0 0 16px;">${planLabel} Onboarding Plan</h1>
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="background:#f8faf7;border:1px solid #e4e8e3;border-radius:8px;padding:12px;"><div style="font-size:10px;color:#697282;text-transform:uppercase;font-weight:700;">Role</div><div style="font-size:14px;color:#101727;font-weight:700;margin-top:4px;">${escapeHtml(role || '—')}</div></td>
-        <td width="10"></td>
-        <td style="background:#f8faf7;border:1px solid #e4e8e3;border-radius:8px;padding:12px;"><div style="font-size:10px;color:#697282;text-transform:uppercase;font-weight:700;">Reports To</div><div style="font-size:14px;color:#101727;font-weight:700;margin-top:4px;">${escapeHtml(reports || '—')}</div></td>
-        <td width="10"></td>
-        <td style="background:#f8faf7;border:1px solid #e4e8e3;border-radius:8px;padding:12px;"><div style="font-size:10px;color:#697282;text-transform:uppercase;font-weight:700;">Collaborates With</div><div style="font-size:14px;color:#101727;font-weight:700;margin-top:4px;">${escapeHtml(collab || '—')}</div></td>
-      </tr>
-    </table>
-  </td></tr>
-  ${noteBlock}
-  ${weekRows}
-  <tr><td style="background:white;padding:24px 32px 32px;border-radius:0 0 12px 12px;">
-    <p style="font-size:12px;color:#697282;line-height:1.5;margin:0;">A complete landscape PDF copy of this onboarding plan is attached.</p>
-  </td></tr>
-</table></td></tr></table>
-</body></html>`
+  function buildEmailText(note: string) {
+    const noteBlock = note ? `\n\nNote:\n${note}` : ''
+    return `Hello,\n\nThe ${nWeeks}-week onboarding plan for ${role || 'the selected role'} is attached as a PDF.${noteBlock}\n\nRegards,\nOakBoard`
   }
 
   function openEmailModal() {
@@ -403,12 +326,12 @@ export default function GenerateFormClient() {
       const payload: EmailPayload = {
         to: emailTo.trim(),
         subject: `${nWeeks}-Week Onboarding Plan: ${role || 'New Role'} — Oak Street Technologies`,
-        html: buildEmailHtml(emailNote.trim()),
+        text: buildEmailText(emailNote.trim()),
         attachment,
       }
       const result = await invokeAuthenticatedFunction<EmailPayload, EmailResult>('send-onboarding-email', payload)
       if (result.ok === false) throw new Error(result.error || 'Email was not sent.')
-      setEmailNotice(`Plan sent to ${emailTo.trim()}.`)
+      setEmailNotice(`PDF attachment sent to ${emailTo.trim()}.`)
       setEmailNote('')
       window.setTimeout(() => setEmailOpen(false), 900)
     } catch (caught) {
@@ -456,13 +379,13 @@ export default function GenerateFormClient() {
         icon="email"
         onClose={() => setEmailOpen(false)}
         open={emailOpen}
-        subtitle="Email a formatted copy and attached landscape PDF."
+        subtitle="Send the downloaded onboarding plan as a PDF attachment."
         title="Send Onboarding Plan"
         footer={(
           <>
             <Button disabled={sendingEmail} onClick={() => setEmailOpen(false)} type="button" variant="secondary">Cancel</Button>
             <Button disabled={sendingEmail} icon="email" onClick={sendEmail} type="button" variant="primary">
-              {sendingEmail ? 'Sending...' : 'Send Email'}
+              {sendingEmail ? 'Sending PDF...' : 'Send PDF'}
             </Button>
           </>
         )}
@@ -470,7 +393,7 @@ export default function GenerateFormClient() {
         <div className="email-summary">
           <strong>Plan:</strong> {nWeeks}-Week Onboarding · {role || '—'}<br />
           <strong>From:</strong> onboarding@resend.dev<br />
-          <strong>Includes:</strong> {nWeeks * 5} training days across {nWeeks} weeks
+          <strong>Attachment:</strong> {filename}
         </div>
         <StatusBanner tone="warning"><strong>Demo Mode:</strong> Resend test delivery is limited to the verified project-owner email.</StatusBanner>
         {emailError && <StatusBanner tone="error">{emailError}</StatusBanner>}
