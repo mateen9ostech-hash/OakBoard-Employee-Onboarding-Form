@@ -5,6 +5,35 @@ This is the canonical OakBoard employee onboarding project.
 The production application is the React + TypeScript + Vite project in `react-app/`.
 The previous root-level static HTML application was removed after the React migration and end-to-end flow were verified.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    User["Employee / Manager"] --> UI["React + TypeScript + Vite"]
+    UI --> Auth["Supabase Authentication"]
+    UI --> Storage["Browser plan storage"]
+    UI --> PDF["jsPDF + html-to-image"]
+    UI --> Function["Supabase Edge Function"]
+    Function --> Resend["Resend email delivery"]
+    Auth --> PostgreSQL["Supabase PostgreSQL"]
+    Function --> PostgreSQL
+    Vercel["Vercel hosting"] --> UI
+```
+
+### Repository language profile
+
+GitHub language statistics snapshot (July 21, 2026):
+
+| Language | Share |
+|---|---:|
+| TypeScript | 59.2% |
+| CSS | 33.8% |
+| PL/pgSQL | 3.6% |
+| PowerShell | 3.2% |
+| HTML | 0.2% |
+
+GitHub calculates the sidebar language bar automatically; percentages may change as the codebase evolves.
+
 ## Local development
 
 For a complete dependency and service inventory, see `REQUIREMENTS.md`.
