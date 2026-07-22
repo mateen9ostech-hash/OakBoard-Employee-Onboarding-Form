@@ -4,12 +4,13 @@
   "private": true,
   "packageManager": "npm@11.16.0",
   "engines": {
-    "node": ">=24 <25",
-    "npm": ">=11 <12"
+    "node": ">=20.9 <25",
+    "npm": ">=10 <12"
   },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node scripts/prepare-standalone.mjs",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",

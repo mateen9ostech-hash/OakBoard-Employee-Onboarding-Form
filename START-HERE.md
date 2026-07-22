@@ -159,6 +159,7 @@ Deploy only after the validation commands pass. The required Vercel variables ar
 
 ## Documentation map
 
+- `CPANEL-DEPLOYMENT.md` - Node.js 22, Passenger, environment, build, and restart steps for cPanel.
 - `README.md` — project overview and architecture.
 - `START-HERE.md` — new-machine setup and continuation guide.
 - `TASKS.md` — current completion and remaining-work checklist.
