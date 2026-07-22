@@ -1,6 +1,6 @@
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
+import Image from './app-image'
+import Link from './app-link'
 import { VividButton } from './vivid'
 
 type IconName =

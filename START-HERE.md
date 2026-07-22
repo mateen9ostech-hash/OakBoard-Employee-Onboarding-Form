@@ -2,168 +2,66 @@
 
 Last updated: 2026-07-22
 
-This is the handoff document for continuing OakBoard development on this or a new laptop.
+## Branch status
 
-## Current links
+- Stable production source: `main` (legacy hosted application)
+- Active cPanel migration: `migration/react-php-mysql`
+- Target: static Vite/React frontend + PHP API + cPanel MySQL
 
-- Production app: <https://ostonboarding.vercel.app>
-- Private GitHub repository: <https://github.com/mateen9ostech-hash/OakBoard-Employee-Onboarding-Form>
-- Vercel project: `9ostech/oak-board-employee-onboarding-form`
-- Main development branch: `main`
+Do not merge this migration branch into `main` or replace production until every release gate in `TASKS.md` passes.
 
-## Current project state
-
-OakBoard is a production-deployed Next.js 16 App Router application. The old static HTML, React Router, and Vite implementations were removed after migration and are not required.
-
-Completed work:
-
-- Migrated the application to Next.js 16, React 19, and TypeScript.
-- Added Supabase SSR/cookie authentication with protected routes and a 15-minute session-freshness rule.
-- Implemented login, signup, email callback, signout, and authenticated redirects.
-- Added 6-digit email OTP verification for new accounts, automatic sign-in after verification, and rate-limited code resending.
-- Migrated the Fill Details and Generate Form workflows.
-- Added 2-week and 4-week onboarding-plan support.
-- Added local NotebookLM text import and duration detection.
-- Added user-owned Recent Plans, archive, restore, preview, and edit routes backed by Supabase.
-- Preserved the 16:9 onboarding preview, print flow, and high-resolution PDF export.
-- Preserved authenticated email delivery through the Supabase `send-onboarding-email` Edge Function.
-- Kept Resend and Supabase service-role secrets outside browser code.
-- Added OakBoard branding and removed inherited Vite assets.
-- Removed obsolete code, duplicate exports, generated artifacts, and migration fallback files.
-- Added exact dependency locking, TypeScript, ESLint, build, and audit validation.
-- Added a no-administrator Windows Node.js setup script.
-- Configured Vercel Production and Preview with the public Supabase variables.
-- Deployed the production application to Vercel.
-
-## New laptop setup
-
-### 1. Install Git and clone the private repository
-
-Sign in to the GitHub account that has access to the private repository, then run:
+## New-machine setup
 
 ```powershell
 cd C:\Projects\Coding
 git clone https://github.com/mateen9ostech-hash/OakBoard-Employee-Onboarding-Form.git
 cd .\OakBoard-Employee-Onboarding-Form
-```
-
-If GitHub asks for authentication, use Git Credential Manager or GitHub CLI. Do not place a password or token in the repository.
-
-### 2. Install Node.js and dependencies
-
-On Windows without administrator/UAC access, run the included portable setup:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
-```
-
-It installs the pinned Node.js version under the current Windows user profile, adds it to the user PATH, runs `npm ci`, and validates the project.
-
-If Node.js is already installed, verify it and install exact dependencies:
-
-```powershell
-node --version
-npm --version
+git switch migration/react-php-mysql
 npm ci
-```
-
-The preferred local versions are recorded in `.nvmrc` and `package.json`.
-
-### 3. Create the local environment file
-
-Create `.env.local` from the safe template:
-
-```powershell
 Copy-Item .env.example .env.local
 ```
 
-Open `.env.local` in VS Code and replace the placeholders with the Supabase project URL and publishable key:
+Set only the public Supabase values in `.env.local`:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
-NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
+VITE_API_BASE_URL=/api
+VITE_SITE_URL=http://127.0.0.1:3000
 ```
 
-`.env.local` is Git-ignored. Never commit it. Never place `RESEND_API_KEY` or `SUPABASE_SERVICE_ROLE_KEY` in this frontend file.
+Never put MySQL or Resend passwords in the Vite environment.
 
-### 4. Validate and run
+## Validate the frontend
 
 ```powershell
 npm run typecheck
 npm run lint
 npm run build
 npm audit
-npm run dev -- --hostname 127.0.0.1
+npm run dev
 ```
 
-Open <http://127.0.0.1:3000/sign-in>.
+The Vite dev server runs at <http://127.0.0.1:3000>. For full local CRUD testing, install PHP 8.1+ and run `npm run dev:api` in a second terminal with `OAKBOARD_CONFIG_FILE` pointing to a private local PHP configuration.
 
-### 5. Confirm external configuration
+## External setup still required
 
-Supabase Authentication URL Configuration should allow:
+1. Import `database/mysql/schema.sql` into the cPanel database.
+2. Create `/home/ostech/oakboard-config.php` from `api/config.example.php` using rotated private credentials.
+3. Confirm PHP extensions `pdo_mysql`, `curl`, `mbstring`, and `json` are enabled for this subdomain.
+4. Add `https://onboarding.9ostech.com/auth/callback` to Supabase Auth redirect URLs.
+5. Deploy only `dist/` by following `CPANEL-DEPLOYMENT.md`.
+6. Run authenticated user-isolation, archive/restore/delete, PDF, and email acceptance tests.
 
-```text
-http://127.0.0.1:3000/auth/callback
-https://ostonboarding.vercel.app/auth/callback
-```
-
-The Supabase Edge Function owns the Resend and service-role secrets. Those secrets do not belong in Vercel or `.env.local`.
-
-Supabase signup verification must also be configured as follows:
-
-- Keep **Authentication > Providers > Email > Confirm email** enabled.
-- In **Authentication > Email Templates > Confirm signup**, include `{{ .Token }}` so the email contains the 6-digit OTP used by the app.
-- Keep the production and local callback URLs listed above in the redirect allow list for recovery and fallback email-link flows.
-
-## Normal development workflow
-
-Before starting work:
+## Normal workflow
 
 ```powershell
-git switch main
-git pull --ff-only origin main
-npm ci
-```
-
-After making changes:
-
-```powershell
-npm run typecheck
-npm run lint
-npm run build
-npm audit
 git status
+git pull --ff-only origin migration/react-php-mysql
+npm ci
+npm run typecheck
+npm run lint
+npm run build
 ```
 
-Review changes before committing. Never commit `.env.local`, `.vercel/`, `node_modules/`, or `.next/`.
-
-## Deployment workflow
-
-The repository is linked locally to the Vercel project, but `.vercel/` is intentionally ignored. A new laptop can install/use the CLI and relink it:
-
-```powershell
-npx vercel@latest login
-npx vercel@latest link
-npx vercel@latest deploy --prod
-```
-
-Deploy only after the validation commands pass. The required Vercel variables are listed in `VERCEL-ENV.md`.
-
-## Remaining external checks
-
-- Confirm the production callback URL in Supabase Auth settings.
-- Confirm the signup email template contains `{{ .Token }}` and perform a production signup/OTP test.
-- Optionally run a complete live NotebookLM import, PDF, Recent Plans, and demo-email acceptance test.
-- Verify a custom Resend sending domain before removing demo-recipient restrictions.
-
-## Documentation map
-
-- `CPANEL-DEPLOYMENT.md` - Node.js 22, Passenger, environment, build, and restart steps for cPanel.
-- `README.md` — project overview and architecture.
-- `START-HERE.md` — new-machine setup and continuation guide.
-- `TASKS.md` — current completion and remaining-work checklist.
-- `REQUIREMENTS.md` — dependencies, runtimes, and external services.
-- `NEXTJS-CUTOVER.md` — migration gates, verification, and rollback.
-- `VERCEL-ENV.md` — Vercel environment and deployment configuration.
-- `AGENTS.md` — repository-specific Git and safety workflow.
+Never commit `.env.local`, `/home/.../oakboard-config.php`, raw database exports, `node_modules`, or `dist`.

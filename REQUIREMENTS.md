@@ -1,85 +1,48 @@
 # OakBoard Requirements
 
-## Runtime
+## Development machine
 
-- Windows 10/11, macOS, or Linux for normal Node.js development.
-- Node.js 20.9 through 24.x is supported. `24.18.0` remains the preferred local version pinned in `.nvmrc`; Node.js 22 is recommended for cPanel.
-- npm 10.x and 11.x are supported; `11.16.0` is the preferred local version pinned in `package.json`.
-- A modern browser such as Microsoft Edge, Chrome, Firefox, or Safari.
+- Node.js 20.19–24.x
+- npm 10–11
+- Git
+- Modern browser
+- Optional PHP 8.1+ for local API testing
 
-Windows users without administrator access can run `scripts/setup.ps1`. It installs the pinned official Node.js ZIP under the current user's profile, verifies its SHA-256 checksum, installs exact npm dependencies, and runs the project checks.
+The checked-in lockfile is authoritative. Install with `npm ci`.
 
-## Frontend dependencies
+## Production cPanel account
 
-Production dependencies are declared in the root `package.json`, and exact resolved versions are locked in `package-lock.json`:
+- Apache with `.htaccess`, `mod_rewrite`, and PHP support
+- PHP 8.1 or newer
+- PHP extensions: PDO MySQL, cURL, mbstring, JSON, OpenSSL
+- MySQL 8.0+ or MariaDB 10.6+
+- InnoDB, `utf8mb4`, and JSON column support
+- A database user limited to the OakBoard database
+- HTTPS for `onboarding.9ostech.com`
 
-- React and React DOM
-- Next.js App Router
-- Supabase JavaScript and SSR clients
-- html-to-image
-- jsPDF
+Production does **not** require Node.js, Passenger, Application Manager, PM2, systemd, or an Apache restart.
 
-Development dependencies:
-
-- TypeScript
-- Next.js ESLint configuration
-- React, React DOM, and Node.js type definitions
-
-Do not copy or commit `node_modules/` or `.next/`. Recreate them with `npm ci` and `npm run build`.
-
-## Environment variables
-
-Create root `.env.local` from `.env.example`:
+## Browser environment
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
-NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
+VITE_API_BASE_URL=/api
+VITE_SITE_URL=https://onboarding.9ostech.com
 ```
 
-`.env.local` is ignored by Git. Never commit real environment values.
+These are browser-visible by design. Never add MySQL, Resend, service-role, or SMTP secrets.
 
-Supabase Edge Function secrets are documented in `supabase/functions/.env.example`:
+## Private PHP configuration
 
-- `RESEND_API_KEY`
-- `RESEND_FROM_EMAIL`
-- `SUPABASE_SERVICE_ROLE_KEY` (provided automatically by Supabase in deployed functions)
+Create `/home/CPANEL_USER/oakboard-config.php` from `api/config.example.php` and set mode `600`. It contains:
 
-Never place server-side secrets in browser-exposed `NEXT_PUBLIC_*` variables.
+- MySQL host, port, database, username, and password
+- Supabase project URL and publishable key used to validate access tokens
 
 ## External services
 
-- Supabase project for authentication and Edge Functions
-- Resend account for email delivery
-- Vercel account for production and preview deployments
-- A cPanel Node.js 22 and Phusion Passenger application when self-hosting on `onboarding.9ostech.com`
-
-Account sign-in, production secrets, Supabase deployment, email-domain verification, and Vercel deployment are intentionally not automated by the local setup script. The current production app is available at <https://ostonboarding.vercel.app>.
-
-For cPanel self-hosting, follow `CPANEL-DEPLOYMENT.md`. Copying the source directory into `public_html` without registering and starting the Node.js application will expose an Apache directory listing instead of OakBoard.
-
-Supabase Authentication URL Configuration must allow `/auth/callback` for every active local or production origin. See `NEXTJS-CUTOVER.md` for the exact cutover gates.
-
-## Standard setup
-
-From the repository root on Windows without administrator access:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
-```
-
-With Node.js already installed:
-
-```powershell
-npm ci
-npm run build
-npm run lint
-npm run typecheck
-npm audit
-```
-
-Start local development:
-
-```powershell
-npm run dev -- --hostname 127.0.0.1
-```
+- Supabase Auth for user identity, OTP, recovery, and sessions
+- Supabase Edge Functions for import/email operations
+- Resend for authenticated PDF email delivery
+- cPanel MySQL/MariaDB for owner-scoped plans and application records

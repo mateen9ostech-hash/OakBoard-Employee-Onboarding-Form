@@ -1,76 +1,76 @@
-# OakBoard cPanel Deployment
+# OakBoard Isolated cPanel Deployment
 
-OakBoard is a dynamic Next.js application. Uploading its source into a web document root is not enough; cPanel must run it as a Node.js application through Phusion Passenger.
+This deployment changes only the document root and database assigned to `onboarding.9ostech.com`. It does not use Passenger and does not require a global Apache rebuild or restart.
 
-## Supported runtime
+## 1. Prepare MySQL
 
-- Node.js 22 is recommended on cPanel.
-- Application type: Node.js
-- Deployment environment: Production
-- Startup file: `app.js`
+In cPanel/phpMyAdmin, select the OakBoard database and import:
 
-Next.js 16 requires Node.js 20.9 or newer. The repository supports Node.js 20.9 through 24.x.
-
-## Application Manager values
-
-| Field | Value |
-| --- | --- |
-| Application name | `onboarding` |
-| Deployment domain | `onboarding.9ostech.com` |
-| Base application URL | `/` |
-| Application type | Node.js |
-| Deployment environment | Production |
-| Startup file | `app.js` |
-
-Prefer an application path outside `public_html`, for example `apps/oakboard`. This prevents source files and private local environment files from being served by Apache if Passenger is stopped or misconfigured.
-
-## Environment variables
-
-Configure these privately in cPanel Application Manager. Never commit their real values.
-
-```env
-NODE_ENV=production
-NEXT_PUBLIC_SITE_URL=https://onboarding.9ostech.com
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
-PLAN_DATABASE_BACKEND=supabase
+```text
+database/mysql/schema.sql
 ```
 
-Keep `PLAN_DATABASE_BACKEND=supabase` until the MySQL schema and data import have both succeeded. Then add the private `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, and rotated `MYSQL_PASSWORD` values and switch the backend to `mysql`.
+Use a database user that has privileges only on this database. Rotate any password that has appeared in chat, screenshots, shell history, or documentation.
 
-Supabase Authentication URL Configuration must include:
+## 2. Create the private API configuration
+
+On the server, create `/home/ostech/oakboard-config.php` based on `api/config.example.php` and add the real values privately. Then protect it:
+
+```bash
+chmod 600 /home/ostech/oakboard-config.php
+chown ostech:ostech /home/ostech/oakboard-config.php
+```
+
+The file must stay outside `/home/ostech/public_html`.
+
+## 3. Build locally or in an isolated source directory
+
+```bash
+npm ci
+npm run typecheck
+npm run lint
+npm run build
+```
+
+The deployable artifact is `dist/`, not the repository root.
+
+## 4. Deploy only this subdomain
+
+Back up the current OakBoard subdomain document root. Replace only its contents with the contents of `dist/`. Do not modify the primary domain or another website's document root.
+
+Expected production layout:
+
+```text
+/home/ostech/public_html/onboarding.9ostech.com/
+  .htaccess
+  index.html
+  assets/
+  api/
+  oakboard-logo.svg
+  task-icon.svg
+```
+
+The included `.htaccess` disables directory indexing, preserves `/api`, serves real assets, and falls back to `index.html` for React Router URLs.
+
+## 5. Supabase configuration
+
+Allow this exact redirect URL in Supabase Authentication:
 
 ```text
 https://onboarding.9ostech.com/auth/callback
 ```
 
-## Build on cPanel
+Keep Confirm Email enabled and keep `{{ .Token }}` in the signup template because OakBoard accepts the six-digit OTP.
 
-Run these commands as the cPanel account user from the application directory:
+## 6. Acceptance checks
 
-```bash
-export PATH=/opt/cpanel/ea-nodejs22/bin:$PATH
-node --version
-npm --version
-npm ci
-npm run build
-mkdir -p tmp
-touch tmp/restart.txt
-```
+- `/sign-in`, `/help`, and a refreshed `/plans/{uuid}` route do not return 404.
+- An unauthenticated `/api/plans` request returns HTTP 401 JSON.
+- User A cannot load, update, archive, restore, or delete User B's plan UUID.
+- New plans are inserted into MySQL with the correct `owner_id`.
+- Archive, restore, delete, PDF download, and PDF email delivery work.
+- No source files, `.env` file, database export, or directory listing is publicly accessible.
 
-The build creates `.next/standalone/server.js`, copies `public` and `.next/static` into the standalone runtime, and leaves `app.js` as Passenger's stable entry point.
+## Rollback
 
-Do not upload a Windows `node_modules` directory. Always recreate dependencies on the Linux server with `npm ci`.
-
-## Verification
-
-Open these URLs after restarting the application:
-
-```text
-https://onboarding.9ostech.com/sign-in
-https://onboarding.9ostech.com/help
-```
-
-An unauthenticated request to `/api/plans` should return HTTP 401. It should not return an Apache directory listing.
-
-If the application fails, check the application `logs/` directory or `stderr.log` in cPanel before changing Apache or NGINX configuration.
+Restore only the backed-up `onboarding.9ostech.com` document root. The stable `main` branch and current hosted deployment remain unchanged until migration acceptance is complete.

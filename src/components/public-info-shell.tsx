@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from './app-link'
 import type { ReactNode } from 'react'
 import { BrandLogo, Icon } from '@/components/ui'
 

@@ -32,8 +32,8 @@ try {
   for (const user of exportDocument.users) {
     await connection.execute(
       `INSERT INTO app_users
-       (id, email, full_name, password_hash, email_verified_at, created_at, updated_at)
-       VALUES (?, ?, ?, NULL, ?, ?, ?)
+       (id, email, full_name, email_verified_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          email = VALUES(email),
          full_name = VALUES(full_name),

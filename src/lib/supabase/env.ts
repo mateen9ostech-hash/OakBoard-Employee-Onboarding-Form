@@ -1,14 +1,12 @@
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabasePublishableKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
 export const supabaseEnvReady = Boolean(supabaseUrl && supabasePublishableKey)
 
 export function getSupabaseEnv() {
   if (!supabaseUrl || !supabasePublishableKey) {
     throw new Error(
-      'Missing NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.',
+      'Missing VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.',
     )
   }
 

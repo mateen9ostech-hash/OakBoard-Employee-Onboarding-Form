@@ -1,54 +1,35 @@
-# OakBoard Project Status
+# React/PHP/MySQL Migration Status
 
 Last updated: 2026-07-22
 
-This is the current release checklist for the canonical Next.js application. Historical Vite and static HTML migration tasks have been removed because those implementations are no longer part of the repository.
+## Implemented on `migration/react-php-mysql`
 
-## Current state
+- [x] Isolated migration branch created from clean `main`.
+- [x] Vite + React Router SPA entry and professional route structure added.
+- [x] Active screens moved from framework route-group folders into native `src/pages` modules.
+- [x] Existing branded login, workspace, builder, preview, PDF, and public pages retained.
+- [x] Supabase browser auth changed from the SSR client to a native SPA PKCE client.
+- [x] Protected-route and auth-callback behavior implemented client-side.
+- [x] PHP 8 JSON API added with PDO prepared statements.
+- [x] Supabase access tokens validated server-side before MySQL access.
+- [x] MySQL users automatically synchronized by Supabase UUID.
+- [x] Owner-scoped list/create/read/update/archive/restore/delete implemented.
+- [x] Static cPanel `.htaccess` route fallback and API routing added.
+- [x] Production build copies only the three required PHP runtime files into `dist/api`.
+- [x] Previous server runtime code removed from the migration branch.
+- [x] TypeScript, ESLint, Vite build, and npm audit pass locally.
+- [x] Real PHP 8.5 syntax checks and unauthenticated API runtime smoke test pass locally.
 
-- [x] Next.js 16 App Router is the canonical root application.
-- [x] The Vite, React Router, and legacy static HTML implementations are removed.
-- [x] Supabase authentication uses SSR cookies and a Next.js proxy with a 15-minute session-freshness rule.
-- [x] Sign-in, signup, signout, protected routes, and authenticated plan access are implemented.
-- [x] Professional App Router URLs separate public, auth, workspace, plan creation, archive, preview, and edit concerns.
-- [x] The plan builder supports 2-week and 4-week onboarding plans.
-- [x] NotebookLM text import runs locally in the browser.
-- [x] Recent plans are owner-scoped in Supabase and support preview, edit, archive, restore, and delete actions.
-- [x] Preview, print, PDF export, and authenticated email delivery are implemented.
-- [x] Supabase database migrations and the `send-onboarding-email` Edge Function are retained.
-- [x] OakBoard branding and browser metadata are configured.
-- [x] Portable no-UAC Node.js setup, pinned dependencies, and environment templates are documented.
-- [x] TypeScript, ESLint, and the production build pass locally.
-- [x] The private GitHub `main` branch is the source of truth.
-- [x] Vercel Production and Preview contain the required public Supabase variables.
-- [x] The production Next.js application is deployed at `https://ostonboarding.vercel.app`.
-- [x] A `START-HERE.md` handoff guide documents completed work and new-laptop setup.
+## Release gates
 
-## External release tasks
-
-These require an external service change or explicit deployment approval:
-
-- [ ] Confirm the local and production callback URLs in Supabase Auth settings.
-- [ ] Run an optional live acceptance test for NotebookLM import and email delivery.
-- [ ] Run a production sign-in/signup callback acceptance test.
-- [ ] Upgrade the inherited `sharp` dependency when Next.js provides a compatible fix for the current advisory.
-
-## Standard validation
-
-Run from the repository root:
-
-```powershell
-npm ci
-npm run typecheck
-npm run lint
-npm run build
-npm audit
-```
-
-For local development:
-
-```powershell
-npm run dev -- --hostname 127.0.0.1
-```
-
-See `README.md`, `REQUIREMENTS.md`, `NEXTJS-CUTOVER.md`, and `VERCEL-ENV.md` for setup and release details.
+- [ ] Run PHP syntax checks on cPanel PHP 8.1+.
+- [ ] Import `database/mysql/schema.sql` into the target database.
+- [ ] Create private `/home/ostech/oakboard-config.php` with rotated credentials.
+- [ ] Import required existing plan data from Supabase PostgreSQL.
+- [ ] Test login, signup OTP, recovery, and callback on the migration domain.
+- [ ] Test two separate users for strict plan isolation.
+- [ ] Test create, edit, preview, archive, restore, and permanent delete.
+- [ ] Test NotebookLM import and error handling.
+- [ ] Test two-week/four-week PDF download and authenticated email attachment.
+- [ ] Test desktop and mobile layouts in production.
+- [ ] Merge only after written acceptance; keep `main` rollback available.

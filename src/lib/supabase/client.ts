@@ -1,9 +1,16 @@
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { getSupabaseEnv, supabaseEnvReady } from './env'
 
 export const supabase = supabaseEnvReady
   ? (() => {
       const { url, publishableKey } = getSupabaseEnv()
-      return createBrowserClient(url, publishableKey)
+      return createClient(url, publishableKey, {
+        auth: {
+          flowType: 'pkce',
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: false,
+        },
+      })
     })()
   : null

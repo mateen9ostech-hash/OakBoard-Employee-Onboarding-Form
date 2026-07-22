@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS app_users (
   id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   email VARCHAR(320) NOT NULL,
   full_name VARCHAR(160) NOT NULL DEFAULT '',
-  password_hash VARCHAR(255) NULL,
   email_verified_at DATETIME(3) NULL,
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
@@ -82,33 +81,4 @@ CREATE TABLE IF NOT EXISTS onboarding_email_logs (
     FOREIGN KEY (owner_id) REFERENCES app_users(id) ON DELETE CASCADE,
   CONSTRAINT onboarding_email_logs_plan_fk
     FOREIGN KEY (plan_id) REFERENCES onboarding_plans(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS auth_sessions (
-  id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  expires_at DATETIME(3) NOT NULL,
-  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  last_seen_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  PRIMARY KEY (id),
-  UNIQUE KEY auth_sessions_token_unique (token_hash),
-  KEY auth_sessions_user_idx (user_id, expires_at),
-  CONSTRAINT auth_sessions_user_fk
-    FOREIGN KEY (user_id) REFERENCES app_users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS auth_verification_codes (
-  id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  code_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  purpose ENUM('signup', 'password_reset') NOT NULL,
-  expires_at DATETIME(3) NOT NULL,
-  consumed_at DATETIME(3) NULL,
-  attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  PRIMARY KEY (id),
-  KEY auth_verification_user_idx (user_id, purpose, expires_at),
-  CONSTRAINT auth_verification_user_fk
-    FOREIGN KEY (user_id) REFERENCES app_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

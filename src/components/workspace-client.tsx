@@ -1,11 +1,12 @@
 'use client'
 
-import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import Image from './app-image'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Button, Icon } from '@/components/ui'
 import { VividButton } from '@/components/vivid'
+import { apiFetch } from '@/lib/api/client'
 import { getValidSession, signOut } from '@/lib/auth/client'
+import { useAppRouter } from '@/lib/router'
 import {
   type OnboardingPlan,
   type PlanWeek,
@@ -351,7 +352,7 @@ export default function WorkspaceClient({
   initialPlan = null,
   initialView = 'workspace',
 }: WorkspaceClientProps) {
-  const router = useRouter()
+  const router = useAppRouter()
   const initialPlanData = initialPlan?.plan || null
   const initialWeekCount: 2 | 4 = Number(initialPlanData?.nWeeks) === 4 ? 4 : 2
   const editingOnLoad = initialView === 'edit' && Boolean(initialPlanData)
@@ -401,7 +402,7 @@ export default function WorkspaceClient({
       setHistoryOwnerId(ownerId)
       setDisplayName(getUserDisplayName(sessionResult.session.user))
 
-      const response = await fetch('/api/plans?limit=8', { cache: 'no-store' })
+      const response = await apiFetch('/api/plans?limit=8', { cache: 'no-store' })
       const result = await response.json().catch(() => null) as { plans?: SavedOnboardingPlan[] } | null
 
       if (!active) return
@@ -602,7 +603,7 @@ export default function WorkspaceClient({
     }
 
     setPlanActionBusy(true)
-    const response = await fetch(`/api/plans/${encodeURIComponent(id)}`, {
+    const response = await apiFetch(`/api/plans/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'archive' }),
@@ -631,7 +632,7 @@ export default function WorkspaceClient({
     }
 
     setPlanActionBusy(true)
-    const response = await fetch(`/api/plans/${encodeURIComponent(id)}`, {
+    const response = await apiFetch(`/api/plans/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'restore' }),
@@ -660,7 +661,7 @@ export default function WorkspaceClient({
     }
 
     setPlanActionBusy(true)
-    const response = await fetch(`/api/plans/${encodeURIComponent(id)}`, { method: 'DELETE' })
+    const response = await apiFetch(`/api/plans/${encodeURIComponent(id)}`, { method: 'DELETE' })
 
     if (!response.ok) {
       setHistoryStatus('This plan could not be removed. Please try again.')
@@ -735,7 +736,7 @@ export default function WorkspaceClient({
     }
 
     const endpoint = editingPlanId ? `/api/plans/${encodeURIComponent(editingPlanId)}` : '/api/plans'
-    const response = await fetch(endpoint, {
+    const response = await apiFetch(endpoint, {
       method: editingPlanId ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plan }),

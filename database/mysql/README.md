@@ -9,11 +9,11 @@ This directory contains the target schema for moving OakBoard application data f
 - `utf8mb4`
 - JSON column support
 - A cPanel database user with all privileges on the OakBoard database
-- A cPanel Node.js application runtime for the Next.js server
+- PHP 8.1+ with PDO MySQL and cURL for the OakBoard API
 
 ## Files
 
-- `schema.sql` creates the MySQL application and authentication tables.
+- `schema.sql` creates the MySQL application-data tables.
 - `private/` is Git-ignored and holds raw exports and generated import files containing private user data.
 
 ## Migration order
@@ -21,31 +21,24 @@ This directory contains the target schema for moving OakBoard application data f
 1. Add `SUPABASE_DB_URL` privately to `.env.local`.
 2. Run `npm run db:export:postgres` to create the Git-ignored JSON export.
 3. Import `schema.sql` through phpMyAdmin or the MySQL CLI.
-4. Add the MySQL variables below privately to `.env.local` or cPanel.
+4. Create `/home/CPANEL_USER/oakboard-config.php` from `api/config.example.php`.
 5. Run `npm run db:import:mysql` from an environment that can reach the cPanel database.
-6. Set `PLAN_DATABASE_BACKEND=mysql` in cPanel only after the import succeeds.
-7. Run the application build and authenticated acceptance tests.
+6. Build the Vite application and deploy only `dist/` to the OakBoard subdomain.
+7. Run authenticated owner-isolation and CRUD acceptance tests.
 
 The import is idempotent: it updates matching UUID records and does not truncate or delete existing MySQL data. It runs inside a transaction and rolls back the current import if a record fails.
 
-## Authentication limitation
+## Authentication boundary
 
-Supabase password hashes, OTP state, refresh tokens, and sessions are not portable as ordinary application data. Existing users will keep their UUID ownership links, but they must set a new password through the migrated authentication flow. Do not export Supabase secrets or session tokens into MySQL.
+Supabase remains OakBoard's identity provider, so existing users keep their login, OTP, recovery, and UUID ownership links. MySQL stores the synchronized user profile and application data only. Password hashes, OTP records, refresh tokens, and sessions are intentionally never exported to MySQL.
 
-## Required cPanel settings
+## Required private cPanel settings
 
-Provide these values privately after creating the database and user:
+Provide these values only in `/home/CPANEL_USER/oakboard-config.php` after creating the database and user:
 
-```env
-MYSQL_HOST=localhost
-MYSQL_PORT=3306
-MYSQL_DATABASE=cpanelprefix_oakboard
-MYSQL_USER=cpanelprefix_oakboard_user
-MYSQL_PASSWORD=replace_with_private_password
-PLAN_DATABASE_BACKEND=mysql
-```
+Use the checked-in `api/config.example.php` structure. The private file must also contain the Supabase URL and publishable key so the PHP API can validate bearer tokens.
 
-Never add the real values to `.env.example`, GitHub, screenshots, or chat messages. Add them only to the cPanel application's environment-variable interface or a private `.env.local` file on the server.
+Never add real values to `.env.example`, GitHub, screenshots, chat messages, or the public document root.
 
 ## Private PostgreSQL export
 
