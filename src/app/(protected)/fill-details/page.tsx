@@ -1057,13 +1057,13 @@ export default function FillDetailsPage() {
         <section className="plan-home" aria-labelledby="plan-home-title">
           <div className="plan-home-frame">
             <header className="plan-home-welcome">
-              <span className="plan-home-kicker">Your onboarding workspace</span>
+              <span className="plan-home-kicker">Your Onboarding Workspace</span>
               <h1 id="plan-home-title">Welcome{displayName ? `, ${displayName}` : ' back'}!</h1>
             </header>
             <div className="plan-home-card">
               <div className="plan-home-copy">
-                <h2>Create onboarding plan</h2>
-                <p>Build a clear, role-specific plan with guided daily goals, activities, and outcomes—then export a polished PDF ready to share.</p>
+                <h2>Create Onboarding Plan</h2>
+                <p>Build a clear, role specific plan with guided daily goals, activities, and outcomes then export a polished PDF ready to share.</p>
               </div>
               <VividButton className="create-plan-button vivid-create-button" icon={<Icon name="plus" />} label="Create new plan" onClick={openNewPlan} />
             </div>
@@ -1171,7 +1171,7 @@ export default function FillDetailsPage() {
           <div className="sec-b">
             {weeks.slice(0, nWeeks).map((week, wi) => (
               <div className="wb" key={wi}>
-                <button className="wt" onClick={() => toggleWeek(wi)} type="button">
+                <button aria-expanded={openWeeks.has(wi)} className={`wt ${openWeeks.has(wi) ? 'open' : ''}`} onClick={() => toggleWeek(wi)} type="button">
                   <span className="wbg">Week {wi + 1}</span>
                   <span className="wp">{week.title || 'Expand to fill week details'}</span>
                   <span className={`wa ${openWeeks.has(wi) ? 'open' : ''}`}><Icon name="chevron-down" /></span>
@@ -1189,7 +1189,7 @@ export default function FillDetailsPage() {
                       const maxTasks = day.tasks.every((task) => task.length <= DAY_TASK_SHORT_MAX) ? DAY_TASK_COUNT_SHORT : DAY_TASK_COUNT_LONG
                       return (
                         <div className="db" key={globalDay}>
-                          <button className="dt" onClick={() => toggleDay(globalDay)} type="button">
+                          <button aria-expanded={openDays.has(globalDay)} className={`dt ${openDays.has(globalDay) ? 'open' : ''}`} onClick={() => toggleDay(globalDay)} type="button">
                             <span className="dnb">Day {globalDay}</span>
                             <span className="ddl">{fmtShort(dates[globalDay - 1])}</span>
                             <span className="dtp">{day.title || 'Click to fill day details'}</span>

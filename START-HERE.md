@@ -20,6 +20,7 @@ Completed work:
 - Migrated the application to Next.js 16, React 19, and TypeScript.
 - Added Supabase SSR/cookie authentication with protected routes and a 15-minute session-freshness rule.
 - Implemented login, signup, email callback, signout, and authenticated redirects.
+- Added 6-digit email OTP verification for new accounts, automatic sign-in after verification, and rate-limited code resending.
 - Migrated the Fill Details and Generate Form workflows.
 - Added 2-week and 4-week onboarding-plan support.
 - Added local NotebookLM text import and duration detection.
@@ -108,6 +109,12 @@ https://oak-board-employee-onboarding-form.vercel.app/auth/callback
 
 The Supabase Edge Function owns the Resend and service-role secrets. Those secrets do not belong in Vercel or `.env.local`.
 
+Supabase signup verification must also be configured as follows:
+
+- Keep **Authentication > Providers > Email > Confirm email** enabled.
+- In **Authentication > Email Templates > Confirm signup**, include `{{ .Token }}` so the email contains the 6-digit OTP used by the app.
+- Keep the production and local callback URLs listed above in the redirect allow list for recovery and fallback email-link flows.
+
 ## Normal development workflow
 
 Before starting work:
@@ -145,7 +152,7 @@ Deploy only after the validation commands pass. The required Vercel variables ar
 ## Remaining external checks
 
 - Confirm the production callback URL in Supabase Auth settings.
-- Perform a production sign-in/signup callback test.
+- Confirm the signup email template contains `{{ .Token }}` and perform a production signup/OTP test.
 - Optionally run a complete live NotebookLM import, PDF, Recent Plans, and demo-email acceptance test.
 - Verify a custom Resend sending domain before removing demo-recipient restrictions.
 

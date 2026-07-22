@@ -18,6 +18,7 @@ type PasswordVisibility = {
 
 const orgDomain = '@9ostech.com'
 const REMEMBER_EMAIL_KEY = 'oakboard_remembered_email'
+const PENDING_SIGNUP_EMAIL_KEY = 'oakboard_pending_signup_email'
 
 function isOrgEmail(email: string) {
   return email.trim().toLowerCase().endsWith(orgDomain)
@@ -33,16 +34,51 @@ function getPasswordScore(password: string) {
   return Math.min(score, 4)
 }
 
-function formatAuthError(message: string) {
+type AuthFailure = {
+  code?: string
+  message?: string
+  status?: number
+}
+
+function formatAuthError(failure: string | AuthFailure) {
+  const message = typeof failure === 'string' ? failure : failure.message || ''
+  const code = typeof failure === 'string' ? '' : failure.code || ''
   const lower = message.toLowerCase()
+  if (code === 'email_address_not_authorized') {
+    return 'Verification email cannot be sent to this address yet. Configure custom SMTP for OakBoard or use an authorized Supabase team email.'
+  }
+  if (code === 'over_email_send_rate_limit') {
+    return 'The verification email limit has been reached. Wait before trying again or configure custom SMTP for OakBoard.'
+  }
+  if (code === 'email_exists' || code === 'user_already_exists') {
+    return 'This email is already registered. Try signing in instead.'
+  }
+  if (code === 'email_provider_disabled') {
+    return 'New email accounts are currently disabled. Contact OakBoard support.'
+  }
   if (lower.includes('email not confirmed')) {
     return 'Please confirm your email first — check your inbox.'
   }
   if (lower.includes('invalid login') || lower.includes('invalid')) {
-    return 'Incorrect email or password.'
+    return "Incorrect email or password. If you're new to OakBoard, create an account."
   }
   if (lower.includes('already registered')) {
     return 'This email is already registered. Try signing in instead.'
+  }
+  if (!message || message === '{}' || message === '[]' || message === '[object Object]') {
+    const diagnostic = code || (typeof failure === 'string' ? '' : failure.status ? `HTTP ${failure.status}` : '')
+    return `Account request failed${diagnostic ? ` (${diagnostic})` : ''}. Check Supabase Authentication logs or contact OakBoard support.`
+  }
+  return message
+}
+
+function formatOtpError(message: string) {
+  const lower = message.toLowerCase()
+  if (lower.includes('expired') || lower.includes('invalid') || lower.includes('token')) {
+    return 'That code is invalid or has expired. Check the code or request a new one.'
+  }
+  if (lower.includes('rate') || lower.includes('too many')) {
+    return 'Too many attempts. Please wait a moment before trying again.'
   }
   return message
 }
@@ -111,6 +147,10 @@ export default function LoginPage() {
   const [signupPassword, setSignupPassword] = useState('')
   const [signupConfirm, setSignupConfirm] = useState('')
   const [pendingEmail, setPendingEmail] = useState('')
+  const [verificationCode, setVerificationCode] = useState('')
+  const [verificationError, setVerificationError] = useState<string | null>(null)
+  const [verificationOk, setVerificationOk] = useState<string | null>(null)
+  const [resendCooldown, setResendCooldown] = useState(0)
   const [visible, setVisible] = useState<PasswordVisibility>({
     signin: false,
     signup: false,
@@ -120,7 +160,7 @@ export default function LoginPage() {
   const [signinError, setSigninError] = useState<string | null>(null)
   const [signinOk, setSigninOk] = useState<string | null>(null)
   const [signupError, setSignupError] = useState<string | null>(null)
-  const [busy, setBusy] = useState<'signin' | 'signup' | 'forgot' | null>(null)
+  const [busy, setBusy] = useState<'signin' | 'signup' | 'forgot' | 'verify' | 'resend' | null>(null)
 
   const passwordStrength = useMemo(() => {
     if (!signupPassword) return null
@@ -134,12 +174,45 @@ export default function LoginPage() {
     return levels[getPasswordScore(signupPassword)]
   }, [signupPassword])
 
+  const passwordConfirmation = useMemo(() => {
+    if (!signupConfirm) {
+      return {
+        color: '#98a2b3',
+        label: 'Repeat your password to confirm',
+        state: 'pending',
+        width: '0%',
+      }
+    }
+    if (signupPassword === signupConfirm) {
+      return {
+        color: '#2f9e44',
+        label: 'Passwords match',
+        state: 'match',
+        width: '100%',
+      }
+    }
+    return {
+      color: '#d64545',
+      label: 'Passwords do not match',
+      state: 'mismatch',
+      width: '100%',
+    }
+  }, [signupConfirm, signupPassword])
+
   useEffect(() => {
     const rememberedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY)
     if (rememberedEmail) {
       queueMicrotask(() => {
         setSigninEmail(rememberedEmail)
         setRememberMe(true)
+      })
+    }
+
+    const pendingSignupEmail = sessionStorage.getItem(PENDING_SIGNUP_EMAIL_KEY)
+    if (pendingSignupEmail && isOrgEmail(pendingSignupEmail)) {
+      queueMicrotask(() => {
+        setPendingEmail(pendingSignupEmail)
+        setTab('pending')
       })
     }
 
@@ -153,6 +226,14 @@ export default function LoginPage() {
       active = false
     }
   }, [router])
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const timer = window.setTimeout(() => {
+      setResendCooldown((current) => Math.max(0, current - 1))
+    }, 1000)
+    return () => window.clearTimeout(timer)
+  }, [resendCooldown])
 
   if (!supabaseEnvReady || !supabase) {
     return (
@@ -189,6 +270,8 @@ export default function LoginPage() {
     setSigninError(null)
     setSigninOk(null)
     setSignupError(null)
+    setVerificationError(null)
+    setVerificationOk(null)
   }
 
   function switchTab(nextTab: AuthTab) {
@@ -224,7 +307,7 @@ export default function LoginPage() {
     setBusy(null)
 
     if (error) {
-      setSigninError(formatAuthError(error.message))
+      setSigninError(formatAuthError(error))
       return
     }
 
@@ -271,8 +354,9 @@ export default function LoginPage() {
     }
 
     setBusy('signup')
-    const { error } = await supabaseClient.auth.signUp({
-      email: signupEmail.trim(),
+    const normalizedEmail = signupEmail.trim().toLowerCase()
+    const { data, error } = await supabaseClient.auth.signUp({
+      email: normalizedEmail,
       password: signupPassword,
       options: {
         data: { full_name: signupName.trim() },
@@ -282,12 +366,105 @@ export default function LoginPage() {
     setBusy(null)
 
     if (error) {
-      setSignupError(formatAuthError(error.message))
+      console.error('Supabase signup failed', {
+        code: error.code,
+        message: error.message,
+        status: error.status,
+      })
+      setSignupError(formatAuthError(error))
       return
     }
 
-    setPendingEmail(signupEmail.trim())
+    if (data.session) {
+      await supabaseClient.auth.signOut()
+      setSignupError('Email verification is not enabled in Supabase. Enable Confirm email before accepting new accounts.')
+      return
+    }
+
+    setPendingEmail(normalizedEmail)
+    setVerificationCode('')
+    setResendCooldown(30)
+    sessionStorage.setItem(PENDING_SIGNUP_EMAIL_KEY, normalizedEmail)
     setTab('pending')
+  }
+
+  async function handleVerifyCode(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault()
+    setVerificationError(null)
+    setVerificationOk(null)
+
+    if (!pendingEmail || !isOrgEmail(pendingEmail)) {
+      setVerificationError('Your signup email is missing. Please create the account again.')
+      return
+    }
+    if (!/^\d{6}$/.test(verificationCode)) {
+      setVerificationError('Enter the complete 6-digit verification code.')
+      return
+    }
+
+    setBusy('verify')
+    const { data, error } = await supabaseClient.auth.verifyOtp({
+      email: pendingEmail,
+      token: verificationCode,
+      type: 'signup',
+    })
+    setBusy(null)
+
+    if (error) {
+      setVerificationError(formatOtpError(error.message))
+      return
+    }
+    if (!data.session) {
+      setVerificationError('Your email was verified, but a login session could not be created. Please sign in.')
+      return
+    }
+
+    setRememberSessionPreference(false)
+    sessionStorage.removeItem(PENDING_SIGNUP_EMAIL_KEY)
+    try {
+      localStorage.setItem(
+        'obf_session_cache',
+        JSON.stringify({
+          timestamp: Date.now(),
+          email: data.session.user.email || pendingEmail,
+        }),
+      )
+    } catch (cacheError) {
+      console.error('Unable to cache verified session:', cacheError)
+    }
+    setVerificationOk('Email verified. Opening your workspace...')
+    window.setTimeout(() => router.replace('/fill-details'), 500)
+  }
+
+  async function handleResendVerificationCode() {
+    if (!pendingEmail || resendCooldown > 0 || busy) return
+    setVerificationError(null)
+    setVerificationOk(null)
+    setBusy('resend')
+    const { error } = await supabaseClient.auth.resend({
+      type: 'signup',
+      email: pendingEmail,
+      options: {
+        emailRedirectTo: new URL('/auth/callback?next=/fill-details', window.location.origin).href,
+      },
+    })
+    setBusy(null)
+
+    if (error) {
+      setVerificationError(formatOtpError(error.message))
+      return
+    }
+    setVerificationCode('')
+    setResendCooldown(30)
+    setVerificationOk('A new verification code has been sent.')
+  }
+
+  function changeSignupEmail() {
+    sessionStorage.removeItem(PENDING_SIGNUP_EMAIL_KEY)
+    setPendingEmail('')
+    setVerificationCode('')
+    setResendCooldown(0)
+    switchTab('signup')
   }
 
   async function handleForgotPassword() {
@@ -308,21 +485,29 @@ export default function LoginPage() {
       return
     }
 
-    setSigninOk(`Password reset link sent to ${signinEmail.trim()}`)
+    setSigninOk(`If this account exists, a password reset link has been sent to ${signinEmail.trim()}. Check spam or junk too.`)
   }
 
   const visualTitle =
     tab === 'signup'
       ? 'Create your OakBoard account'
       : tab === 'pending'
-        ? 'Almost there'
+        ? 'Verify your work email'
         : 'Welcome Back to OakBoard'
   const visualSubtitle =
     tab === 'signup'
       ? 'Create a secure work account to start building onboarding plans.'
       : tab === 'pending'
-        ? 'Confirm your email address, then return here to sign in.'
+        ? 'Enter the six-digit code to verify your account and continue automatically.'
         : 'Sign in to continue creating and sharing onboarding plans.'
+  const passwordFieldFeedback = fieldErrors.signupPassword
+    ? { color: '#b02020', label: fieldErrors.signupPassword }
+    : passwordStrength
+  const confirmationFieldFeedback = fieldErrors.signupConfirm
+    ? { color: '#b02020', label: fieldErrors.signupConfirm }
+    : passwordConfirmation.state === 'pending'
+      ? null
+      : passwordConfirmation
 
   return (
     <main className="auth-wrap">
@@ -473,22 +658,29 @@ export default function LoginPage() {
                       setSignupPassword(event.target.value)
                     }}
                     placeholder="Min. 8 characters"
+                    style={passwordFieldFeedback
+                      ? {
+                          borderColor: passwordFieldFeedback.color,
+                          boxShadow: `0 0 0 3px ${passwordFieldFeedback.color}18`,
+                        }
+                      : undefined}
                     type={visible.signup ? 'text' : 'password'}
                     value={signupPassword}
                   />
                   <button className="toggle-pw" onClick={() => toggleVisibility('signup')} type="button">
                     <EyeIcon hidden={!visible.signup} />
                   </button>
+                  {passwordFieldFeedback && (
+                    <span
+                      aria-live="polite"
+                      className="input-corner-feedback"
+                      role="status"
+                      style={{ color: passwordFieldFeedback.color }}
+                    >
+                      {passwordFieldFeedback.label}
+                    </span>
+                  )}
                 </div>
-                {fieldErrors.signupPassword && <span className="field-err show">{fieldErrors.signupPassword}</span>}
-                {passwordStrength && (
-                  <div className="pw-strength">
-                    <div className="pw-track">
-                      <div className="pw-bar" style={{ width: passwordStrength.width, background: passwordStrength.color }} />
-                    </div>
-                    <span style={{ color: passwordStrength.color }}>{passwordStrength.label}</span>
-                  </div>
-                )}
               </div>
 
               <div className="fld no-bottom">
@@ -497,21 +689,42 @@ export default function LoginPage() {
                   <FieldIcon type="lock" />
                   <input
                     autoComplete="new-password"
-                    className={`has-toggle ${fieldErrors.signupConfirm ? 'err-inp' : ''}`}
+                    className={`has-toggle ${
+                      fieldErrors.signupConfirm || passwordConfirmation.state === 'mismatch'
+                        ? 'err-inp'
+                        : passwordConfirmation.state === 'match'
+                          ? 'match-inp'
+                          : ''
+                    }`}
                     id="su-pw2"
                     onChange={(event) => {
                       clearErrors()
                       setSignupConfirm(event.target.value)
                     }}
                     placeholder="Repeat password"
+                    style={confirmationFieldFeedback
+                      ? {
+                          borderColor: confirmationFieldFeedback.color,
+                          boxShadow: `0 0 0 3px ${confirmationFieldFeedback.color}18`,
+                        }
+                      : undefined}
                     type={visible.confirm ? 'text' : 'password'}
                     value={signupConfirm}
                   />
                   <button className="toggle-pw" onClick={() => toggleVisibility('confirm')} type="button">
                     <EyeIcon hidden={!visible.confirm} />
                   </button>
+                  {confirmationFieldFeedback && (
+                    <span
+                      aria-live="polite"
+                      className="input-corner-feedback"
+                      role="status"
+                      style={{ color: confirmationFieldFeedback.color }}
+                    >
+                      {confirmationFieldFeedback.label}
+                    </span>
+                  )}
                 </div>
-                {fieldErrors.signupConfirm && <span className="field-err show">{fieldErrors.signupConfirm}</span>}
               </div>
 
               <button className={`btn-submit ${busy === 'signup' ? 'loading' : ''}`} disabled={busy === 'signup'} type="submit">
@@ -534,46 +747,84 @@ export default function LoginPage() {
           )}
 
           {tab === 'pending' && (
-            <div className="pending-panel active">
+            <form className="pending-panel active" onSubmit={handleVerifyCode}>
+              {verificationError && (
+                <div className="banner-err show">
+                  <AlertIcon />
+                  <span>{verificationError}</span>
+                </div>
+              )}
+              {verificationOk && (
+                <div className="banner-ok show">
+                  <CheckIcon />
+                  <span>{verificationOk}</span>
+                </div>
+              )}
               <div className="pending-icon">
                 <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                  <path d="M4 14h20M14 4l10 10-10 10" />
+                  <rect x="3.5" y="6" width="21" height="16" rx="3" />
+                  <path d="m5 8 9 7 9-7" />
                 </svg>
               </div>
-              <div className="pending-title">Check Your Email!</div>
-              <div className="pending-sub">
-                A confirmation link has been sent to
+              <div className="pending-title">Verify your email</div>
+              <div className="pending-sub" id="verification-help">
+                We sent a 6-digit verification code to
                 <br />
                 <strong>{pendingEmail || 'your email'}</strong>
-                <br />
-                Click the link in the email to activate your account.
               </div>
-              <div className="info-box">
-                {[
-                  'Verification email sent to your inbox',
-                  'Click the link to activate your account, then sign in',
-                  `Access is restricted to ${orgDomain} employees only`,
-                ].map((item) => (
-                  <div className="info-row" key={item}>
-                    <div className="info-ic">
-                      <CheckIcon />
-                    </div>
-                    <div className="info-txt">{item}</div>
-                  </div>
-                ))}
+
+              <div className="fld otp-field">
+                <label htmlFor="signup-code">Verification code</label>
+                <input
+                  aria-describedby="verification-help"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  className="otp-input"
+                  id="signup-code"
+                  inputMode="numeric"
+                  maxLength={6}
+                  onChange={(event) => {
+                    setVerificationError(null)
+                    setVerificationOk(null)
+                    setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))
+                  }}
+                  placeholder="000000"
+                  type="text"
+                  value={verificationCode}
+                />
               </div>
-              <button className="btn-submit" onClick={() => switchTab('signin')} type="button">
-                <span className="btn-txt">Back to Sign In</span>
+
+              <button className={`btn-submit ${busy === 'verify' ? 'loading' : ''}`} disabled={busy !== null} type="submit">
+                <span className="btn-spin" />
+                <span className="btn-txt">Verify &amp; Continue</span>
               </button>
-            </div>
+              <p className="otp-resend">
+                Didn&apos;t receive the code?{' '}
+                <button
+                  className="link-btn inline"
+                  disabled={busy !== null || resendCooldown > 0}
+                  onClick={handleResendVerificationCode}
+                  type="button"
+                >
+                  {busy === 'resend'
+                    ? 'Sending...'
+                    : resendCooldown > 0
+                      ? `Resend in ${resendCooldown}s`
+                      : 'Resend code'}
+                </button>
+              </p>
+              <button className="link-btn otp-change-email" disabled={busy !== null} onClick={changeSignupEmail} type="button">
+                Use a different email
+              </button>
+            </form>
           )}
 
           <div className="auth-footer">
             <span>© 2026 9ostech</span>
             <span className="dot">•</span>
-            <Link href="/login">Help</Link>
+            <Link href="/help">Help</Link>
             <span className="dot">•</span>
-            <Link href="/login">Privacy</Link>
+            <Link href="/privacy">Privacy</Link>
           </div>
         </div>
         <aside className="auth-visual" aria-hidden="true">

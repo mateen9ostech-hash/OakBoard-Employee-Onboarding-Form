@@ -71,7 +71,20 @@ npm audit
 
 - Browser and server Supabase clients live in `src/lib/supabase/` and use `@supabase/ssr` cookies.
 - `src/proxy.ts` refreshes auth cookies; the protected route-group layout verifies claims server-side.
-- Login, email confirmation callbacks, 15-minute freshness, sign-out, and redirects use App Router conventions.
+- New accounts require a 6-digit email OTP. Successful verification creates the session and opens the protected workspace automatically.
+- Login, email verification, confirmation callbacks, 15-minute freshness, sign-out, and redirects use App Router conventions.
+
+### Required Supabase signup OTP configuration
+
+In the hosted Supabase Dashboard, keep **Authentication > Providers > Email > Confirm email** enabled. Then open **Authentication > Email Templates > Confirm signup** and use `{{ .Token }}` in the message body so the email contains the 6-digit code expected by OakBoard. For example:
+
+```html
+<h2>Verify your OakBoard account</h2>
+<p>Enter this code in OakBoard to finish creating your account:</p>
+<p style="font-size: 28px; font-weight: 700; letter-spacing: 6px;">{{ .Token }}</p>
+```
+
+Do not replace the OTP with `{{ .ConfirmationURL }}` unless the application is intentionally switched back to link-based confirmation.
 
 ## Secure email delivery
 
