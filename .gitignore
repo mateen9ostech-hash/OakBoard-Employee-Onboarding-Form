@@ -1,4 +1,5 @@
 supabase/.temp/
+database/mysql/private/
 
 # Local environment files may contain private API keys.
 .env

@@ -12,7 +12,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "db:export:postgres": "node --env-file=.env.local scripts/export-postgres-data.mjs",
+    "db:import:mysql": "node --env-file=.env.local scripts/import-mysql-data.mjs"
   },
   "overrides": {
     "postcss": "8.5.21"
@@ -24,16 +26,19 @@
     "@vonage/vivid": "^5.24.0",
     "html-to-image": "^1.11.13",
     "jspdf": "^4.2.1",
+    "mysql2": "^3.23.1",
     "next": "^16.2.11",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.2.11",
+    "pg": "^8.22.0",
     "typescript": "~6.0.2"
   }
 }

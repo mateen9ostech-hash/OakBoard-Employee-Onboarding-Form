@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Button, Icon } from '@/components/ui'
 import { VividButton } from '@/components/vivid'
 import { getValidSession, signOut } from '@/lib/auth/client'
-import { supabase } from '@/lib/supabase/client'
 import {
   type OnboardingPlan,
   type PlanWeek,
@@ -15,27 +14,6 @@ import {
 } from '@/types/plan'
 
 type CreationMode = 'manual' | 'import'
-
-type OnboardingPlanRow = {
-  id: string
-  title: string
-  role: string
-  duration_weeks: number
-  updated_at: string
-  plan_json: OnboardingPlan
-}
-
-function savedPlanFromRow(row: OnboardingPlanRow): SavedOnboardingPlan {
-  const nWeeks = Number(row.duration_weeks) === 4 ? 4 : 2
-  return {
-    id: row.id,
-    name: row.title || `${nWeeks}-Week · ${row.role || 'Untitled role'}`,
-    role: row.role || 'Untitled role',
-    nWeeks,
-    updatedAt: row.updated_at,
-    plan: row.plan_json,
-  }
-}
 
 export type WorkspaceView = 'workspace' | 'new' | 'archived' | 'edit'
 
@@ -413,7 +391,7 @@ export default function WorkspaceClient({
     async function loadUserHistory() {
       const sessionResult = await getValidSession()
       if (!active) return
-      if (!sessionResult.ok || !supabase) {
+      if (!sessionResult.ok) {
         setSavedPlans([])
         setHistoryStatus('Recent plans could not be loaded from the database.')
         return
@@ -423,23 +401,17 @@ export default function WorkspaceClient({
       setHistoryOwnerId(ownerId)
       setDisplayName(getUserDisplayName(sessionResult.session.user))
 
-      const { data, error: historyError } = await supabase
-        .from('onboarding_plans')
-        .select('id,title,role,duration_weeks,updated_at,plan_json')
-        .eq('owner_id', ownerId)
-        .is('archived_at', null)
-        .order('updated_at', { ascending: false })
-        .limit(8)
+      const response = await fetch('/api/plans?limit=8', { cache: 'no-store' })
+      const result = await response.json().catch(() => null) as { plans?: SavedOnboardingPlan[] } | null
 
       if (!active) return
-      if (historyError || !data) {
+      if (!response.ok || !result?.plans) {
         setSavedPlans([])
         setHistoryStatus('Recent plans could not be loaded from the database.')
         return
       }
 
-      const remoteHistory = (data as unknown as OnboardingPlanRow[]).map(savedPlanFromRow)
-      setSavedPlans(remoteHistory)
+      setSavedPlans(result.plans)
       setHistoryStatus('')
     }
 
@@ -624,19 +596,19 @@ export default function WorkspaceClient({
   }
 
   async function archiveSavedPlan(id: string) {
-    if (!supabase || !historyOwnerId) {
+    if (!historyOwnerId) {
       setHistoryStatus('The database is unavailable. Please try again.')
       return
     }
 
     setPlanActionBusy(true)
-    const { error: archiveError } = await supabase
-      .from('onboarding_plans')
-      .update({ archived_at: new Date().toISOString() })
-      .eq('id', id)
-      .eq('owner_id', historyOwnerId)
+    const response = await fetch(`/api/plans/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'archive' }),
+    })
 
-    if (archiveError) {
+    if (!response.ok) {
       setHistoryStatus('This plan could not be archived. Please try again.')
       setPlanActionBusy(false)
       return
@@ -653,19 +625,19 @@ export default function WorkspaceClient({
   }
 
   async function restoreArchivedPlan(id: string) {
-    if (!supabase || !historyOwnerId) {
+    if (!historyOwnerId) {
       setHistoryStatus('The database is unavailable. Please try again.')
       return
     }
 
     setPlanActionBusy(true)
-    const { error: restoreError } = await supabase
-      .from('onboarding_plans')
-      .update({ archived_at: null })
-      .eq('id', id)
-      .eq('owner_id', historyOwnerId)
+    const response = await fetch(`/api/plans/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'restore' }),
+    })
 
-    if (restoreError) {
+    if (!response.ok) {
       setHistoryStatus('This plan could not be restored. Please try again.')
       setPlanActionBusy(false)
       return
@@ -682,19 +654,15 @@ export default function WorkspaceClient({
   }
 
   async function removeSavedPlan(id: string) {
-    if (!supabase || !historyOwnerId) {
+    if (!historyOwnerId) {
       setHistoryStatus('The database is unavailable. Please try again.')
       return
     }
 
     setPlanActionBusy(true)
-    const { error: removeError } = await supabase
-      .from('onboarding_plans')
-      .delete()
-      .eq('id', id)
-      .eq('owner_id', historyOwnerId)
+    const response = await fetch(`/api/plans/${encodeURIComponent(id)}`, { method: 'DELETE' })
 
-    if (removeError) {
+    if (!response.ok) {
       setHistoryStatus('This plan could not be removed. Please try again.')
       setPlanActionBusy(false)
       return
@@ -760,41 +728,27 @@ export default function WorkspaceClient({
     }
 
     setIsGenerating(true)
-    if (!supabase || !historyOwnerId) {
+    if (!historyOwnerId) {
       setError('Your database session is unavailable. Please sign in again and retry.')
       setIsGenerating(false)
       return
     }
 
-    const planPayload = {
-      title: `${plan.nWeeks}-Week · ${plan.role}`,
-      role: plan.role,
-      reports_to: plan.reportsTo,
-      collaborates_with: plan.collaboratesWith,
-      duration_weeks: plan.nWeeks,
-      plan_json: plan,
-    }
-    const saveQuery = editingPlanId
-      ? supabase
-          .from('onboarding_plans')
-          .update(planPayload)
-          .eq('id', editingPlanId)
-          .eq('owner_id', historyOwnerId)
-      : supabase
-          .from('onboarding_plans')
-          .insert({ owner_id: historyOwnerId, ...planPayload })
+    const endpoint = editingPlanId ? `/api/plans/${encodeURIComponent(editingPlanId)}` : '/api/plans'
+    const response = await fetch(endpoint, {
+      method: editingPlanId ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan }),
+    })
+    const result = await response.json().catch(() => null) as { plan?: SavedOnboardingPlan } | null
 
-    const { data: savedRow, error: saveError } = await saveQuery
-      .select('id,title,role,duration_weeks,updated_at,plan_json')
-      .single()
-
-    if (saveError || !savedRow) {
+    if (!response.ok || !result?.plan) {
       setError('Your plan could not be saved to the database. Please try again.')
       setIsGenerating(false)
       return
     }
 
-    const savedPlan = savedPlanFromRow(savedRow as unknown as OnboardingPlanRow)
+    const savedPlan = result.plan
     setSavedPlans((current) => [savedPlan, ...current.filter((saved) => saved.id !== savedPlan.id)].slice(0, 8))
     writeStoredPlan({ ...plan, id: savedPlan.id })
     router.push(`/plans/${savedPlan.id}`)

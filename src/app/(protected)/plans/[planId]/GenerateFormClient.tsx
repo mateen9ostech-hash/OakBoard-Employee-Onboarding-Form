@@ -6,9 +6,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { toPng } from 'html-to-image'
 import { jsPDF } from 'jspdf'
 import { Button, Modal, PageToolbar, StatusBanner, TextField } from '@/components/ui'
-import { getValidSession, invokeAuthenticatedFunction } from '@/lib/auth/client'
-import { supabase } from '@/lib/supabase/client'
-import { type OnboardingPlan, type PlanDay, type PlanWeek, readStoredPlan, writeStoredPlan } from '@/types/plan'
+import { invokeAuthenticatedFunction } from '@/lib/auth/client'
+import { type OnboardingPlan, type PlanDay, type PlanWeek, readStoredPlan } from '@/types/plan'
 
 const DAY_TITLE_MAX = 90
 const DAY_TASK_MAX = 90
@@ -195,7 +194,7 @@ type GenerateFormClientProps = {
 export default function GenerateFormClient({ initialPlan = null, initialPlanId = null }: GenerateFormClientProps) {
   const router = useRouter()
   const plan = useMemo(() => initialPlan || readStoredPlan(), [initialPlan])
-  const [resolvedPlanId, setResolvedPlanId] = useState(initialPlanId || plan?.id || null)
+  const planId = initialPlanId || plan?.id || null
   const [exporting, setExporting] = useState(false)
   const [emailOpen, setEmailOpen] = useState(false)
   const [emailTo, setEmailTo] = useState(DEMO_RECIPIENT_EMAIL)
@@ -212,40 +211,6 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
     if (!plan) router.replace('/workspace')
   }, [plan, router])
 
-  useEffect(() => {
-    if (!plan || resolvedPlanId || !supabase) return
-    let active = true
-    const storedPlanSnapshot = plan
-
-    async function resolveStoredPlanId() {
-      const sessionResult = await getValidSession()
-      if (!active || !sessionResult.ok || !supabase) return
-
-      const { id: ignoredId, ...storedPlan } = storedPlanSnapshot
-      void ignoredId
-      const { data } = await supabase
-        .from('onboarding_plans')
-        .select('id,plan_json')
-        .eq('owner_id', sessionResult.session.user.id)
-        .order('updated_at', { ascending: false })
-        .limit(50)
-
-      if (!active || !data) return
-      const match = (data as Array<{ id: string; plan_json: OnboardingPlan }>).find(
-        (candidate) => JSON.stringify(candidate.plan_json) === JSON.stringify(storedPlan),
-      )
-      if (!match) return
-
-      setResolvedPlanId(match.id)
-      writeStoredPlan({ ...storedPlanSnapshot, id: match.id })
-    }
-
-    void resolveStoredPlanId()
-    return () => {
-      active = false
-    }
-  }, [plan, resolvedPlanId])
-
   if (!plan) {
     return (
       <main className="auth-loader" aria-live="polite">
@@ -255,7 +220,6 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
     )
   }
 
-  const planId = resolvedPlanId
   const weeks =
     plan.weeks && plan.weeks.length > 0
       ? plan.weeks
@@ -367,27 +331,16 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
       return
     }
 
-    const sessionResult = await getValidSession()
-    if (!sessionResult.ok || !supabase) {
-      setPlanActionError('Your database session is unavailable. Please sign in again.')
-      return
-    }
-
     setPlanActionBusy(action)
-    const ownerId = sessionResult.session.user.id
-    const result = action === 'archive'
-      ? await supabase
-          .from('onboarding_plans')
-          .update({ archived_at: new Date().toISOString() })
-          .eq('id', planId)
-          .eq('owner_id', ownerId)
-      : await supabase
-          .from('onboarding_plans')
-          .delete()
-          .eq('id', planId)
-          .eq('owner_id', ownerId)
+    const response = action === 'archive'
+      ? await fetch(`/api/plans/${encodeURIComponent(planId)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'archive' }),
+        })
+      : await fetch(`/api/plans/${encodeURIComponent(planId)}`, { method: 'DELETE' })
 
-    if (result.error) {
+    if (!response.ok) {
       setPlanActionError(action === 'archive' ? 'This plan could not be archived.' : 'This plan could not be deleted.')
       setPlanActionBusy(null)
       return
