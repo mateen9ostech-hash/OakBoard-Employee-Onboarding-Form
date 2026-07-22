@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const requestedNext = requestUrl.searchParams.get('next')
   const next = requestedNext?.startsWith('/') && !requestedNext.startsWith('//')
     ? requestedNext
-    : '/fill-details'
+    : '/workspace'
 
   if (code && supabaseEnvReady) {
     const supabase = await createSupabaseServerClient()
@@ -26,5 +26,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(new URL('/login?auth_error=callback', requestUrl.origin))
+  return NextResponse.redirect(new URL('/sign-in?auth_error=callback', requestUrl.origin))
 }

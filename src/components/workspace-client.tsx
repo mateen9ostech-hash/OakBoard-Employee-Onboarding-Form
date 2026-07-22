@@ -8,9 +8,6 @@ import { VividButton } from '@/components/vivid'
 import { getValidSession, signOut } from '@/lib/auth/client'
 import { supabase } from '@/lib/supabase/client'
 import {
-  clearStoredPlanEditIntent,
-  hasStoredPlanEditIntent,
-  readStoredPlan,
   type OnboardingPlan,
   type PlanWeek,
   type SavedOnboardingPlan,
@@ -38,6 +35,14 @@ function savedPlanFromRow(row: OnboardingPlanRow): SavedOnboardingPlan {
     updatedAt: row.updated_at,
     plan: row.plan_json,
   }
+}
+
+export type WorkspaceView = 'workspace' | 'new' | 'archived' | 'edit'
+
+type WorkspaceClientProps = {
+  initialArchivedPlans?: SavedOnboardingPlan[]
+  initialPlan?: SavedOnboardingPlan | null
+  initialView?: WorkspaceView
 }
 
 function SidebarIcon({ name }: { name: 'recent' | 'archive' | 'signout' }) {
@@ -108,6 +113,23 @@ const makeWeeks = (count: 2 | 4): PlanWeek[] =>
     goal: '',
     days: Array.from({ length: DPW }, (_, dayIndex) => emptyDay(weekIndex * DPW + dayIndex + 1)),
   }))
+
+function restorePlanWeeks(plan: OnboardingPlan, count: 2 | 4) {
+  const restoredWeeks = makeWeeks(count)
+  ;(plan.weeks || []).slice(0, count).forEach((week, weekIndex) => {
+    restoredWeeks[weekIndex].title = week.title || ''
+    restoredWeeks[weekIndex].goal = week.goal || ''
+    week.days.slice(0, DPW).forEach((day, dayIndex) => {
+      restoredWeeks[weekIndex].days[dayIndex] = {
+        ...restoredWeeks[weekIndex].days[dayIndex],
+        title: day.title || '',
+        tasks: day.tasks?.length ? day.tasks : ['', '', '', ''],
+        outcome: day.outcome || '',
+      }
+    })
+  })
+  return restoredWeeks
+}
 
 const sampleWeeks: PlanWeek[] = [
   {
@@ -346,79 +368,44 @@ function getUserDisplayName(user: { email?: string; user_metadata?: Record<strin
   return titleCaseName(user.email?.split('@')[0] || 'there')
 }
 
-export default function FillDetailsPage() {
+export default function WorkspaceClient({
+  initialArchivedPlans = [],
+  initialPlan = null,
+  initialView = 'workspace',
+}: WorkspaceClientProps) {
   const router = useRouter()
+  const initialPlanData = initialPlan?.plan || null
+  const initialWeekCount: 2 | 4 = Number(initialPlanData?.nWeeks) === 4 ? 4 : 2
+  const editingOnLoad = initialView === 'edit' && Boolean(initialPlanData)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
-  const [editingPlanId, setEditingPlanId] = useState<string | null>(null)
-  const [role, setRole] = useState('')
-  const [startDate, setStartDate] = useState(nextWeekdayIso())
-  const [reports, setReports] = useState('')
-  const [collab, setCollab] = useState('')
-  const [nWeeks, setNWeeks] = useState<2 | 4>(2)
-  const [weeks, setWeeks] = useState<PlanWeek[]>(makeWeeks(2))
-  const [openWeeks, setOpenWeeks] = useState(() => new Set([0]))
+  const editingPlanId = editingOnLoad ? initialPlan?.id || null : null
+  const [role, setRole] = useState(editingOnLoad ? initialPlanData?.role || '' : '')
+  const [startDate, setStartDate] = useState(editingOnLoad ? initialPlanData?.startDate || nextWeekdayIso() : nextWeekdayIso())
+  const [reports, setReports] = useState(editingOnLoad ? initialPlanData?.reportsTo || initialPlanData?.reports || '' : '')
+  const [collab, setCollab] = useState(editingOnLoad ? initialPlanData?.collaboratesWith || initialPlanData?.collab || '' : '')
+  const [nWeeks, setNWeeks] = useState<2 | 4>(editingOnLoad ? initialWeekCount : 2)
+  const [weeks, setWeeks] = useState<PlanWeek[]>(() => editingOnLoad && initialPlanData ? restorePlanWeeks(initialPlanData, initialWeekCount) : makeWeeks(2))
+  const [openWeeks, setOpenWeeks] = useState(() => new Set(editingOnLoad ? Array.from({ length: initialWeekCount }, (_, index) => index) : [0]))
   const [openDays, setOpenDays] = useState(() => new Set<number>())
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
+  const [notice, setNotice] = useState(editingOnLoad ? 'Editing saved plan' : '')
   const [importText, setImportText] = useState('')
   const [importStatus, setImportStatus] = useState<{ type: 'info' | 'error'; message: string } | null>(null)
   const [savedPlans, setSavedPlans] = useState<SavedOnboardingPlan[]>([])
-  const [archivedPlans, setArchivedPlans] = useState<SavedOnboardingPlan[]>([])
-  const [archiveView, setArchiveView] = useState(false)
-  const [archiveLoading, setArchiveLoading] = useState(false)
+  const [archivedPlans, setArchivedPlans] = useState<SavedOnboardingPlan[]>(initialArchivedPlans)
+  const [archiveView, setArchiveView] = useState(initialView === 'archived')
+  const archiveLoading = false
   const [historyOwnerId, setHistoryOwnerId] = useState('')
   const [historyStatus, setHistoryStatus] = useState('')
-  const [wizardOpen, setWizardOpen] = useState(false)
-  const [creationMode, setCreationMode] = useState<CreationMode | null>(null)
-  const [wizardStep, setWizardStep] = useState(0)
-  const [durationChosen, setDurationChosen] = useState(false)
+  const [wizardOpen, setWizardOpen] = useState(initialView === 'new' || editingOnLoad)
+  const [creationMode, setCreationMode] = useState<CreationMode | null>(editingOnLoad ? 'manual' : null)
+  const [wizardStep, setWizardStep] = useState(editingOnLoad ? 1 : 0)
+  const [durationChosen, setDurationChosen] = useState(editingOnLoad)
   const [isGenerating, setIsGenerating] = useState(false)
   const [openPlanMenuId, setOpenPlanMenuId] = useState<string | null>(null)
   const [deleteCandidate, setDeleteCandidate] = useState<SavedOnboardingPlan | null>(null)
   const [planActionBusy, setPlanActionBusy] = useState(false)
   const [displayName, setDisplayName] = useState('')
-
-  useEffect(() => {
-    if (!hasStoredPlanEditIntent()) return
-    const plan = readStoredPlan()
-    if (!plan) return
-
-    const loadedWeeks = Number(plan.nWeeks) === 4 ? 4 : 2
-    const restoredWeeks = makeWeeks(loadedWeeks)
-    ;(plan.weeks || []).slice(0, loadedWeeks).forEach((week, wi) => {
-      restoredWeeks[wi].title = week.title || ''
-      restoredWeeks[wi].goal = week.goal || ''
-      week.days.slice(0, DPW).forEach((day, di) => {
-        restoredWeeks[wi].days[di] = {
-          ...restoredWeeks[wi].days[di],
-          title: day.title || '',
-          tasks: day.tasks?.length ? day.tasks : ['', '', '', ''],
-          outcome: day.outcome || '',
-        }
-      })
-    })
-
-    const timer = window.setTimeout(() => {
-      clearStoredPlanEditIntent()
-      setEditingPlanId(plan.id || null)
-      setNWeeks(loadedWeeks)
-      setRole(plan.role || '')
-      setReports(plan.reportsTo || plan.reports || '')
-      setCollab(plan.collaboratesWith || plan.collab || '')
-      setStartDate(plan.startDate || nextWeekdayIso())
-      setWeeks(restoredWeeks)
-      setOpenWeeks(new Set(Array.from({ length: loadedWeeks }, (_, index) => index)))
-      setOpenDays(new Set())
-      setCreationMode('manual')
-      setWizardStep(1)
-      setDurationChosen(true)
-      setWizardOpen(true)
-      setError('')
-      setNotice('Editing saved plan')
-    }, 0)
-
-    return () => window.clearTimeout(timer)
-  }, [])
 
   useEffect(() => {
     let active = true
@@ -593,23 +580,7 @@ export default function FillDetailsPage() {
   }
 
   function openNewPlan() {
-    setEditingPlanId(null)
-    setRole('')
-    setReports('')
-    setCollab('')
-    setStartDate(nextWeekdayIso())
-    setNWeeks(2)
-    setWeeks(makeWeeks(2))
-    setOpenWeeks(new Set([0]))
-    setOpenDays(new Set())
-    setCreationMode(null)
-    setWizardStep(0)
-    setDurationChosen(false)
-    setImportText('')
-    setImportStatus(null)
-    setError('')
-    setNotice('')
-    setWizardOpen(true)
+    router.push('/plans/new')
   }
 
   function chooseCreationMode(mode: CreationMode) {
@@ -624,6 +595,7 @@ export default function FillDetailsPage() {
     setWizardOpen(false)
     setError('')
     setImportStatus(null)
+    if (initialView !== 'workspace') router.push('/workspace')
   }
 
   function goToRoleStep() {
@@ -645,44 +617,10 @@ export default function FillDetailsPage() {
     setOpenWeeks(new Set([0]))
   }
 
-  function loadSavedPlan(saved: SavedOnboardingPlan) {
-    const plan = saved.plan
-    const loadedWeeks = Number(plan.nWeeks) === 4 ? 4 : 2
-    setEditingPlanId(saved.id)
-    setDuration(loadedWeeks)
-    setRole(plan.role || '')
-    setReports(plan.reportsTo || plan.reports || '')
-    setCollab(plan.collaboratesWith || plan.collab || '')
-    setStartDate(plan.startDate || nextWeekdayIso())
-
-    const restoredWeeks = makeWeeks(loadedWeeks)
-    ;(plan.weeks || []).slice(0, loadedWeeks).forEach((week, wi) => {
-      restoredWeeks[wi].title = week.title || ''
-      restoredWeeks[wi].goal = week.goal || ''
-      week.days.slice(0, DPW).forEach((day, di) => {
-        restoredWeeks[wi].days[di] = {
-          ...restoredWeeks[wi].days[di],
-          title: day.title || '',
-          tasks: day.tasks?.length ? day.tasks : ['', '', '', ''],
-          outcome: day.outcome || '',
-        }
-      })
-    })
-    setWeeks(restoredWeeks)
-    setOpenWeeks(new Set(Array.from({ length: loadedWeeks }, (_, index) => index)))
-    setOpenDays(new Set())
-    setCreationMode('manual')
-    setWizardStep(1)
-    setDurationChosen(true)
-    setWizardOpen(true)
-    setError('')
-    setNotice(`Loaded saved plan: ${saved.name}`)
-  }
-
   function previewSavedPlan(saved: SavedOnboardingPlan) {
     writeStoredPlan({ ...saved.plan, id: saved.id })
     setOpenPlanMenuId(null)
-    router.push('/generate-form')
+    router.push(`/plans/${saved.id}`)
   }
 
   async function archiveSavedPlan(id: string) {
@@ -712,39 +650,6 @@ export default function FillDetailsPage() {
     setHistoryStatus('')
     setOpenPlanMenuId(null)
     setPlanActionBusy(false)
-  }
-
-  async function showArchivedPlans() {
-    setArchiveView(true)
-    setArchiveLoading(true)
-    setOpenPlanMenuId(null)
-    setHistoryStatus('')
-
-    if (!supabase || !historyOwnerId) {
-      setArchivedPlans([])
-      setHistoryStatus('The database is unavailable. Please try again.')
-      setArchiveLoading(false)
-      return
-    }
-
-    const { data, error: archiveError } = await supabase
-      .from('onboarding_plans')
-      .select('id,title,role,duration_weeks,updated_at,plan_json')
-      .eq('owner_id', historyOwnerId)
-      .not('archived_at', 'is', null)
-      .order('updated_at', { ascending: false })
-      .limit(20)
-
-    if (archiveError || !data) {
-      setArchivedPlans([])
-      setHistoryStatus('Archived plans could not be loaded. Please try again.')
-      setArchiveLoading(false)
-      return
-    }
-
-    setArchivedPlans((data as unknown as OnboardingPlanRow[]).map(savedPlanFromRow))
-    setHistoryStatus('')
-    setArchiveLoading(false)
   }
 
   async function restoreArchivedPlan(id: string) {
@@ -804,7 +709,7 @@ export default function FillDetailsPage() {
 
   async function handleSignOut() {
     await signOut()
-    router.replace('/login')
+    router.replace('/sign-in')
   }
 
   function collect(): OnboardingPlan {
@@ -892,7 +797,7 @@ export default function FillDetailsPage() {
     const savedPlan = savedPlanFromRow(savedRow as unknown as OnboardingPlanRow)
     setSavedPlans((current) => [savedPlan, ...current.filter((saved) => saved.id !== savedPlan.id)].slice(0, 8))
     writeStoredPlan({ ...plan, id: savedPlan.id })
-    router.push('/generate-form')
+    router.push(`/plans/${savedPlan.id}`)
   }
 
   function applyImportedPlan(plan: ImportResult['plan']) {
@@ -1021,7 +926,7 @@ export default function FillDetailsPage() {
                     {openPlanMenuId === saved.id && (
                       <div className="recent-plan-menu" role="menu">
                         <button onClick={() => previewSavedPlan(saved)} role="menuitem" type="button">View</button>
-                        <button onClick={() => { setOpenPlanMenuId(null); loadSavedPlan(saved) }} role="menuitem" type="button">Edit</button>
+                        <button onClick={() => { setOpenPlanMenuId(null); router.push(`/plans/${saved.id}/edit`) }} role="menuitem" type="button">Edit</button>
                         <button disabled={planActionBusy} onClick={() => void archiveSavedPlan(saved.id)} role="menuitem" type="button">Archive</button>
                         <button className="danger" onClick={() => { setOpenPlanMenuId(null); setDeleteCandidate(saved) }} role="menuitem" type="button">Delete</button>
                       </div>
@@ -1040,7 +945,7 @@ export default function FillDetailsPage() {
               aria-label="Open archived plans"
               aria-pressed={archiveView}
               className={`side-footer-item archive ${archiveView ? 'active' : ''}`}
-              onClick={() => void showArchivedPlans()}
+              onClick={() => router.push('/plans/archived')}
               title="Archive"
               type="button"
             >
@@ -1281,7 +1186,11 @@ export default function FillDetailsPage() {
       {archiveView && (
         <div
           className="archive-plans-overlay"
-          onPointerDown={(event) => event.target === event.currentTarget && !planActionBusy && setArchiveView(false)}
+          onPointerDown={(event) => {
+            if (event.target !== event.currentTarget || planActionBusy) return
+            setArchiveView(false)
+            router.push('/workspace')
+          }}
         >
           <section aria-labelledby="archive-plans-title" aria-modal="true" className="archive-plans-dialog" role="dialog">
             <header className="archive-plans-head">
@@ -1289,7 +1198,7 @@ export default function FillDetailsPage() {
                 <span>Saved history</span>
                 <h2 id="archive-plans-title">Archived Plans</h2>
               </div>
-              <button aria-label="Close archived plans" onClick={() => setArchiveView(false)} title="Close" type="button">
+              <button aria-label="Close archived plans" onClick={() => { setArchiveView(false); router.push('/workspace') }} title="Close" type="button">
                 <Icon name="close" />
               </button>
             </header>

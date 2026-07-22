@@ -11,6 +11,7 @@ Apply them to the environments you intend to use (Preview and/or Production), th
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+NEXT_PUBLIC_SITE_URL=https://oak-board-employee-onboarding-form.vercel.app
 ```
 
 Do not add server-side secrets to the Next.js/Vercel frontend:

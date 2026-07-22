@@ -6,28 +6,28 @@ This runbook records the release gates for the completed local cutover to the ro
 
 | Capability | Next.js implementation |
 |---|---|
-| Login, signup, and sign-out | `src/app/login/page.tsx` and `src/lib/auth/client.ts` |
+| Login, signup, and sign-out | `src/app/(auth)/sign-in/page.tsx` and `src/lib/auth/client.ts` |
 | Cookie refresh and verified protected routes | `src/proxy.ts`, `src/lib/supabase/`, and `src/app/(protected)/layout.tsx` |
-| Email confirmation callback | `src/app/auth/callback/route.ts` |
-| Fill Details and NotebookLM import | `src/app/(protected)/fill-details/page.tsx` |
-| Local draft and recent-plan storage | `src/types/plan.ts` |
-| Preview, print, and PDF download | `src/app/(protected)/generate-form/` |
+| Email confirmation callback | `src/app/(auth)/auth/callback/route.ts` |
+| Workspace, plan creation, editing, and NotebookLM import | `src/components/workspace-client.tsx` with routes under `src/app/(protected)/` |
+| User-owned plan persistence and history | Supabase `onboarding_plans`, enforced by owner-scoped queries |
+| Preview, print, and PDF download | `src/app/(protected)/plans/[planId]/` |
 | Authenticated email delivery | Existing `send-onboarding-email` Supabase Edge Function |
 
 ## Pre-cutover gates
 
 - [x] Next.js root dependencies have an exact npm lockfile.
 - [x] `npm run typecheck`, `npm run lint`, and `npm run build` pass.
-- [x] `npm audit` reports zero known vulnerabilities.
+- [ ] Resolve the current upstream `sharp` advisory inherited through Next.js when a compatible fixed release is available.
 - [x] The no-administrator Windows setup script installs and verifies the root app.
 - [x] Unauthenticated route and redirect smoke tests pass.
-- [x] Unknown routes preserve the previous fallback redirect to `/fill-details`.
+- [x] Unknown routes render a dedicated 404 page instead of redirecting into the application.
 - [x] Browser metadata displays the OakBoard logo with no inherited Vite favicon.
 - [x] Root `.env.local` contains the two public Supabase variables from `.env.example` and remains Git-ignored.
 - [x] The configured Supabase Auth health endpoint responds successfully.
-- [x] Real Supabase sign-in, JWT claim verification, and authenticated `/fill-details` rendering pass.
+- [x] Real Supabase sign-in, JWT claim verification, and authenticated `/workspace` rendering pass.
 - [x] The migrated Generate preview and PDF download pass an authenticated browser check.
-- [x] A generated plan reloads from browser-local Recent Plans storage.
+- [x] A generated plan reloads from the authenticated user's Supabase-backed Recent Plans history.
 - [x] The deployed email Edge Function responds successfully to the Next.js origin preflight.
 - [x] NotebookLM parsing and the authenticated email invocation path are preserved in the migrated source and compile successfully.
 - [x] The temporary `react-app/` fallback was removed after explicit deletion approval.
@@ -72,7 +72,7 @@ Verify this sequence in the browser:
 3. Import a structured NotebookLM plan and verify its duration and fields.
 4. Generate the preview and download the PDF.
 5. Send the demo email to the permitted recipient.
-6. Sign out and confirm protected routes return to `/login`.
+6. Sign out and confirm protected routes return to `/sign-in`.
 
 ## Rollback
 

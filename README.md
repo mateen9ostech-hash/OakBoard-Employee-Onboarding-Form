@@ -16,14 +16,42 @@ flowchart LR
     Vercel["Vercel hosting"] --> App
     App --> Client["React client UI"]
     App --> Server["Server layouts + auth proxy"]
-    Client --> Storage["Browser plan storage"]
+    Client --> Draft["Browser preview handoff"]
     Client --> PDF["jsPDF + html-to-image"]
     Client --> Function["Supabase Edge Function"]
     Server --> Auth["Supabase cookie authentication"]
     Function --> Resend["Resend email delivery"]
+    Server --> Plans["Owner-scoped plan queries"]
     Auth --> PostgreSQL["Supabase PostgreSQL"]
+    Plans --> PostgreSQL
     Function --> PostgreSQL
 ```
+
+### Route architecture
+
+Public, authentication, and protected application concerns are separated with App Router route groups. Route groups organize the source without appearing in browser URLs.
+
+```text
+src/app/
+|-- (public)/
+|   |-- page.tsx                         -> /
+|   |-- help/page.tsx                    -> /help
+|   |-- privacy-policy/page.tsx          -> /privacy-policy
+|   `-- terms-of-service/page.tsx        -> /terms-of-service
+|-- (auth)/
+|   |-- sign-in/page.tsx                 -> /sign-in
+|   `-- auth/callback/route.ts            -> /auth/callback
+`-- (protected)/
+    |-- workspace/page.tsx               -> /workspace
+    `-- plans/
+        |-- new/page.tsx                 -> /plans/new
+        |-- archived/page.tsx            -> /plans/archived
+        `-- [planId]/
+            |-- page.tsx                 -> /plans/{id}
+            `-- edit/page.tsx            -> /plans/{id}/edit
+```
+
+Legacy `/login`, `/fill-details`, `/generate-form`, and `/privacy` links are permanently redirected to their current equivalents.
 
 ### Repository language profile
 

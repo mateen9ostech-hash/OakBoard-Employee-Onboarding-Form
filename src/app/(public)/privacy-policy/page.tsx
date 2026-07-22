@@ -2,8 +2,11 @@ import type { Metadata } from 'next'
 import { PublicInfoShell } from '@/components/public-info-shell'
 
 export const metadata: Metadata = {
-  title: 'Privacy | OakBoard',
+  title: 'Privacy Policy',
   description: 'Learn how OakBoard handles account, onboarding plan, and service data.',
+  alternates: {
+    canonical: '/privacy-policy',
+  },
 }
 
 export default function PrivacyPage() {

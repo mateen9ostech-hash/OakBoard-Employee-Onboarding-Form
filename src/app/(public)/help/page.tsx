@@ -3,8 +3,11 @@ import { PublicInfoShell } from '@/components/public-info-shell'
 import { Icon } from '@/components/ui'
 
 export const metadata: Metadata = {
-  title: 'Help | OakBoard',
+  title: 'Help',
   description: 'Get help creating, managing, exporting, and sharing onboarding plans in OakBoard.',
+  alternates: {
+    canonical: '/help',
+  },
 }
 
 const steps = [

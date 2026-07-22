@@ -219,7 +219,7 @@ export default function LoginPage() {
     let active = true
     getValidSession().then((result) => {
       if (active && result.ok) {
-        router.replace('/fill-details')
+        router.replace('/workspace')
       }
     })
     return () => {
@@ -329,7 +329,7 @@ export default function LoginPage() {
     } catch (error) {
       console.error('Unable to cache local session:', error)
     }
-    window.setTimeout(() => router.replace('/fill-details'), 700)
+    window.setTimeout(() => router.replace('/workspace'), 700)
   }
 
   async function handleSignUp(event?: FormEvent<HTMLFormElement>) {
@@ -360,7 +360,7 @@ export default function LoginPage() {
       password: signupPassword,
       options: {
         data: { full_name: signupName.trim() },
-        emailRedirectTo: new URL('/auth/callback?next=/fill-details', window.location.origin).href,
+        emailRedirectTo: new URL('/auth/callback?next=/workspace', window.location.origin).href,
       },
     })
     setBusy(null)
@@ -433,7 +433,7 @@ export default function LoginPage() {
       console.error('Unable to cache verified session:', cacheError)
     }
     setVerificationOk('Email verified. Opening your workspace...')
-    window.setTimeout(() => router.replace('/fill-details'), 500)
+    window.setTimeout(() => router.replace('/workspace'), 500)
   }
 
   async function handleResendVerificationCode() {
@@ -445,7 +445,7 @@ export default function LoginPage() {
       type: 'signup',
       email: pendingEmail,
       options: {
-        emailRedirectTo: new URL('/auth/callback?next=/fill-details', window.location.origin).href,
+        emailRedirectTo: new URL('/auth/callback?next=/workspace', window.location.origin).href,
       },
     })
     setBusy(null)
@@ -476,7 +476,7 @@ export default function LoginPage() {
 
     setBusy('forgot')
     const { error } = await supabaseClient.auth.resetPasswordForEmail(signinEmail.trim(), {
-      redirectTo: new URL('/auth/callback?next=/login', window.location.origin).href,
+      redirectTo: new URL('/auth/callback?next=/sign-in', window.location.origin).href,
     })
     setBusy(null)
 
@@ -737,7 +737,7 @@ export default function LoginPage() {
               <p className="terms-note">
                 By creating an account you agree to the
                 <br />
-                <Link href="/login">Terms of Service</Link> &amp; <Link href="/login">Privacy Policy</Link> of 9ostech.
+                <Link href="/terms-of-service">Terms of Service</Link> &amp; <Link href="/privacy-policy">Privacy Policy</Link> of 9ostech.
               </p>
               <p className="auth-switch-line">
                 Already registered?{' '}
@@ -824,7 +824,7 @@ export default function LoginPage() {
             <span className="dot">•</span>
             <Link href="/help">Help</Link>
             <span className="dot">•</span>
-            <Link href="/privacy">Privacy</Link>
+            <Link href="/privacy-policy">Privacy</Link>
           </div>
         </div>
         <aside className="auth-visual" aria-hidden="true">

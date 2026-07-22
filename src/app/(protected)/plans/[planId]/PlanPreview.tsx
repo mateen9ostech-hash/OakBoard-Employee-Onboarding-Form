@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import type { OnboardingPlan } from '@/types/plan'
 
 const GenerateFormClient = dynamic(() => import('./GenerateFormClient'), {
   ssr: false,
@@ -12,6 +13,6 @@ const GenerateFormClient = dynamic(() => import('./GenerateFormClient'), {
   ),
 })
 
-export default function GenerateFormPage() {
-  return <GenerateFormClient />
+export default function PlanPreview({ plan, planId }: { plan: OnboardingPlan; planId: string }) {
+  return <GenerateFormClient initialPlan={plan} initialPlanId={planId} />
 }

@@ -1,15 +1,14 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
-import { requireFreshSession } from '@/lib/auth/server'
 
 export const metadata: Metadata = {
+  title: 'Sign in',
   robots: {
     index: false,
     follow: false,
   },
 }
 
-export default async function ProtectedLayout({ children }: Readonly<{ children: ReactNode }>) {
-  await requireFreshSession()
+export default function AuthLayout({ children }: Readonly<{ children: ReactNode }>) {
   return children
 }

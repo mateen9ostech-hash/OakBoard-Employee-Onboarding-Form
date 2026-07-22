@@ -1,6 +1,6 @@
 # OakBoard — Read This First
 
-Last updated: 2026-07-21
+Last updated: 2026-07-22
 
 This is the handoff document for continuing OakBoard development on this or a new laptop.
 
@@ -24,7 +24,7 @@ Completed work:
 - Migrated the Fill Details and Generate Form workflows.
 - Added 2-week and 4-week onboarding-plan support.
 - Added local NotebookLM text import and duration detection.
-- Added local Recent Plans storage and restore support.
+- Added user-owned Recent Plans, archive, restore, preview, and edit routes backed by Supabase.
 - Preserved the 16:9 onboarding preview, print flow, and high-resolution PDF export.
 - Preserved authenticated email delivery through the Supabase `send-onboarding-email` Edge Function.
 - Kept Resend and Supabase service-role secrets outside browser code.
@@ -82,6 +82,7 @@ Open `.env.local` in VS Code and replace the placeholders with the Supabase proj
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000
 ```
 
 `.env.local` is Git-ignored. Never commit it. Never place `RESEND_API_KEY` or `SUPABASE_SERVICE_ROLE_KEY` in this frontend file.
@@ -96,7 +97,7 @@ npm audit
 npm run dev -- --hostname 127.0.0.1
 ```
 
-Open <http://127.0.0.1:3000/login>.
+Open <http://127.0.0.1:3000/sign-in>.
 
 ### 5. Confirm external configuration
 

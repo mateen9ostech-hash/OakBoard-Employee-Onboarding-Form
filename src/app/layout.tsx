@@ -6,8 +6,18 @@ import '@fontsource-variable/raleway/wght-italic.css'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'OakBoard',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://oak-board-employee-onboarding-form.vercel.app'),
+  title: {
+    default: 'OakBoard - Employee Onboarding Plan Builder',
+    template: '%s | OakBoard',
+  },
   description: 'Employee onboarding plan builder for Oak Street Technologies.',
+  openGraph: {
+    title: 'OakBoard - Employee Onboarding Plan Builder',
+    description: 'Create, manage, export, and share structured employee onboarding plans.',
+    siteName: 'OakBoard',
+    type: 'website',
+  },
   icons: {
     icon: {
       url: '/oakboard-logo.svg',

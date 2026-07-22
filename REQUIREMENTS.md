@@ -34,6 +34,7 @@ Create root `.env.local` from `.env.example`:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000
 ```
 
 `.env.local` is ignored by Git. Never commit real environment values.

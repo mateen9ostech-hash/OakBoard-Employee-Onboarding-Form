@@ -8,7 +8,7 @@ import { jsPDF } from 'jspdf'
 import { Button, Modal, PageToolbar, StatusBanner, TextField } from '@/components/ui'
 import { getValidSession, invokeAuthenticatedFunction } from '@/lib/auth/client'
 import { supabase } from '@/lib/supabase/client'
-import { type OnboardingPlan, type PlanDay, type PlanWeek, readStoredPlan, requestStoredPlanEdit, writeStoredPlan } from '@/types/plan'
+import { type OnboardingPlan, type PlanDay, type PlanWeek, readStoredPlan, writeStoredPlan } from '@/types/plan'
 
 const DAY_TITLE_MAX = 90
 const DAY_TASK_MAX = 90
@@ -187,10 +187,15 @@ function PlanPage({
   )
 }
 
-export default function GenerateFormClient() {
+type GenerateFormClientProps = {
+  initialPlan?: OnboardingPlan | null
+  initialPlanId?: string | null
+}
+
+export default function GenerateFormClient({ initialPlan = null, initialPlanId = null }: GenerateFormClientProps) {
   const router = useRouter()
-  const plan = useMemo(() => readStoredPlan(), [])
-  const [resolvedPlanId, setResolvedPlanId] = useState(plan?.id || null)
+  const plan = useMemo(() => initialPlan || readStoredPlan(), [initialPlan])
+  const [resolvedPlanId, setResolvedPlanId] = useState(initialPlanId || plan?.id || null)
   const [exporting, setExporting] = useState(false)
   const [emailOpen, setEmailOpen] = useState(false)
   const [emailTo, setEmailTo] = useState(DEMO_RECIPIENT_EMAIL)
@@ -204,7 +209,7 @@ export default function GenerateFormClient() {
   const [planActionError, setPlanActionError] = useState('')
 
   useEffect(() => {
-    if (!plan) router.replace('/fill-details')
+    if (!plan) router.replace('/workspace')
   }, [plan, router])
 
   useEffect(() => {
@@ -352,8 +357,7 @@ export default function GenerateFormClient() {
       setPlanActionError('Please return to Recent Plans and reopen this plan before editing it.')
       return
     }
-    requestStoredPlanEdit()
-    router.push('/fill-details')
+    router.push(`/plans/${planId}/edit`)
   }
 
   async function mutatePlan(action: 'archive' | 'delete') {
@@ -390,7 +394,7 @@ export default function GenerateFormClient() {
     }
 
     setDeleteOpen(false)
-    router.replace('/fill-details')
+    router.replace('/workspace')
   }
 
   async function sendEmail() {
@@ -433,7 +437,7 @@ export default function GenerateFormClient() {
     <main className="generate-page">
       <PageToolbar
         backLabel="Back to details"
-        backTo="/fill-details"
+        backTo="/workspace"
         subtitle={`${role || 'New role'} / Preview & export`}
         title={`${nWeeks}-Week Onboarding Plan`}
         actions={(

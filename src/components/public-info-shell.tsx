@@ -10,7 +10,7 @@ export function PublicInfoShell({
   title,
 }: {
   children: ReactNode
-  current: 'help' | 'privacy'
+  current: 'help' | 'home' | 'privacy' | 'terms'
   description: string
   eyebrow: string
   title: string
@@ -19,13 +19,14 @@ export function PublicInfoShell({
     <main className="info-page">
       <div className="info-page__glow" aria-hidden="true" />
       <header className="info-header">
-        <Link className="info-brand-link" href="/login" aria-label="OakBoard sign in">
+        <Link className="info-brand-link" href="/" aria-label="OakBoard home">
           <BrandLogo />
         </Link>
         <nav className="info-nav" aria-label="Support and policy navigation">
+          <Link aria-current={current === 'home' ? 'page' : undefined} href="/">Product</Link>
           <Link aria-current={current === 'help' ? 'page' : undefined} href="/help">Help</Link>
-          <Link aria-current={current === 'privacy' ? 'page' : undefined} href="/privacy">Privacy</Link>
-          <Link className="info-nav__signin" href="/login">
+          <Link aria-current={current === 'privacy' ? 'page' : undefined} href="/privacy-policy">Privacy</Link>
+          <Link className="info-nav__signin" href="/sign-in">
             <Icon name="arrow-left" />
             Sign in
           </Link>

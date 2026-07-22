@@ -10,7 +10,7 @@ import { supabaseEnvReady } from '@/lib/supabase/env'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export async function requireFreshSession() {
-  if (!supabaseEnvReady) redirect('/login')
+  if (!supabaseEnvReady) redirect('/sign-in')
 
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase.auth.getClaims()
@@ -24,7 +24,7 @@ export async function requireFreshSession() {
     Date.now() - issuedAt <= SESSION_MAX_AGE_MS
 
   if (error || !data?.claims?.sub || (!remembered && !currentSessionIsFresh)) {
-    redirect('/login')
+    redirect('/sign-in')
   }
 
   return data.claims
