@@ -6,7 +6,7 @@ import '@fontsource-variable/raleway/wght-italic.css'
 import './globals.css'
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://oak-board-employee-onboarding-form.vercel.app'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://ostonboarding.vercel.app'),
   title: {
     default: 'OakBoard - Employee Onboarding Plan Builder',
     template: '%s | OakBoard',

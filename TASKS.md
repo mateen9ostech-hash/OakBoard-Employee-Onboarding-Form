@@ -21,7 +21,7 @@ This is the current release checklist for the canonical Next.js application. His
 - [x] TypeScript, ESLint, and the production build pass locally.
 - [x] The private GitHub `main` branch is the source of truth.
 - [x] Vercel Production and Preview contain the required public Supabase variables.
-- [x] The production Next.js application is deployed at `https://oak-board-employee-onboarding-form.vercel.app`.
+- [x] The production Next.js application is deployed at `https://ostonboarding.vercel.app`.
 - [x] A `START-HERE.md` handoff guide documents completed work and new-laptop setup.
 
 ## External release tasks

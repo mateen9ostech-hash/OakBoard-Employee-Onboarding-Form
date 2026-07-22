@@ -53,7 +53,7 @@ Never place server-side secrets in browser-exposed `NEXT_PUBLIC_*` variables.
 - Resend account for email delivery
 - Vercel account for production and preview deployments
 
-Account sign-in, production secrets, Supabase deployment, email-domain verification, and Vercel deployment are intentionally not automated by the local setup script. The current production app is available at <https://oak-board-employee-onboarding-form.vercel.app>.
+Account sign-in, production secrets, Supabase deployment, email-domain verification, and Vercel deployment are intentionally not automated by the local setup script. The current production app is available at <https://ostonboarding.vercel.app>.
 
 Supabase Authentication URL Configuration must allow `/auth/callback` for every active local or production origin. See `NEXTJS-CUTOVER.md` for the exact cutover gates.
 

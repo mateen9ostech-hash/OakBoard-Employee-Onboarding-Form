@@ -6,7 +6,7 @@ This is the handoff document for continuing OakBoard development on this or a ne
 
 ## Current links
 
-- Production app: <https://oak-board-employee-onboarding-form.vercel.app>
+- Production app: <https://ostonboarding.vercel.app>
 - Private GitHub repository: <https://github.com/mateen9ostech-hash/OakBoard-Employee-Onboarding-Form>
 - Vercel project: `9ostech/oak-board-employee-onboarding-form`
 - Main development branch: `main`
@@ -105,7 +105,7 @@ Supabase Authentication URL Configuration should allow:
 
 ```text
 http://127.0.0.1:3000/auth/callback
-https://oak-board-employee-onboarding-form.vercel.app/auth/callback
+https://ostonboarding.vercel.app/auth/callback
 ```
 
 The Supabase Edge Function owns the Resend and service-role secrets. Those secrets do not belong in Vercel or `.env.local`.

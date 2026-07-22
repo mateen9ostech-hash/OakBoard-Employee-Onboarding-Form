@@ -4,7 +4,7 @@
 
 This is the canonical OakBoard employee onboarding project.
 
-Production: <https://oak-board-employee-onboarding-form.vercel.app>
+Production: <https://ostonboarding.vercel.app>
 
 The canonical application is the Next.js App Router project at the repository root. The previous Vite application was removed after the approved Next.js cutover.
 
