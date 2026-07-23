@@ -1,8 +1,7 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
-import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { apiFetch } from '@/lib/api/client'
 import { getValidSession } from '@/lib/auth/client'
-import { supabase } from '@/lib/supabase/client'
 import { writeStoredPlan, type SavedOnboardingPlan } from '@/types/plan'
 
 const LoginPage = lazy(() => import('@/pages/sign-in'))
@@ -135,30 +134,6 @@ function ArchivedPlansRoute() {
   return <WorkspaceClient initialArchivedPlans={plans} initialView="archived" />
 }
 
-function AuthCallback() {
-  const navigate = useNavigate()
-
-  useEffect(() => {
-    let active = true
-    const code = new URLSearchParams(window.location.search).get('code')
-    const next = new URLSearchParams(window.location.search).get('next') || '/workspace'
-
-    async function completeCallback() {
-      if (!supabase || !code) {
-        if (active) navigate('/sign-in?auth_error=callback', { replace: true })
-        return
-      }
-      const { error } = await supabase.auth.exchangeCodeForSession(code)
-      if (active) navigate(error ? '/sign-in?auth_error=callback' : next, { replace: true })
-    }
-
-    void completeCallback()
-    return () => { active = false }
-  }, [navigate])
-
-  return <PageState><span className="auth-loader__spinner" aria-hidden="true" /><p>Verifying your account...</p></PageState>
-}
-
 function Protected({ children }: { children: ReactNode }) {
   return <RequireAuth>{children}</RequireAuth>
 }
@@ -173,9 +148,9 @@ export default function App() {
         <Route path="/privacy-policy" element={<PrivacyPage />} />
         <Route path="/terms-of-service" element={<TermsPage />} />
         <Route path="/sign-in" element={<LoginPage />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/workspace" element={<Protected><WorkspaceClient /></Protected>} />
-        <Route path="/plans/new" element={<Protected><WorkspaceClient initialView="new" /></Protected>} />
+        <Route path="/auth/callback" element={<Navigate replace to="/sign-in" />} />
+        <Route path="/workspace" element={<Protected><WorkspaceClient key="workspace" /></Protected>} />
+        <Route path="/plans/new" element={<Protected><WorkspaceClient key="new-plan" initialView="new" /></Protected>} />
         <Route path="/plans/archived" element={<Protected><ArchivedPlansRoute /></Protected>} />
         <Route path="/plans/:planId" element={<Protected><PlanRoute /></Protected>} />
         <Route path="/plans/:planId/edit" element={<Protected><PlanRoute edit /></Protected>} />

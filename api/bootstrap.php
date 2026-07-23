@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-const OAKBOARD_MAX_BODY_BYTES = 2_500_000;
+const OAKBOARD_MAX_BODY_BYTES = 12_000_000;
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -32,7 +32,7 @@ function oakboard_config(): array
     }
 
     $loaded = require $path;
-    if (!is_array($loaded) || !isset($loaded['mysql'], $loaded['supabase'])) {
+    if (!is_array($loaded) || !isset($loaded['mysql'], $loaded['app'])) {
         throw new RuntimeException('OakBoard server configuration is invalid.');
     }
 
@@ -84,103 +84,6 @@ function request_json(): array
         json_response(['error' => 'A valid JSON request body is required.'], 400);
     }
     return $decoded;
-}
-
-function authorization_header(): string
-{
-    $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-    if ($header === '' && function_exists('apache_request_headers')) {
-        $headers = apache_request_headers();
-        $header = $headers['Authorization'] ?? $headers['authorization'] ?? '';
-    }
-    return is_string($header) ? $header : '';
-}
-
-function authenticated_user(): array
-{
-    $header = authorization_header();
-    if (!preg_match('/^Bearer\s+(.+)$/i', $header, $matches)) {
-        json_response(['error' => 'Unauthorized'], 401);
-    }
-
-    $config = oakboard_config()['supabase'];
-    $url = rtrim((string) ($config['url'] ?? ''), '/');
-    $publishableKey = (string) ($config['publishable_key'] ?? '');
-    if ($url === '' || $publishableKey === '') {
-        throw new RuntimeException('Supabase authentication configuration is incomplete.');
-    }
-
-    $curl = curl_init($url . '/auth/v1/user');
-    if ($curl === false) {
-        throw new RuntimeException('Authentication service could not be initialized.');
-    }
-
-    curl_setopt_array($curl, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => [
-            'Accept: application/json',
-            'apikey: ' . $publishableKey,
-            'Authorization: Bearer ' . $matches[1],
-        ],
-        CURLOPT_CONNECTTIMEOUT => 5,
-        CURLOPT_TIMEOUT => 10,
-        CURLOPT_SSL_VERIFYPEER => true,
-    ]);
-    $response = curl_exec($curl);
-    $status = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($curl);
-    curl_close($curl);
-
-    if ($response === false) {
-        error_log('OakBoard Supabase verification failed: ' . $curlError);
-        json_response(['error' => 'Authentication service is temporarily unavailable.'], 503);
-    }
-    if ($status !== 200) {
-        json_response(['error' => 'Unauthorized'], 401);
-    }
-
-    $user = json_decode($response, true);
-    if (!is_array($user) || !isset($user['id']) || !is_string($user['id'])) {
-        json_response(['error' => 'Unauthorized'], 401);
-    }
-    return $user;
-}
-
-function display_name(array $user): string
-{
-    $metadata = is_array($user['user_metadata'] ?? null) ? $user['user_metadata'] : [];
-    foreach (['full_name', 'name', 'display_name'] as $key) {
-        if (isset($metadata[$key]) && is_string($metadata[$key]) && trim($metadata[$key]) !== '') {
-            return mb_substr(trim($metadata[$key]), 0, 160);
-        }
-    }
-    return '';
-}
-
-function ensure_application_user(array $user): void
-{
-    $email = isset($user['email']) && is_string($user['email']) && $user['email'] !== ''
-        ? mb_strtolower(trim($user['email']))
-        : $user['id'] . '@legacy.oakboard.invalid';
-    $verifiedAt = isset($user['email_confirmed_at']) && is_string($user['email_confirmed_at'])
-        ? date('Y-m-d H:i:s.v', strtotime($user['email_confirmed_at']))
-        : null;
-
-    $statement = database()->prepare(
-        'INSERT INTO app_users (id, email, full_name, email_verified_at)
-         VALUES (:id, :email, :full_name, :verified_at)
-         ON DUPLICATE KEY UPDATE
-           email = VALUES(email),
-           full_name = VALUES(full_name),
-           email_verified_at = COALESCE(VALUES(email_verified_at), email_verified_at),
-           updated_at = CURRENT_TIMESTAMP(3)'
-    );
-    $statement->execute([
-        'id' => $user['id'],
-        'email' => $email,
-        'full_name' => display_name($user),
-        'verified_at' => $verifiedAt,
-    ]);
 }
 
 function uuid_v4(): string

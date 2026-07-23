@@ -12,8 +12,19 @@ return [
         'username' => 'cpanelprefix_oakboard_user',
         'password' => 'replace_with_a_private_password',
     ],
-    'supabase' => [
-        'url' => 'https://your-project.supabase.co',
-        'publishable_key' => 'your_supabase_publishable_key',
+    'app' => [
+        'url' => 'https://onboarding.example.com',
+        'allowed_email_domain' => '9ostech.com',
+    ],
+    'security' => [
+        'session_secret' => 'replace_with_at_least_32_random_characters',
+    ],
+    'mailgun' => [
+        'api_key' => 'replace_with_a_private_mailgun_key',
+        'domain' => 'osdevlabs.com',
+        'region' => 'us',
+        'from_email' => 'onboarding@osdevlabs.com',
+        'from_name' => 'OakBoard',
+        'reply_to' => 'support@9ostech.com',
     ],
 ];

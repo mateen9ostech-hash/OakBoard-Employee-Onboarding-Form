@@ -34,7 +34,7 @@ npm run build
 
 The deployable artifact is `dist/`, not the repository root.
 
-The checked-in `.env.production` contains only browser-public Supabase settings, so cPanel builds do not depend on an ignored local env file. The checked-in `.cpanel.yml` runs these validation/build steps automatically when **Deploy HEAD Commit** is selected in cPanel Git Version Control.
+The checked-in `.env.production` contains browser-public same-origin settings only. The checked-in `.cpanel.yml` runs these validation/build steps automatically when **Deploy HEAD Commit** is selected in cPanel Git Version Control.
 
 ## 4. Deploy only this subdomain
 
@@ -48,22 +48,16 @@ Expected production layout:
   index.html
   assets/
   api/
-  task-icon.svg
+  oakboard-logo.svg
 ```
 
 The visible OakBoard logo and favicon are emitted as fingerprinted files under `assets/` so browser and Cloudflare caches refresh when the asset changes.
 
 The included `.htaccess` disables directory indexing, preserves `/api`, serves real assets, and falls back to `index.html` for React Router URLs.
 
-## 5. Supabase configuration
+## 5. Mail and authentication configuration
 
-Allow this exact redirect URL in Supabase Authentication:
-
-```text
-https://onboarding.9ostech.com/auth/callback
-```
-
-Keep Confirm Email enabled and keep `{{ .Token }}` in the signup template because OakBoard accepts the six-digit OTP.
+Set `app.allowed_email_domain` to `9ostech.com`, generate a random `security.session_secret`, and add the Mailgun credentials to `/home/ostech/oakboard-config.php`. Signup confirmation and password recovery use six-digit codes sent through Mailgun.
 
 ## 6. Acceptance checks
 
@@ -71,6 +65,8 @@ Keep Confirm Email enabled and keep `{{ .Token }}` in the signup template becaus
 - An unauthenticated `/api/plans` request returns HTTP 401 JSON.
 - User A cannot load, update, archive, restore, or delete User B's plan UUID.
 - New plans are inserted into MySQL with the correct `owner_id`.
+- A new `@9ostech.com` account receives and verifies its OTP.
+- Password recovery sends a code without revealing whether an account exists.
 - Archive, restore, delete, PDF download, and PDF email delivery work.
 - No source files, `.env` file, database export, or directory listing is publicly accessible.
 

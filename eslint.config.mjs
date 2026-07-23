@@ -10,7 +10,6 @@ export default tseslint.config(
       'dist/**',
       '.next/**',
       'node_modules/**',
-      'supabase/**',
       'database/mysql/private/**',
     ],
   },

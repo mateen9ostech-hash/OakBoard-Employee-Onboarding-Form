@@ -1,20 +1,26 @@
 'use client'
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import oakboardLogo from '@/assets/oakboard-logo.svg'
-import Image from '@/components/app-image'
 import Link from '@/components/app-link'
 import { BrandLogo } from '@/components/ui'
-import { getValidSession, setRememberSessionPreference } from '@/lib/auth/client'
+import {
+  confirmPasswordReset,
+  getValidSession,
+  requestPasswordReset,
+  resendSignupOtp,
+  signInWithPassword,
+  signUpWithPassword,
+  verifySignupOtp,
+} from '@/lib/auth/client'
 import { useAppRouter } from '@/lib/router'
-import { supabase } from '@/lib/supabase/client'
-import { supabaseEnvReady } from '@/lib/supabase/env'
 
-type AuthTab = 'signin' | 'signup' | 'pending'
+type AuthTab = 'signin' | 'signup' | 'pending' | 'reset'
 type PasswordVisibility = {
   signin: boolean
   signup: boolean
   confirm: boolean
+  reset: boolean
+  resetConfirm: boolean
 }
 
 const orgDomain = '@9ostech.com'
@@ -46,10 +52,10 @@ function formatAuthError(failure: string | AuthFailure) {
   const code = typeof failure === 'string' ? '' : failure.code || ''
   const lower = message.toLowerCase()
   if (code === 'email_address_not_authorized') {
-    return 'Verification email cannot be sent to this address yet. Configure custom SMTP for OakBoard or use an authorized Supabase team email.'
+    return 'Verification email cannot be sent to this address yet. Contact OakBoard support.'
   }
   if (code === 'over_email_send_rate_limit') {
-    return 'The verification email limit has been reached. Wait before trying again or configure custom SMTP for OakBoard.'
+    return 'The verification email limit has been reached. Please wait before trying again.'
   }
   if (code === 'email_exists' || code === 'user_already_exists') {
     return 'This email is already registered. Try signing in instead.'
@@ -68,7 +74,7 @@ function formatAuthError(failure: string | AuthFailure) {
   }
   if (!message || message === '{}' || message === '[]' || message === '[object Object]') {
     const diagnostic = code || (typeof failure === 'string' ? '' : failure.status ? `HTTP ${failure.status}` : '')
-    return `Account request failed${diagnostic ? ` (${diagnostic})` : ''}. Check Supabase Authentication logs or contact OakBoard support.`
+    return `Account request failed${diagnostic ? ` (${diagnostic})` : ''}. Please contact OakBoard support.`
   }
   return message
 }
@@ -147,6 +153,9 @@ export default function LoginPage() {
   const [signupEmail, setSignupEmail] = useState('')
   const [signupPassword, setSignupPassword] = useState('')
   const [signupConfirm, setSignupConfirm] = useState('')
+  const [resetToken] = useState(() => new URLSearchParams(window.location.search).get('reset_token') || '')
+  const [resetPassword, setResetPassword] = useState('')
+  const [resetConfirm, setResetConfirm] = useState('')
   const [pendingEmail, setPendingEmail] = useState('')
   const [verificationCode, setVerificationCode] = useState('')
   const [verificationError, setVerificationError] = useState<string | null>(null)
@@ -156,12 +165,14 @@ export default function LoginPage() {
     signin: false,
     signup: false,
     confirm: false,
+    reset: false,
+    resetConfirm: false,
   })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [signinError, setSigninError] = useState<string | null>(null)
   const [signinOk, setSigninOk] = useState<string | null>(null)
   const [signupError, setSignupError] = useState<string | null>(null)
-  const [busy, setBusy] = useState<'signin' | 'signup' | 'forgot' | 'verify' | 'resend' | null>(null)
+  const [busy, setBusy] = useState<'signin' | 'signup' | 'forgot' | 'verify' | 'resend' | 'reset' | null>(null)
 
   const passwordStrength = useMemo(() => {
     if (!signupPassword) return null
@@ -201,6 +212,11 @@ export default function LoginPage() {
   }, [signupConfirm, signupPassword])
 
   useEffect(() => {
+    if (resetToken) {
+      queueMicrotask(() => setTab('reset'))
+      return
+    }
+
     const rememberedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY)
     if (rememberedEmail) {
       queueMicrotask(() => {
@@ -226,7 +242,7 @@ export default function LoginPage() {
     return () => {
       active = false
     }
-  }, [router])
+  }, [resetToken, router])
 
   useEffect(() => {
     if (resendCooldown <= 0) return
@@ -235,36 +251,6 @@ export default function LoginPage() {
     }, 1000)
     return () => window.clearTimeout(timer)
   }, [resendCooldown])
-
-  if (!supabaseEnvReady || !supabase) {
-    return (
-      <main className="auth-wrap">
-        <section className="auth-card">
-          <div className="auth-card-hdr">
-            <div className="auth-logo-wrap">
-              <Image
-                src={oakboardLogo}
-                alt="Oak Street Technologies"
-                height={64}
-                width={64}
-                priority
-              />
-            </div>
-            <div className="auth-title">Setup Required</div>
-            <div className="auth-sub">Supabase environment variables are missing.</div>
-          </div>
-          <div className="auth-body">
-            <div className="banner-err show">
-              <AlertIcon />
-              <span>Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> in the root <code>.env.local</code>, then restart Vite.</span>
-            </div>
-          </div>
-        </section>
-      </main>
-    )
-  }
-
-  const supabaseClient = supabase
 
   function clearErrors() {
     setFieldErrors({})
@@ -301,10 +287,7 @@ export default function LoginPage() {
     }
 
     setBusy('signin')
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-      email: signinEmail.trim(),
-      password: signinPassword,
-    })
+    const { data, error } = await signInWithPassword(signinEmail.trim(), signinPassword, rememberMe)
     setBusy(null)
 
     if (error) {
@@ -313,7 +296,6 @@ export default function LoginPage() {
     }
 
     setSigninOk('Signed in! Redirecting...')
-    setRememberSessionPreference(rememberMe)
     try {
       if (rememberMe) {
         localStorage.setItem(REMEMBER_EMAIL_KEY, signinEmail.trim())
@@ -356,29 +338,16 @@ export default function LoginPage() {
 
     setBusy('signup')
     const normalizedEmail = signupEmail.trim().toLowerCase()
-    const { data, error } = await supabaseClient.auth.signUp({
-      email: normalizedEmail,
-      password: signupPassword,
-      options: {
-        data: { full_name: signupName.trim() },
-        emailRedirectTo: new URL('/auth/callback?next=/workspace', window.location.origin).href,
-      },
-    })
+    const { error } = await signUpWithPassword(normalizedEmail, signupPassword, signupName.trim())
     setBusy(null)
 
     if (error) {
-      console.error('Supabase signup failed', {
+      console.error('OakBoard signup failed', {
         code: error.code,
         message: error.message,
         status: error.status,
       })
       setSignupError(formatAuthError(error))
-      return
-    }
-
-    if (data.session) {
-      await supabaseClient.auth.signOut()
-      setSignupError('Email verification is not enabled in Supabase. Enable Confirm email before accepting new accounts.')
       return
     }
 
@@ -404,23 +373,18 @@ export default function LoginPage() {
     }
 
     setBusy('verify')
-    const { data, error } = await supabaseClient.auth.verifyOtp({
-      email: pendingEmail,
-      token: verificationCode,
-      type: 'signup',
-    })
+    const { data, error } = await verifySignupOtp(pendingEmail, verificationCode)
     setBusy(null)
 
     if (error) {
       setVerificationError(formatOtpError(error.message))
       return
     }
-    if (!data.session) {
+    if (!data?.session) {
       setVerificationError('Your email was verified, but a login session could not be created. Please sign in.')
       return
     }
 
-    setRememberSessionPreference(false)
     sessionStorage.removeItem(PENDING_SIGNUP_EMAIL_KEY)
     try {
       localStorage.setItem(
@@ -442,13 +406,7 @@ export default function LoginPage() {
     setVerificationError(null)
     setVerificationOk(null)
     setBusy('resend')
-    const { error } = await supabaseClient.auth.resend({
-      type: 'signup',
-      email: pendingEmail,
-      options: {
-        emailRedirectTo: new URL('/auth/callback?next=/workspace', window.location.origin).href,
-      },
-    })
+    const { error } = await resendSignupOtp(pendingEmail)
     setBusy(null)
 
     if (error) {
@@ -476,9 +434,7 @@ export default function LoginPage() {
     }
 
     setBusy('forgot')
-    const { error } = await supabaseClient.auth.resetPasswordForEmail(signinEmail.trim(), {
-      redirectTo: new URL('/auth/callback?next=/sign-in', window.location.origin).href,
-    })
+    const { error } = await requestPasswordReset(signinEmail.trim())
     setBusy(null)
 
     if (error) {
@@ -489,17 +445,48 @@ export default function LoginPage() {
     setSigninOk(`If this account exists, a password reset link has been sent to ${signinEmail.trim()}. Check spam or junk too.`)
   }
 
+  async function handleResetPassword(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault()
+    clearErrors()
+    if (!resetToken) {
+      setSigninError('This password reset link is invalid or incomplete.')
+      return
+    }
+    if (resetPassword.length < 8) {
+      setFieldErrors({ resetPassword: 'Password must be at least 8 characters' })
+      return
+    }
+    if (resetPassword !== resetConfirm) {
+      setFieldErrors({ resetConfirm: 'Passwords do not match' })
+      return
+    }
+
+    setBusy('reset')
+    const { data, error } = await confirmPasswordReset(resetToken, resetPassword)
+    setBusy(null)
+    if (error || !data?.session) {
+      setSigninError(formatAuthError(error || 'This password reset link is invalid or has expired.'))
+      return
+    }
+    setSigninOk('Password updated. Opening your workspace...')
+    window.setTimeout(() => router.replace('/workspace'), 600)
+  }
+
   const visualTitle =
     tab === 'signup'
       ? 'Create your OakBoard account'
       : tab === 'pending'
         ? 'Verify your work email'
+        : tab === 'reset'
+          ? 'Choose a new password'
         : 'Welcome Back to OakBoard'
   const visualSubtitle =
     tab === 'signup'
       ? 'Create a secure work account to start building onboarding plans.'
       : tab === 'pending'
         ? 'Enter the six-digit code to verify your account and continue automatically.'
+        : tab === 'reset'
+          ? 'Secure your account with a new password, then continue to your workspace.'
         : 'Sign in to continue creating and sharing onboarding plans.'
   const passwordFieldFeedback = fieldErrors.signupPassword
     ? { color: '#b02020', label: fieldErrors.signupPassword }
@@ -743,6 +730,77 @@ export default function LoginPage() {
               <p className="auth-switch-line">
                 Already registered?{' '}
                 <button className="link-btn inline" onClick={() => switchTab('signin')} type="button">Sign in</button>
+              </p>
+            </form>
+          )}
+
+          {tab === 'reset' && (
+            <form className="form-panel active" onSubmit={handleResetPassword}>
+              {signinError && (
+                <div className="banner-err show">
+                  <AlertIcon />
+                  <span>{signinError}</span>
+                </div>
+              )}
+              {signinOk && (
+                <div className="banner-ok show">
+                  <CheckIcon />
+                  <span>{signinOk}</span>
+                </div>
+              )}
+
+              <div className="fld">
+                <label htmlFor="reset-password">New Password</label>
+                <div className="inp-wrap">
+                  <FieldIcon type="lock" />
+                  <input
+                    autoComplete="new-password"
+                    className={`has-toggle ${fieldErrors.resetPassword ? 'err-inp' : ''}`}
+                    id="reset-password"
+                    onChange={(event) => {
+                      clearErrors()
+                      setResetPassword(event.target.value)
+                    }}
+                    placeholder="Min. 8 characters"
+                    type={visible.reset ? 'text' : 'password'}
+                    value={resetPassword}
+                  />
+                  <button className="toggle-pw" onClick={() => toggleVisibility('reset')} type="button">
+                    <EyeIcon hidden={!visible.reset} />
+                  </button>
+                </div>
+                {fieldErrors.resetPassword && <span className="field-err show">{fieldErrors.resetPassword}</span>}
+              </div>
+
+              <div className="fld">
+                <label htmlFor="reset-confirm">Confirm New Password</label>
+                <div className="inp-wrap">
+                  <FieldIcon type="lock" />
+                  <input
+                    autoComplete="new-password"
+                    className={`has-toggle ${fieldErrors.resetConfirm ? 'err-inp' : ''}`}
+                    id="reset-confirm"
+                    onChange={(event) => {
+                      clearErrors()
+                      setResetConfirm(event.target.value)
+                    }}
+                    placeholder="Repeat password"
+                    type={visible.resetConfirm ? 'text' : 'password'}
+                    value={resetConfirm}
+                  />
+                  <button className="toggle-pw" onClick={() => toggleVisibility('resetConfirm')} type="button">
+                    <EyeIcon hidden={!visible.resetConfirm} />
+                  </button>
+                </div>
+                {fieldErrors.resetConfirm && <span className="field-err show">{fieldErrors.resetConfirm}</span>}
+              </div>
+
+              <button className={`btn-submit ${busy === 'reset' ? 'loading' : ''}`} disabled={busy === 'reset'} type="submit">
+                <span className="btn-spin" />
+                <span className="btn-txt">Update Password</span>
+              </button>
+              <p className="auth-switch-line">
+                <button className="link-btn inline" onClick={() => switchTab('signin')} type="button">Back to sign in</button>
               </p>
             </form>
           )}

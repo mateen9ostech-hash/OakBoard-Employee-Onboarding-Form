@@ -65,7 +65,7 @@ export default function PrivacyPage() {
             <span>04</span>
             <div>
               <h2>Storage and service providers</h2>
-              <p>Supabase provides authentication and the server-side email function. The OakBoard cPanel account hosts the web application and stores owner-scoped plan records in MySQL. Resend processes recipient and message information when you ask OakBoard to email a PDF. These providers process data only as needed to operate their part of the service.</p>
+              <p>OakBoard&apos;s cPanel environment hosts the application and stores account, session, and owner-scoped plan records in MySQL. Mailgun processes recipient and message information when OakBoard sends verification codes, password-reset messages, or a PDF you explicitly request. These systems process data only as needed to operate the service.</p>
             </div>
           </section>
 

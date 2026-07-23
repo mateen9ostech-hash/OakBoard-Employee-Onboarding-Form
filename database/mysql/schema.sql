@@ -9,11 +9,47 @@ CREATE TABLE IF NOT EXISTS app_users (
   id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   email VARCHAR(320) NOT NULL,
   full_name VARCHAR(160) NOT NULL DEFAULT '',
+  password_hash VARCHAR(255) NULL,
   email_verified_at DATETIME(3) NULL,
+  failed_login_count TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  locked_until DATETIME(3) NULL,
+  last_sign_in_at DATETIME(3) NULL,
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   PRIMARY KEY (id),
   UNIQUE KEY app_users_email_unique (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS auth_sessions (
+  id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  csrf_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  expires_at DATETIME(3) NOT NULL,
+  last_seen_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  revoked_at DATETIME(3) NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY auth_sessions_token_unique (token_hash),
+  KEY auth_sessions_user_expires_idx (user_id, expires_at),
+  CONSTRAINT auth_sessions_user_fk
+    FOREIGN KEY (user_id) REFERENCES app_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS auth_tokens (
+  id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  purpose ENUM('email_verification', 'password_reset') NOT NULL,
+  token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  expires_at DATETIME(3) NOT NULL,
+  used_at DATETIME(3) NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  UNIQUE KEY auth_tokens_hash_unique (token_hash),
+  KEY auth_tokens_user_purpose_idx (user_id, purpose, created_at),
+  CONSTRAINT auth_tokens_user_fk
+    FOREIGN KEY (user_id) REFERENCES app_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS onboarding_imports (
@@ -69,7 +105,7 @@ CREATE TABLE IF NOT EXISTS onboarding_email_logs (
   plan_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NULL,
   recipient_email VARCHAR(320) NOT NULL,
   cc_email VARCHAR(320) NULL,
-  provider VARCHAR(100) NOT NULL DEFAULT 'resend',
+  provider VARCHAR(100) NOT NULL DEFAULT 'mailgun',
   provider_message_id VARCHAR(255) NULL,
   status ENUM('sent', 'failed') NOT NULL,
   error_message TEXT NULL,

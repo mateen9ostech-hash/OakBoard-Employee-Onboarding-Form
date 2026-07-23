@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 require __DIR__ . '/bootstrap.php';
+require __DIR__ . '/mailgun.php';
+require __DIR__ . '/auth.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
     http_response_code(204);
@@ -10,12 +12,116 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
 }
 
 try {
-    $user = authenticated_user();
-    ensure_application_user($user);
     $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
     $path = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/api'), PHP_URL_PATH) ?: '/api';
     $path = preg_replace('#^/api(?:/index\.php)?#', '', $path) ?? '';
     $segments = array_values(array_filter(explode('/', trim($path, '/')), static fn ($part) => $part !== ''));
+
+    if (($segments[0] ?? '') === 'auth') {
+        $action = $segments[1] ?? '';
+        if ($action === 'session' && $method === 'GET') {
+            json_response(current_auth_session());
+        }
+        if ($action === 'signup' && $method === 'POST') {
+            json_response(signup_user(request_json()), 201);
+        }
+        if ($action === 'verify' && $method === 'POST') {
+            json_response(verify_email_code(request_json()));
+        }
+        if ($action === 'resend' && $method === 'POST') {
+            json_response(resend_verification(request_json()));
+        }
+        if ($action === 'signin' && $method === 'POST') {
+            json_response(signin_user(request_json()));
+        }
+        if ($action === 'signout' && $method === 'POST') {
+            json_response(signout_user());
+        }
+        if ($action === 'password-reset' && $method === 'POST') {
+            json_response(request_password_reset(request_json()));
+        }
+        if ($action === 'password-reset-confirm' && $method === 'POST') {
+            json_response(confirm_password_reset(request_json()));
+        }
+        json_response(['error' => 'Authentication route not found.'], 404);
+    }
+
+    $user = authenticated_user();
+    if (!in_array($method, ['GET', 'HEAD'], true)) {
+        require_csrf($user);
+    }
+
+    if (($segments[0] ?? '') === 'email' && ($segments[1] ?? '') === 'plan' && $method === 'POST') {
+        $body = request_json();
+        try {
+            $to = valid_email_list($body['to'] ?? null);
+            $cc = isset($body['cc']) && $body['cc'] !== '' ? valid_email_list($body['cc']) : [];
+            $subject = mb_substr(trim((string) ($body['subject'] ?? '')), 0, 180);
+            $text = mb_substr(trim((string) ($body['text'] ?? '')), 0, 8_000);
+            $attachment = is_array($body['attachment'] ?? null) ? $body['attachment'] : null;
+            $planId = is_string($body['plan_id'] ?? null) ? $body['plan_id'] : null;
+
+            if ($subject === '' || $text === '' || $attachment === null) {
+                json_response(['error' => 'Email subject, message, and PDF attachment are required.'], 422);
+            }
+            if ($planId !== null) {
+                if (!valid_uuid($planId)) {
+                    json_response(['error' => 'Plan not found.'], 404);
+                }
+                $planStatement = database()->prepare(
+                    'SELECT 1 FROM onboarding_plans WHERE id = :id AND owner_id = :owner_id LIMIT 1'
+                );
+                $planStatement->execute(['id' => $planId, 'owner_id' => $user['id']]);
+                if (!$planStatement->fetchColumn()) {
+                    json_response(['error' => 'Plan not found.'], 404);
+                }
+            }
+
+            $safeText = nl2br(htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
+            $result = mailgun_send([
+                'to' => $to,
+                'cc' => $cc,
+                'subject' => $subject,
+                'text' => $text,
+                'html' => email_shell('Your onboarding plan is ready', '<p style="margin:0;font-size:15px;line-height:1.7;color:#45534a;">' . $safeText . '</p>'),
+                'attachment' => $attachment,
+            ]);
+            database()->prepare(
+                'INSERT INTO onboarding_email_logs
+                 (id, owner_id, plan_id, recipient_email, cc_email, provider, provider_message_id, status)
+                 VALUES (:id, :owner_id, :plan_id, :recipient, :cc, \'mailgun\', :provider_id, \'sent\')'
+            )->execute([
+                'id' => uuid_v4(),
+                'owner_id' => $user['id'],
+                'plan_id' => $planId,
+                'recipient' => implode(',', $to),
+                'cc' => $cc === [] ? null : implode(',', $cc),
+                'provider_id' => $result['id'],
+            ]);
+            json_response(['ok' => true, 'id' => $result['id']]);
+        } catch (InvalidArgumentException $error) {
+            json_response(['error' => $error->getMessage()], 422);
+        } catch (Throwable $error) {
+            error_log('OakBoard plan email failed: ' . $error->getMessage());
+            try {
+                database()->prepare(
+                    'INSERT INTO onboarding_email_logs
+                     (id, owner_id, plan_id, recipient_email, cc_email, provider, status, error_message)
+                     VALUES (:id, :owner_id, :plan_id, :recipient, :cc, \'mailgun\', \'failed\', :error)'
+                )->execute([
+                    'id' => uuid_v4(),
+                    'owner_id' => $user['id'],
+                    'plan_id' => isset($planId) && is_string($planId) && valid_uuid($planId) ? $planId : null,
+                    'recipient' => isset($to) && is_array($to) ? implode(',', $to) : 'invalid',
+                    'cc' => isset($cc) && is_array($cc) && $cc !== [] ? implode(',', $cc) : null,
+                    'error' => mb_substr($error->getMessage(), 0, 1_000),
+                ]);
+            } catch (Throwable $logError) {
+                error_log('OakBoard email log failure: ' . $logError->getMessage());
+            }
+            json_response(['error' => 'Email could not be sent. Check Mailgun domain verification and try again.'], 502);
+        }
+    }
 
     if (($segments[0] ?? '') !== 'plans') {
         json_response(['error' => 'API route not found.'], 404);

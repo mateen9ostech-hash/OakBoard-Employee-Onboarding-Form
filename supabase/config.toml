@@ -1,3 +1,0 @@
-[functions.send-onboarding-email]
-verify_jwt = true
-

@@ -36,7 +36,7 @@ const steps = [
 const faqs = [
   {
     question: 'I did not receive the signup code. What should I do?',
-    answer: 'Check your spam or junk folder, confirm that the address ends in @9ostech.com, and use Resend code after the countdown finishes. If it still does not arrive, contact support.',
+    answer: 'Check your spam or junk folder, confirm that the address ends in @9ostech.com, and request a new code after the countdown finishes. If it still does not arrive, contact support. OakBoard verification messages are delivered through Mailgun.',
   },
   {
     question: 'Where are my recent plans?',

@@ -23,9 +23,9 @@ The following cannot be stored in Git and must exist before authenticated plan C
 - `/home/ostech/oakboard-config.php` created from `api/config.example.php`, mode `600`.
 - MySQL credentials limited to the OakBoard database.
 - `database/mysql/schema.sql` imported into that database.
-- Supabase redirect URL `https://onboarding.9ostech.com/auth/callback` allowed.
+- A random session secret and the Mailgun settings added to the private config.
 
-Never place MySQL, Resend, SMTP, or Supabase service-role secrets in `.env.production` or the public document root.
+Never place MySQL, Mailgun, session, or SMTP secrets in `.env.production` or the public document root.
 
 ## If deployment is disabled or fails
 

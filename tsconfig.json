@@ -22,7 +22,6 @@
   "exclude": [
     "node_modules",
     "dist",
-    "supabase",
     "src/proxy.ts",
     "src/app/api",
     "src/app/layout.tsx",
@@ -36,8 +35,6 @@
     "src/app/(protected)/**/PlanPreview.tsx",
     "src/lib/auth/server.ts",
     "src/lib/mysql",
-    "src/lib/plans",
-    "src/lib/supabase/proxy.ts",
-    "src/lib/supabase/server.ts"
+    "src/lib/plans"
   ]
 }

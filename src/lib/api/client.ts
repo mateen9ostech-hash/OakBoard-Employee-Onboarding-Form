@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client'
+import { readCookie } from '@/lib/auth/client'
 
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '') || '/api'
 
@@ -9,12 +9,10 @@ function resolveApiUrl(input: RequestInfo | URL) {
 
 export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}) {
   const headers = new Headers(init.headers)
-  const { data } = supabase
-    ? await supabase.auth.getSession()
-    : { data: { session: null } }
-
-  if (data.session?.access_token) {
-    headers.set('Authorization', `Bearer ${data.session.access_token}`)
+  const method = (init.method || 'GET').toUpperCase()
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    const csrf = readCookie('oakboard_csrf')
+    if (csrf) headers.set('X-CSRF-Token', csrf)
   }
   headers.set('Accept', 'application/json')
 

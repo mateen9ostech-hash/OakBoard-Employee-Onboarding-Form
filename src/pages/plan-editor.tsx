@@ -7,7 +7,7 @@ import oakboardLogo from '@/assets/oakboard-logo.svg'
 import Image from '@/components/app-image'
 import { Button, Modal, PageToolbar, StatusBanner, TextField } from '@/components/ui'
 import { apiFetch } from '@/lib/api/client'
-import { invokeAuthenticatedFunction } from '@/lib/auth/client'
+import { getValidSession } from '@/lib/auth/client'
 import { useAppRouter } from '@/lib/router'
 import { type OnboardingPlan, type PlanDay, type PlanWeek, readStoredPlan } from '@/types/plan'
 
@@ -17,11 +17,10 @@ const DAY_TASK_SHORT_MAX = 50
 const DAY_TASK_COUNT_LONG = 4
 const DAY_TASK_COUNT_SHORT = 6
 const DAY_OUTCOME_MAX = 90
-const DEMO_RECIPIENT_EMAIL = 'mateen9ostech@gmail.com'
-
 type EmailPayload = {
   to: string
   cc?: string
+  plan_id?: string
   subject: string
   text: string
   attachment: {
@@ -199,7 +198,7 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
   const planId = initialPlanId || plan?.id || null
   const [exporting, setExporting] = useState(false)
   const [emailOpen, setEmailOpen] = useState(false)
-  const [emailTo, setEmailTo] = useState(DEMO_RECIPIENT_EMAIL)
+  const [emailTo, setEmailTo] = useState('')
   const [emailCc, setEmailCc] = useState('')
   const [emailNote, setEmailNote] = useState('')
   const [emailError, setEmailError] = useState('')
@@ -309,12 +308,17 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
   }
 
   function openEmailModal() {
-    setEmailTo(DEMO_RECIPIENT_EMAIL)
+    setEmailTo('')
     setEmailCc('')
     setEmailNote('')
     setEmailError('')
     setEmailNotice('')
     setEmailOpen(true)
+    void getValidSession().then((result) => {
+      if (result.ok && result.session.user.email) {
+        setEmailTo(result.session.user.email)
+      }
+    })
   }
 
   function editPlan() {
@@ -356,13 +360,8 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
     setEmailError('')
     setEmailNotice('')
 
-    if (emailTo.trim().toLowerCase() !== DEMO_RECIPIENT_EMAIL) {
-      setEmailError(`Demo Mode can only send to ${DEMO_RECIPIENT_EMAIL}.`)
-      return
-    }
-
-    if (emailCc.trim()) {
-      setEmailError('CC is unavailable in demo mode.')
+    if (!emailTo.trim()) {
+      setEmailError('Enter at least one recipient email address.')
       return
     }
 
@@ -371,12 +370,19 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
       const attachment = await buildPdfAttachment()
       const payload: EmailPayload = {
         to: emailTo.trim(),
+        cc: emailCc.trim() || undefined,
+        plan_id: planId || undefined,
         subject: `${nWeeks}-Week Onboarding Plan: ${role || 'New Role'} — Oak Street Technologies`,
         text: buildEmailText(emailNote.trim()),
         attachment,
       }
-      const result = await invokeAuthenticatedFunction<EmailPayload, EmailResult>('send-onboarding-email', payload)
-      if (result.ok === false) throw new Error(result.error || 'Email was not sent.')
+      const response = await apiFetch('/api/email/plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const result = await response.json().catch(() => null) as EmailResult | null
+      if (!response.ok || !result?.ok) throw new Error(result?.error || 'Email was not sent.')
       setEmailNotice(`PDF attachment sent to ${emailTo.trim()}.`)
       setEmailNote('')
       window.setTimeout(() => setEmailOpen(false), 900)
@@ -443,14 +449,14 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
       >
         <div className="email-summary">
           <strong>Plan:</strong> {nWeeks}-Week Onboarding · {role || '—'}<br />
-          <strong>From:</strong> onboarding@resend.dev<br />
+          <strong>From:</strong> onboarding@osdevlabs.com<br />
           <strong>Attachment:</strong> {filename}
         </div>
-        <StatusBanner tone="warning"><strong>Demo Mode:</strong> Resend test delivery is limited to the verified project-owner email.</StatusBanner>
+        <StatusBanner tone="info">OakBoard securely sends the generated PDF through Mailgun.</StatusBanner>
         {emailError && <StatusBanner tone="error">{emailError}</StatusBanner>}
         {emailNotice && <StatusBanner tone="success">{emailNotice}</StatusBanner>}
-        <TextField label="Recipient Email *" readOnly type="email" value={emailTo} onChange={(event) => setEmailTo(event.target.value)} />
-        <TextField label="CC (Unavailable in demo mode)" disabled placeholder="Available after domain verification" type="email" value={emailCc} onChange={(event) => setEmailCc(event.target.value)} />
+        <TextField label="Recipient Email *" type="email" value={emailTo} onChange={(event) => setEmailTo(event.target.value)} />
+        <TextField label="CC (Optional)" placeholder="Optional copy recipient" type="email" value={emailCc} onChange={(event) => setEmailCc(event.target.value)} />
         <TextField label="Personal Note (Optional)" multiline placeholder="Add a short message to include with the plan..." value={emailNote} onChange={(event) => setEmailNote(event.target.value)} />
       </Modal>
 
