@@ -24,10 +24,21 @@ function oakboard_config(): array
     }
 
     $configuredPath = getenv('OAKBOARD_CONFIG_FILE') ?: '';
-    $defaultPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'oakboard-config.php';
-    $path = $configuredPath !== '' ? $configuredPath : $defaultPath;
+    $candidates = $configuredPath !== ''
+        ? [$configuredPath]
+        : [
+            dirname(__DIR__, 4) . DIRECTORY_SEPARATOR . 'oakboard-config.php',
+            dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'oakboard-config.php',
+        ];
+    $path = '';
+    foreach ($candidates as $candidate) {
+        if (is_file($candidate)) {
+            $path = $candidate;
+            break;
+        }
+    }
 
-    if (!is_file($path)) {
+    if ($path === '') {
         throw new RuntimeException('OakBoard server configuration is missing.');
     }
 

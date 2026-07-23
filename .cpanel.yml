@@ -1,11 +1,6 @@
 ---
 deployment:
   tasks:
-    # This deployment is scoped to the OakBoard subdomain only.
-    - export DEPLOYPATH=/home/ostech/public_html/onboarding.9ostech.com
-    - export PATH=/opt/cpanel/ea-nodejs22/bin:$PATH
-    - /opt/cpanel/ea-nodejs22/bin/npm ci --no-audit --no-fund
-    - /opt/cpanel/ea-nodejs22/bin/npm run typecheck
-    - /opt/cpanel/ea-nodejs22/bin/npm run build
-    - /bin/mkdir -p $DEPLOYPATH
-    - /bin/cp -a dist/. $DEPLOYPATH/
+    # Build directly into the subdomain's dist document root.
+    # No files are copied into the repository root.
+    - /bin/bash scripts/deploy-production.sh

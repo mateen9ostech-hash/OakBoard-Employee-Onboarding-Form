@@ -18,6 +18,9 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    // Production serves dist directly. Keep the current release available
+    // until Vite writes the next index and its fingerprinted assets.
+    emptyOutDir: false,
     sourcemap: false,
   },
 })
