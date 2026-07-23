@@ -75,6 +75,9 @@ function database(): PDO
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
+    // Keep application timestamps consistent even when the cPanel server uses
+    // a regional system timezone.
+    $pdo->exec("SET time_zone = '+00:00'");
     return $pdo;
 }
 

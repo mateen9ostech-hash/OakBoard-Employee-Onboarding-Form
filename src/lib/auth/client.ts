@@ -32,6 +32,17 @@ type AuthResult<T> = {
   error: AuthFailure | null
 }
 
+let cachedSession: AuthSession | null = null
+let pendingSessionCheck: Promise<SessionCheck> | null = null
+
+function sessionIsCurrent(session: AuthSession | null): session is AuthSession {
+  return Boolean(session && session.expires_at * 1000 > Date.now())
+}
+
+function cacheSession(session: AuthSession | null) {
+  cachedSession = sessionIsCurrent(session) ? session : null
+}
+
 function resolveAuthUrl(path: string) {
   return `${configuredBaseUrl}/auth/${path}`
 }
@@ -71,22 +82,48 @@ async function authRequest<T>(path: string, init: RequestInit = {}): Promise<Aut
 }
 
 export async function getValidSession(): Promise<SessionCheck> {
-  const result = await authRequest<{ session: AuthSession }>('session', { cache: 'no-store' })
-  if (result.error || !result.data?.session) {
-    return {
-      ok: false,
-      reason: result.error?.status === 401 ? 'missing' : 'error',
-      message: result.error?.message,
-    }
+  if (sessionIsCurrent(cachedSession)) {
+    return { ok: true, session: cachedSession }
   }
-  if (result.data.session.expires_at * 1000 <= Date.now()) {
-    return { ok: false, reason: 'expired' }
+  if (!pendingSessionCheck) {
+    pendingSessionCheck = (async () => {
+      const result = await authRequest<{ session: AuthSession }>('session', { cache: 'no-store' })
+      if (result.error || !result.data?.session) {
+        cacheSession(null)
+        return {
+          ok: false,
+          reason: result.error?.status === 401 ? 'missing' : 'error',
+          message: result.error?.message,
+        } satisfies SessionCheck
+      }
+      if (!sessionIsCurrent(result.data.session)) {
+        cacheSession(null)
+        return { ok: false, reason: 'expired' } satisfies SessionCheck
+      }
+      cacheSession(result.data.session)
+      return { ok: true, session: result.data.session } satisfies SessionCheck
+    })().finally(() => {
+      pendingSessionCheck = null
+    })
   }
-  return { ok: true, session: result.data.session }
+  return pendingSessionCheck
+}
+
+async function authRequestWithSession<T extends { session: AuthSession }>(
+  path: string,
+  init: RequestInit,
+): Promise<AuthResult<T>> {
+  const result = await authRequest<T>(path, init)
+  if (result.data?.session) {
+    cacheSession(result.data.session)
+  } else if (result.error?.status === 401) {
+    cacheSession(null)
+  }
+  return result
 }
 
 export function signInWithPassword(email: string, password: string, remember: boolean) {
-  return authRequest<{ session: AuthSession; user: AuthUser }>('signin', {
+  return authRequestWithSession<{ session: AuthSession; user: AuthUser }>('signin', {
     method: 'POST',
     body: JSON.stringify({ email, password, remember }),
   })
@@ -100,7 +137,7 @@ export function signUpWithPassword(email: string, password: string, fullName: st
 }
 
 export function verifySignupOtp(email: string, code: string) {
-  return authRequest<{ session: AuthSession; user: AuthUser }>('verify', {
+  return authRequestWithSession<{ session: AuthSession; user: AuthUser }>('verify', {
     method: 'POST',
     body: JSON.stringify({ email, code }),
   })
@@ -121,7 +158,7 @@ export function requestPasswordReset(email: string) {
 }
 
 export function confirmPasswordReset(token: string, password: string) {
-  return authRequest<{ session: AuthSession; user: AuthUser }>('password-reset-confirm', {
+  return authRequestWithSession<{ session: AuthSession; user: AuthUser }>('password-reset-confirm', {
     method: 'POST',
     body: JSON.stringify({ token, password }),
   })
@@ -133,6 +170,7 @@ export async function signOut() {
     method: 'POST',
     headers: csrf ? { 'X-CSRF-Token': csrf } : undefined,
   })
+  cacheSession(null)
   localStorage.removeItem('obf_plan_data')
   sessionStorage.removeItem('obf_plan_data')
 }

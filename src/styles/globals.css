@@ -5174,6 +5174,14 @@ vwc-button.vivid-create-button:hover {
   color: var(--green-accent);
 }
 
+.plan-editor-note {
+  margin: 12px 0 16px;
+  color: var(--green-accent);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
 /* Branded archive and delete dialogs */
 .archive-plans-overlay,
 .delete-plan-overlay {

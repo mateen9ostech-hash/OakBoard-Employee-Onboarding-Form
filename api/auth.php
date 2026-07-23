@@ -11,87 +11,10 @@ const OAKBOARD_RESET_SECONDS = 1_800;
 
 function ensure_auth_schema(): void
 {
-    static $ready = false;
-    if ($ready) {
-        return;
-    }
-
-    $db = database();
-    $db->exec(
-        'CREATE TABLE IF NOT EXISTS app_users (
-          id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-          email VARCHAR(320) NOT NULL,
-          full_name VARCHAR(160) NOT NULL DEFAULT \'\',
-          password_hash VARCHAR(255) NULL,
-          email_verified_at DATETIME(3) NULL,
-          failed_login_count TINYINT UNSIGNED NOT NULL DEFAULT 0,
-          locked_until DATETIME(3) NULL,
-          last_sign_in_at DATETIME(3) NULL,
-          created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-          updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-          PRIMARY KEY (id),
-          UNIQUE KEY app_users_email_unique (email)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
-    );
-
-    $columns = $db->prepare(
-        'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = \'app_users\''
-    );
-    $columns->execute();
-    $existingColumns = array_fill_keys($columns->fetchAll(PDO::FETCH_COLUMN), true);
-    $requiredColumns = [
-        'password_hash' => 'VARCHAR(255) NULL AFTER full_name',
-        'failed_login_count' => 'TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER email_verified_at',
-        'locked_until' => 'DATETIME(3) NULL AFTER failed_login_count',
-        'last_sign_in_at' => 'DATETIME(3) NULL AFTER locked_until',
-    ];
-    foreach ($requiredColumns as $name => $definition) {
-        if (!isset($existingColumns[$name])) {
-            $db->exec("ALTER TABLE app_users ADD COLUMN {$name} {$definition}");
-        }
-    }
-
-    $db->exec(
-        'CREATE TABLE IF NOT EXISTS auth_sessions (
-          id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-          user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-          token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-          csrf_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-          expires_at DATETIME(3) NOT NULL,
-          last_seen_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-          created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-          revoked_at DATETIME(3) NULL,
-          PRIMARY KEY (id),
-          UNIQUE KEY auth_sessions_token_unique (token_hash),
-          KEY auth_sessions_user_expires_idx (user_id, expires_at),
-          CONSTRAINT auth_sessions_user_fk
-            FOREIGN KEY (user_id) REFERENCES app_users(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
-    );
-    $db->exec(
-        'CREATE TABLE IF NOT EXISTS auth_tokens (
-          id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-          user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-          purpose ENUM(\'email_verification\', \'password_reset\') NOT NULL,
-          token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-          attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
-          expires_at DATETIME(3) NOT NULL,
-          used_at DATETIME(3) NULL,
-          created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-          PRIMARY KEY (id),
-          UNIQUE KEY auth_tokens_hash_unique (token_hash),
-          KEY auth_tokens_user_purpose_idx (user_id, purpose, created_at),
-          CONSTRAINT auth_tokens_user_fk
-            FOREIGN KEY (user_id) REFERENCES app_users(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
-    );
-
-    if (random_int(1, 50) === 1) {
-        $db->exec('DELETE FROM auth_sessions WHERE expires_at < UTC_TIMESTAMP(3) OR revoked_at IS NOT NULL');
-        $db->exec('DELETE FROM auth_tokens WHERE expires_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 1 DAY)');
-    }
-    $ready = true;
+    // Database structure is deployed once from database/mysql/schema.sql.
+    // Running DDL and INFORMATION_SCHEMA checks on every web request adds
+    // substantial latency, especially when developing against remote cPanel
+    // MySQL, and is unsafe under concurrent production traffic.
 }
 
 function app_config(): array
@@ -278,13 +201,16 @@ function create_auth_token(string $userId, string $purpose, string $plainToken, 
 {
     $db = database();
     $recent = $db->prepare(
-        'SELECT created_at FROM auth_tokens
-         WHERE user_id = :user_id AND purpose = :purpose AND used_at IS NULL
+        'SELECT id FROM auth_tokens
+         WHERE user_id = :user_id
+           AND purpose = :purpose
+           AND used_at IS NULL
+           AND created_at BETWEEN DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 30 SECOND)
+                              AND DATE_ADD(UTC_TIMESTAMP(3), INTERVAL 5 SECOND)
          ORDER BY created_at DESC LIMIT 1'
     );
     $recent->execute(['user_id' => $userId, 'purpose' => $purpose]);
-    $createdAt = $recent->fetchColumn();
-    if (is_string($createdAt) && strtotime($createdAt) > time() - 30) {
+    if ($recent->fetchColumn() !== false) {
         json_response(['error' => 'Please wait before requesting another email.', 'code' => 'rate_limited'], 429);
     }
 

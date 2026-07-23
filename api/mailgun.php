@@ -65,25 +65,23 @@ function valid_email_list(mixed $value, int $maximum = 5): array
     return $result;
 }
 
-function mailgun_logo_path(): ?string
+function mailgun_logo_url(): string
 {
-    $candidates = [
-        dirname(__DIR__) . DIRECTORY_SEPARATOR . 'oakboard-logo.svg',
-        dirname(__DIR__) . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR . 'oakboard-logo.svg',
-    ];
-    foreach ($candidates as $candidate) {
-        if (is_file($candidate)) {
-            return $candidate;
-        }
+    $appUrl = rtrim((string) (oakboard_config()['app']['url'] ?? ''), '/');
+    $host = mb_strtolower((string) parse_url($appUrl, PHP_URL_HOST));
+
+    if ($appUrl === '' || in_array($host, ['127.0.0.1', 'localhost'], true)) {
+        $appUrl = 'https://onboarding.9ostech.com';
     }
-    return null;
+
+    return $appUrl . '/oakboard-email-logo.png';
 }
 
 function email_shell(string $title, string $content): string
 {
-    $logo = mailgun_logo_path() !== null
-        ? '<img src="cid:oakboard-logo.svg" alt="Oak Street Technologies" width="62" height="62" style="display:block;margin:0 auto 12px;width:62px;height:62px;object-fit:contain;">'
-        : '';
+    $logoUrl = htmlspecialchars(mailgun_logo_url(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $logo = '<img src="' . $logoUrl . '" alt="Oak Street Technologies" width="62" height="62" '
+        . 'style="display:block;margin:0 auto 12px;width:62px;height:62px;object-fit:contain;">';
 
     return '<!doctype html><html><body style="margin:0;background:#f1f5f1;padding:32px 16px;">'
         . '<div style="max-width:560px;margin:0 auto;font-family:Raleway,Arial,sans-serif;color:#142018;">'
@@ -151,11 +149,6 @@ function mailgun_send(array $message): array
             throw new RuntimeException('The PDF attachment could not be prepared.');
         }
         $fields['attachment'] = new CURLFile($temporaryAttachment, 'application/pdf', $filename);
-    }
-
-    $logoPath = mailgun_logo_path();
-    if ($html !== '' && $logoPath !== null) {
-        $fields['inline'] = new CURLFile($logoPath, 'image/svg+xml', 'oakboard-logo.svg');
     }
 
     $url = $config['api_base_url'] . '/v3/' . rawurlencode($config['domain']) . '/messages';

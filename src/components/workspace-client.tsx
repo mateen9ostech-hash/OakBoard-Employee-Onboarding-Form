@@ -1094,7 +1094,8 @@ export default function WorkspaceClient({
 
                 )}
 
-                {(error || notice) && <div className={`err on ${notice ? 'ok' : ''}`}>{error || notice}</div>}
+                {error && <div className="err on">{error}</div>}
+                {!error && notice && <p className="plan-editor-note">{notice}</p>}
               </div>
 
               <div className="plan-wizard-actions">

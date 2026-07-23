@@ -452,7 +452,6 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
           <strong>From:</strong> onboarding@osdevlabs.com<br />
           <strong>Attachment:</strong> {filename}
         </div>
-        <StatusBanner tone="info">OakBoard securely sends the generated PDF through Mailgun.</StatusBanner>
         {emailError && <StatusBanner tone="error">{emailError}</StatusBanner>}
         {emailNotice && <StatusBanner tone="success">{emailNotice}</StatusBanner>}
         <TextField label="Recipient Email *" type="email" value={emailTo} onChange={(event) => setEmailTo(event.target.value)} />
