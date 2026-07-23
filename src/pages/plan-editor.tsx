@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toPng } from 'html-to-image'
 import { jsPDF } from 'jspdf'
+import oakboardLogo from '@/assets/oakboard-logo.svg'
 import Image from '@/components/app-image'
 import { Button, Modal, PageToolbar, StatusBanner, TextField } from '@/components/ui'
 import { apiFetch } from '@/lib/api/client'
@@ -154,7 +155,7 @@ function PlanPage({
       <div className="plan-frame">
         <div className="ph">
           <div className="ph-logo">
-            <Image src="/oakboard-logo.svg" alt="Oak Street Technologies" height={80} width={80} unoptimized />
+            <Image src={oakboardLogo} alt="Oak Street Technologies" height={80} width={80} unoptimized />
           </div>
           <div className="ph-right">
             <div className="ph-title">{planName} Onboarding Plan</div>

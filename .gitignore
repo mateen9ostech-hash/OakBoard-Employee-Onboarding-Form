@@ -5,6 +5,7 @@ database/mysql/private/
 .env
 .env.*
 !.env.example
+!.env.production
 .vercel
 
 # Dependencies and generated builds

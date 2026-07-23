@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import oakboardLogo from '@/assets/oakboard-logo.svg'
 import Image from '@/components/app-image'
 import Link from '@/components/app-link'
 import { BrandLogo } from '@/components/ui'
@@ -242,7 +243,7 @@ export default function LoginPage() {
           <div className="auth-card-hdr">
             <div className="auth-logo-wrap">
               <Image
-                src="/oakboard-logo.svg"
+                src={oakboardLogo}
                 alt="Oak Street Technologies"
                 height={64}
                 width={64}

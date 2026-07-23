@@ -2,6 +2,7 @@
 
 import Image from './app-image'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import oakboardLogo from '@/assets/oakboard-logo.svg'
 import { Button, Icon } from '@/components/ui'
 import { VividButton } from '@/components/vivid'
 import { apiFetch } from '@/lib/api/client'
@@ -822,7 +823,7 @@ export default function WorkspaceClient({
           </button>
 
           <div className="side-brand">
-            <div className="side-logo" title="OakBoard"><Image src="/oakboard-logo.svg" alt="" height={40} width={40} /></div>
+            <div className="side-logo" title="OakBoard"><Image src={oakboardLogo} alt="" height={40} width={40} /></div>
             <div>
               <strong>OakBoard</strong>
               <span>Onboarding Plans</span>

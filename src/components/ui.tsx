@@ -1,4 +1,5 @@
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
+import oakboardLogo from '@/assets/oakboard-logo.svg'
 import Image from './app-image'
 import Link from './app-link'
 import { VividButton } from './vivid'
@@ -259,7 +260,7 @@ export function BrandLogo({ label = 'OakBoard' }: { label?: string }) {
   return (
     <div className="ob-brand">
       <span className="ob-brand__mark">
-        <Image src="/oakboard-logo.svg" alt="" height={40} width={40} unoptimized />
+        <Image src={oakboardLogo} alt="" height={40} width={40} unoptimized />
       </span>
       <span>{label}</span>
     </div>

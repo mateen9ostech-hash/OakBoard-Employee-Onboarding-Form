@@ -34,6 +34,8 @@ npm run build
 
 The deployable artifact is `dist/`, not the repository root.
 
+The checked-in `.env.production` contains only browser-public Supabase settings, so cPanel builds do not depend on an ignored local env file. The checked-in `.cpanel.yml` runs these validation/build steps automatically when **Deploy HEAD Commit** is selected in cPanel Git Version Control.
+
 ## 4. Deploy only this subdomain
 
 Back up the current OakBoard subdomain document root. Replace only its contents with the contents of `dist/`. Do not modify the primary domain or another website's document root.
@@ -46,9 +48,10 @@ Expected production layout:
   index.html
   assets/
   api/
-  oakboard-logo.svg
   task-icon.svg
 ```
+
+The visible OakBoard logo and favicon are emitted as fingerprinted files under `assets/` so browser and Cloudflare caches refresh when the asset changes.
 
 The included `.htaccess` disables directory indexing, preserves `/api`, serves real assets, and falls back to `index.html` for React Router URLs.
 
