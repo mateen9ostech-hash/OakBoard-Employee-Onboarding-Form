@@ -4,7 +4,7 @@ This is the only production deployment guide. It applies to:
 
 ```text
 Repository: mateen9ostech-hash/OakBoard-Employee-Onboarding-Form
-Branch: migration/react-php-mysql
+Branch: main
 Domain: https://onboarding.9ostech.com
 Checkout: /home/ostech/public_html/onboarding.9ostech.com
 Document root: /home/ostech/public_html/onboarding.9ostech.com/dist
@@ -49,8 +49,8 @@ Run:
 cd /home/ostech/public_html/onboarding.9ostech.com
 git status --short
 git fetch origin
-git switch migration/react-php-mysql
-git pull --ff-only origin migration/react-php-mysql
+git switch main
+git pull --ff-only origin main
 git config core.hooksPath .githooks
 chmod +x .githooks/post-merge scripts/deploy-production.sh
 /bin/bash scripts/deploy-production.sh
@@ -75,7 +75,7 @@ persistent Node server.
 
 ```bash
 cd /home/ostech/public_html/onboarding.9ostech.com
-git pull --ff-only origin migration/react-php-mysql
+git pull --ff-only origin main
 ```
 
 The tracked post-merge hook automatically runs the locked npm install, TypeScript

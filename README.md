@@ -36,7 +36,6 @@ Production:
 cd "C:\Users\Mateen\OneDrive - Oak Street Technologies\M. Mateen Shahid Files - Design Team\Projects\Coding"
 git clone https://github.com/mateen9ostech-hash/OakBoard-Employee-Onboarding-Form.git
 cd .\OakBoard-Employee-Onboarding-Form
-git switch migration/react-php-mysql
 npm ci
 npm run dev
 ```
