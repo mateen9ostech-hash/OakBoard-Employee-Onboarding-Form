@@ -631,11 +631,11 @@ textarea:focus {
   height: 46px;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  border: 1px solid #d9f2e1;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #eaf9ef, #fff);
-  box-shadow: 0 8px 20px rgb(36 179 75 / 16%);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .ob-brand__mark img {
@@ -2777,10 +2777,10 @@ input:is([type='button'], [type='submit'], [type='reset']) {
   height: 36px;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
   border: 0;
-  border-radius: 8px;
-  background: white;
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
 }
 
@@ -4782,7 +4782,7 @@ vwc-button.vivid-create-button:hover {
 }
 
 .recent-sidebar .side-logo {
-  background: rgb(255 255 255 / 94%);
+  background: transparent;
 }
 
 .recent-sidebar .side-brand strong {
