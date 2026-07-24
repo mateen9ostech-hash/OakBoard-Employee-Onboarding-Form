@@ -17,6 +17,15 @@ try {
     $path = preg_replace('#^/api(?:/index\.php)?#', '', $path) ?? '';
     $segments = array_values(array_filter(explode('/', trim($path, '/')), static fn ($part) => $part !== ''));
 
+    if (($segments[0] ?? '') === 'health' && $method === 'GET') {
+        database()->query('SELECT 1')->fetchColumn();
+        $release = preg_replace('/[^A-Za-z0-9._-]/', '', (string) (getenv('OAKBOARD_RELEASE') ?: 'unknown'));
+        json_response([
+            'status' => 'ok',
+            'release' => $release !== '' ? $release : 'unknown',
+        ]);
+    }
+
     if (($segments[0] ?? '') === 'auth') {
         $action = $segments[1] ?? '';
         if ($action === 'session' && $method === 'GET') {

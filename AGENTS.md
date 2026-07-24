@@ -14,3 +14,10 @@
 - Deploying or publishing.
 - Adding, exposing, or changing secrets.
 - Using paid services.
+
+## cPanel production safety
+
+- OakBoard deployment changes must remain isolated to `onboarding.9ostech.com` and its own project, document-root, database, and configuration paths.
+- Never change global Apache, Nginx, PHP, DNS, firewall, MySQL, cPanel, or WHM settings in a way that could affect existing websites.
+- Never delete, overwrite, move, restart, or reconfigure another cPanel website, virtual host, database, application, service, or shared document root.
+- Before any server-level or Docker change, verify that it is scoped to OakBoard. If isolation cannot be guaranteed, stop and request explicit confirmation instead of applying the change.

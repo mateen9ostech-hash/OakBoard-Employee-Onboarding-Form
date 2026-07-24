@@ -1,21 +1,29 @@
 # OakBoard MySQL Database
 
-This directory contains OakBoard's complete cPanel MySQL schema. The first deployment has no legacy users or plans to import.
+MySQL remains outside the Docker container and is the system of record for:
+
+- users and password hashes;
+- sessions and one-time tokens;
+- onboarding plans and imports;
+- email delivery logs.
 
 ## Requirements
 
 - MySQL 8.0+ or MariaDB 10.6+
 - InnoDB, `utf8mb4`, and JSON support
-- PHP 8.1+ with PDO MySQL and cURL
+- a dedicated OakBoard database and least-privilege database user
 
-## Setup
+## First deployment
 
-1. Import `schema.sql` using phpMyAdmin or the MySQL CLI.
-2. Create `/home/CPANEL_USER/oakboard-config.php` from `api/config.example.php`.
-3. Add the private database, session, and Mailgun values.
-4. Build the app and deploy only `dist/`.
-5. Test signup, OTP, recovery, owner isolation, CRUD, PDF, and email.
+1. Back up the OakBoard database if it already contains data.
+2. Import `schema.sql` with phpMyAdmin or the MySQL CLI.
+3. Put the connection values only in `/home/ostech/oakboard-config.php`.
+4. Start the container. Its preflight verifies connectivity and required tables
+   without creating, deleting, or modifying schema.
 
-MySQL is the system of record for users, password hashes, sessions, one-time tokens, plans, and email logs. Passwords use PHP's password API; raw passwords and raw session tokens are never stored.
+The Docker deployment does not run a MySQL container and does not change cPanel's
+global MySQL service. Database migrations must be reviewed and backed up before
+they are applied.
 
-Never add real credentials to Git, screenshots, chat messages, `.env` files, or the public document root.
+Never commit credentials or place them in browser-readable Vite environment
+files.
