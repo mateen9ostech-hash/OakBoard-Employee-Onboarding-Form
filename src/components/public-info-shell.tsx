@@ -27,8 +27,8 @@ export function PublicInfoShell({
           <Link aria-current={current === 'help' ? 'page' : undefined} to="/help">Help</Link>
           <Link aria-current={current === 'privacy' ? 'page' : undefined} to="/privacy-policy">Privacy</Link>
           <Link className="info-nav__signin" to="/sign-in">
-            <Icon name="arrow-left" />
             Sign in
+            <Icon name="arrow-right" />
           </Link>
         </nav>
       </header>

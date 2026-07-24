@@ -1289,8 +1289,17 @@ input:is([type='button'], [type='submit'], [type='reset']) {
 }
 
 @media (max-width: 900px) {
+  .plan-wrap-react {
+    justify-content: start;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
   .plan-doc-react {
     --preview-scale: 0.38;
+    transform-origin: top left;
+    margin-right: calc(-1920px * (1 - var(--preview-scale)));
+    margin-left: 0;
   }
 
   .tbr {
@@ -4709,12 +4718,26 @@ vwc-button.vivid-create-button:hover {
   }
 
   .plan-wizard-actions {
-    flex-wrap: wrap;
+    min-height: auto;
+    align-items: stretch;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-top: 10px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
   }
 
   .plan-wizard-tools {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
-    flex-wrap: wrap;
+    gap: 8px;
+    margin-right: 0;
+  }
+
+  .plan-wizard-actions > vwc-button.ob-button,
+  .plan-wizard-tools > vwc-button.ob-button {
+    width: 100%;
   }
 
   .r2,

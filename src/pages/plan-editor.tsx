@@ -301,7 +301,7 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
 
   function buildEmailText(note: string) {
     const noteBlock = note ? `\n\nNote:\n${note}` : ''
-    return `Hello,\n\nThe ${nWeeks}-week onboarding plan for ${role || 'the selected role'} is attached as a PDF.${noteBlock}\n\nRegards,\nOakBoard`
+    return `Hello,\n\nThe ${nWeeks}-week onboarding plan for ${role || 'the selected role'} is attached as a PDF.${noteBlock}\n\nRegards,\nOak Street Technologies`
   }
 
   function openEmailModal() {
