@@ -1,7 +1,5 @@
-'use client'
-
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import Link from '@/components/app-link'
+import { Link } from 'react-router-dom'
 import { BrandLogo } from '@/components/ui'
 import {
   confirmPasswordReset,
@@ -725,7 +723,7 @@ export default function LoginPage() {
               <p className="terms-note">
                 By creating an account you agree to the
                 <br />
-                <Link href="/terms-of-service">Terms of Service</Link> &amp; <Link href="/privacy-policy">Privacy Policy</Link> of 9ostech.
+                <Link to="/terms-of-service">Terms of Service</Link> &amp; <Link to="/privacy-policy">Privacy Policy</Link> of 9ostech.
               </p>
               <p className="auth-switch-line">
                 Already registered?{' '}
@@ -881,9 +879,9 @@ export default function LoginPage() {
           <div className="auth-footer">
             <span>© 2026 9ostech</span>
             <span className="dot">•</span>
-            <Link href="/help">Help</Link>
+            <Link to="/help">Help</Link>
             <span className="dot">•</span>
-            <Link href="/privacy-policy">Privacy</Link>
+            <Link to="/privacy-policy">Privacy</Link>
           </div>
         </div>
         <aside className="auth-visual" aria-hidden="true">

@@ -1,5 +1,5 @@
-import Link from './app-link'
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { BrandLogo, Icon } from '@/components/ui'
 
 export function PublicInfoShell({
@@ -19,14 +19,14 @@ export function PublicInfoShell({
     <main className="info-page">
       <div className="info-page__glow" aria-hidden="true" />
       <header className="info-header">
-        <Link className="info-brand-link" href="/" aria-label="OakBoard home">
+        <Link className="info-brand-link" to="/" aria-label="OakBoard home">
           <BrandLogo />
         </Link>
         <nav className="info-nav" aria-label="Support and policy navigation">
-          <Link aria-current={current === 'home' ? 'page' : undefined} href="/">Product</Link>
-          <Link aria-current={current === 'help' ? 'page' : undefined} href="/help">Help</Link>
-          <Link aria-current={current === 'privacy' ? 'page' : undefined} href="/privacy-policy">Privacy</Link>
-          <Link className="info-nav__signin" href="/sign-in">
+          <Link aria-current={current === 'home' ? 'page' : undefined} to="/">Product</Link>
+          <Link aria-current={current === 'help' ? 'page' : undefined} to="/help">Help</Link>
+          <Link aria-current={current === 'privacy' ? 'page' : undefined} to="/privacy-policy">Privacy</Link>
+          <Link className="info-nav__signin" to="/sign-in">
             <Icon name="arrow-left" />
             Sign in
           </Link>

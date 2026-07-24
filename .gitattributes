@@ -9,4 +9,3 @@
 *.conf text eol=lf
 Dockerfile text eol=lf
 .htaccess text eol=lf
-*.pdf binary

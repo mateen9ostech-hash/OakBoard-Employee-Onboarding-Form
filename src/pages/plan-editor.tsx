@@ -1,10 +1,7 @@
-'use client'
-
 import { useEffect, useMemo, useState } from 'react'
 import { toPng } from 'html-to-image'
 import { jsPDF } from 'jspdf'
 import oakboardLogo from '@/assets/oakboard-logo.svg'
-import Image from '@/components/app-image'
 import { Button, Modal, PageToolbar, StatusBanner, TextField } from '@/components/ui'
 import { apiFetch } from '@/lib/api/client'
 import { getValidSession } from '@/lib/auth/client'
@@ -114,7 +111,7 @@ function DayCard({ day }: { day: PlanDay }) {
         <span className="pdc-topic-txt">{title || 'Day title'}</span>
       </div>
       <div className="pdc-tasks-area">
-        <Image className="pdc-icon" src="/task-icon.svg" alt="" height={16} width={16} unoptimized />
+        <img className="pdc-icon" src="/task-icon.svg" alt="" height={16} width={16} />
         <div className="pdc-tasks-list">
           {tasks.map((task) => (
             <div className="pdc-task" key={task}>
@@ -154,7 +151,7 @@ function PlanPage({
       <div className="plan-frame">
         <div className="ph">
           <div className="ph-logo">
-            <Image src={oakboardLogo} alt="Oak Street Technologies" height={80} width={80} unoptimized />
+            <img src={oakboardLogo} alt="Oak Street Technologies" height={80} width={80} />
           </div>
           <div className="ph-right">
             <div className="ph-title">{planName} Onboarding Plan</div>

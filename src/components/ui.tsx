@@ -1,7 +1,6 @@
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
+import { Link } from 'react-router-dom'
 import oakboardLogo from '@/assets/oakboard-logo.svg'
-import Image from './app-image'
-import Link from './app-link'
 import { VividButton } from './vivid'
 
 type IconName =
@@ -120,7 +119,7 @@ export function Button(props: ButtonAsButton | ButtonAsLink) {
         {...(linkProps as AnchorHTMLAttributes<HTMLAnchorElement>)}
         aria-disabled={disabled || undefined}
         className={`${classes}${disabled ? ' is-disabled' : ''}`}
-        href={to}
+        to={to}
       >
         {content}
       </Link>
@@ -260,7 +259,7 @@ export function BrandLogo({ label = 'OakBoard' }: { label?: string }) {
   return (
     <div className="ob-brand">
       <span className="ob-brand__mark">
-        <Image src={oakboardLogo} alt="" height={40} width={40} unoptimized />
+        <img src={oakboardLogo} alt="" height={40} width={40} />
       </span>
       <span>{label}</span>
     </div>

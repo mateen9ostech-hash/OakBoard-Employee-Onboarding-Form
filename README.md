@@ -1,9 +1,12 @@
-# OakBoard Employee Onboarding Plans
+# OakBoard
 
-OakBoard creates, stores, previews, exports, and emails role-specific onboarding
-plans for `9ostech.com` users.
+OakBoard is an internal employee-onboarding plan builder for approved
+`@9ostech.com` users. It creates structured two-week and four-week plans,
+stores each user's plans privately, and exports or emails polished PDFs.
 
-## Stack
+Production: [onboarding.9ostech.com](https://onboarding.9ostech.com/)
+
+## Architecture
 
 ```text
 React + TypeScript + Vite
@@ -13,96 +16,98 @@ same-origin PHP REST API
 cPanel MySQL + Mailgun
 ```
 
-Production runs the frontend and PHP API together in one Docker container.
-MySQL remains the existing external cPanel database. Docker does not create,
-replace, restart, or modify another website or database.
+Production packages the React frontend and PHP API into one isolated Docker
+container. The existing cPanel MySQL database remains external to Docker.
+
+## Features
+
+- Work-email signup with six-digit OTP verification
+- Password authentication, recovery, remembered sessions, and CSRF protection
+- User-owned plan history with edit, archive, restore, and delete actions
+- Guided two-week and four-week onboarding workflows
+- PDF preview, download, and Mailgun delivery
+- Responsive workspace, help, privacy, and terms pages
 
 ## Local development
 
 Requirements:
 
-- Node.js 20.19-24.x
-- npm 10-11
-- PHP 8.1+ for the local API
+- Node.js 20.19–24.x and npm 10–11
+- PHP 8.1+ for API testing
+- Access to a private OakBoard server configuration
 
-Install and start the frontend:
+Install dependencies and start the frontend:
 
 ```powershell
 npm ci
 npm run dev
 ```
 
-For full API testing, keep the private PHP config outside the repository and run
-the API in a second terminal:
+For full API testing, keep the PHP configuration outside the repository and
+start the API in a second terminal:
 
 ```powershell
-$env:OAKBOARD_CONFIG_FILE = "C:\Users\Mateen\Downloads\oakboard-config.php"
+$env:OAKBOARD_CONFIG_FILE = "C:\private\oakboard-config.php"
 npm run dev:api
 ```
 
-Open <http://127.0.0.1:3000/sign-in>. Vite proxies `/api` to
-`http://127.0.0.1:8080`.
+Open [127.0.0.1:3000/sign-in](http://127.0.0.1:3000/sign-in). Vite proxies
+same-origin `/api` requests to `127.0.0.1:8080`.
+
+Windows users without administrator access can run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
+```
 
 ## Configuration
 
-Browser-public Vite values are documented in `.env.example`. MySQL passwords,
-Mailgun keys, and the session secret must never be placed in a Vite `.env` file.
+- `.env.example` documents browser-public Vite settings.
+- `.env.production` contains only the public production URL and API path.
+- `api/config.example.php` documents the private server configuration.
+- Production reads `/home/ostech/oakboard-config.php` as a read-only mount.
 
-The single private server configuration is based on
-`api/config.example.php`. Production mounts it read-only from:
+Never put MySQL passwords, Mailgun keys, or session secrets in a Vite
+environment file or Git.
 
-```text
-/home/ostech/oakboard-config.php
-```
-
-## Validation
+## Quality checks
 
 ```powershell
-npm run php:check
 npm run typecheck
 npm run lint
+npm run php:check
 npm run build -- --emptyOutDir
 ```
 
-`npm run build` creates the frontend and PHP runtime in `dist/`. Docker performs
-the same clean build inside its image, so host PHP and Node versions cannot
-change the production result.
+## Production deployment
 
-## Application routes
+[`DEPLOYMENT.md`](DEPLOYMENT.md) is the single production deployment guide. It
+covers the OakBoard-only Docker container, cPanel subdomain proxy, validation,
+updates, and rollback.
 
-| URL | Purpose |
-| --- | --- |
-| `/` | Public product page |
-| `/sign-in` | Sign in, signup, OTP, and recovery |
-| `/workspace` | Authenticated dashboard |
-| `/plans/new` | New-plan workflow |
-| `/plans/archived` | Archived plans |
-| `/plans/{id}` | Owner-scoped preview and export |
-| `/plans/{id}/edit` | Owner-scoped plan editor |
-| `/api/health` | Container, config, and database health |
+The server's private configuration, `.docker.env`, cPanel proxy include, and
+MySQL data are outside Git. A normal `git pull` therefore updates source code
+without overwriting production credentials or server settings.
 
-## Production
-
-Use [`DEPLOYMENT.md`](DEPLOYMENT.md) as the only production deployment guide.
-It includes Docker setup, the cPanel subdomain-only proxy, updates, verification,
-and rollback.
-
-For a self-contained Team Lead or ChatGPT handoff, share
-[`OakBoard-Team-Lead-Docker-Deployment-Handoff.pdf`](output/pdf/OakBoard-Team-Lead-Docker-Deployment-Handoff.pdf).
-It summarizes the safe deployment sequence without relying on previous chat
-history.
-
-Database structure is documented in
+Database requirements and first-time schema setup are documented in
 [`database/mysql/README.md`](database/mysql/README.md).
+
+## Repository layout
+
+```text
+api/              PHP authentication, plans, and Mailgun API
+database/mysql/   MySQL schema and database notes
+docker/           Container runtime and cPanel proxy templates
+public/           Public static assets
+scripts/          Validation, setup, and production-build helpers
+src/              React application
+```
 
 ## Security
 
 - Every plan query is scoped to the authenticated owner.
-- Passwords use PHP password hashing; raw passwords and session tokens are not
-  stored.
-- State-changing API requests require CSRF validation.
-- The Docker port binds only to `127.0.0.1`; it is not publicly exposed.
-- Production secrets remain outside Git and outside the public document root.
-- Never bind the container to host ports `80` or `443`.
-- Rotate credentials that were previously shared in chat, screenshots, or
-  shell history.
+- Passwords and session tokens are stored only as secure hashes.
+- State-changing requests require CSRF validation.
+- Production secrets remain outside Git and the public document root.
+- The container listens only on `127.0.0.1`; cPanel owns public ports 80/443.
+- Credentials exposed in chat, screenshots, or shell history must be rotated.

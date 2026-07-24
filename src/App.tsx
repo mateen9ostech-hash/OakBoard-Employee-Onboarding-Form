@@ -148,7 +148,6 @@ export default function App() {
         <Route path="/privacy-policy" element={<PrivacyPage />} />
         <Route path="/terms-of-service" element={<TermsPage />} />
         <Route path="/sign-in" element={<LoginPage />} />
-        <Route path="/auth/callback" element={<Navigate replace to="/sign-in" />} />
         <Route path="/workspace" element={<Protected><WorkspaceClient key="workspace" /></Protected>} />
         <Route path="/plans/new" element={<Protected><WorkspaceClient key="new-plan" initialView="new" /></Protected>} />
         <Route path="/plans/archived" element={<Protected><ArchivedPlansRoute /></Protected>} />

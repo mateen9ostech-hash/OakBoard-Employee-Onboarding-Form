@@ -1,15 +1,6 @@
-import Link from '@/components/app-link'
-import type { PageMetadata as Metadata } from '@/types/metadata'
+import { Link } from 'react-router-dom'
 import { PublicInfoShell } from '@/components/public-info-shell'
 import { Icon } from '@/components/ui'
-
-export const metadata: Metadata = {
-  title: 'Employee Onboarding Plan Builder',
-  description: 'Create structured 2-week and 4-week employee onboarding plans, manage role-specific activities, and export polished PDFs with OakBoard.',
-  alternates: {
-    canonical: '/',
-  },
-}
 
 const features = [
   ['01', 'Guided plan creation', 'Build role-specific onboarding plans through clear duration, role, week, and daily activity steps.'],
@@ -69,8 +60,8 @@ export default function HomePage() {
           <p>Sign in with an approved Oak Street Technologies work account to create, manage, and export onboarding plans securely.</p>
         </div>
         <div className="support-panel__actions">
-          <Link className="support-primary" href="/sign-in">Sign in to OakBoard</Link>
-          <Link href="/help">View the user guide</Link>
+          <Link className="support-primary" to="/sign-in">Sign in to OakBoard</Link>
+          <Link to="/help">View the user guide</Link>
         </div>
       </section>
     </PublicInfoShell>
