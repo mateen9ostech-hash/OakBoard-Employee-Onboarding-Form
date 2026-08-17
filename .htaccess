@@ -1,0 +1,54 @@
+Options -Indexes
+DirectoryIndex index.html
+RewriteEngine On
+
+<IfModule mod_setenvif.c>
+  SetEnvIf Request_URI "^/assets/" OAKBOARD_IMMUTABLE=1
+  SetEnvIf Request_URI "^/api(/|$)" OAKBOARD_NO_STORE=1
+</IfModule>
+
+<IfModule mod_headers.c>
+  # index.html names fingerprinted bundles, so a cached copy makes a browser
+  # load assets from a build that is no longer deployed. Never store it.
+  <FilesMatch "^index\.html$">
+    Header always set Cache-Control "no-store, must-revalidate"
+  </FilesMatch>
+
+  # Everything under /assets carries a content hash in its filename, so the same
+  # URL never changes content and can be cached indefinitely.
+  Header always set Cache-Control "public, max-age=31536000, immutable" env=OAKBOARD_IMMUTABLE
+
+  # index.php already sends no-store, but an Apache-level error page for /api
+  # (a half-finished upload, a missing file) would not. A cached API error keeps
+  # failing long after the server is healthy again, so cover the whole prefix.
+  Header always set Cache-Control "no-store" env=OAKBOARD_NO_STORE
+</IfModule>
+
+# Route every /api request straight to the PHP front controller.
+# Do NOT rely on the nested api/.htaccess for this: on many cPanel setups that
+# hidden file is not uploaded, or AllowOverride is not applied to the api/
+# subdirectory, so the request would fall through to the SPA fallback below and
+# return index.html / 404 instead of JSON. index.php reads the original
+# REQUEST_URI to route, so path and query string are preserved by this rewrite.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^api(?:/.*)?$ api/index.php [QSA,L]
+
+# Serve real static files and directories as-is.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# React Router handles all remaining application URLs.
+RewriteRule ^ index.html [L]
+
+<FilesMatch "^\.(env|git)">
+  Require all denied
+</FilesMatch>
+
+# php -- BEGIN cPanel-generated handler, do not edit
+# Set the “ea-php84” package as the default “PHP” programming language.
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php84 .php .php8 .phtml
+</IfModule>
+# php -- END cPanel-generated handler, do not edit

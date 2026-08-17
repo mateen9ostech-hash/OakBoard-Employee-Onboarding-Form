@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+'use client'
+
+import Image from './app-image'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import oakboardLogo from '@/assets/oakboard-logo.svg'
 import { Button, Icon } from '@/components/ui'
 import { VividButton } from '@/components/vivid'
@@ -22,7 +25,16 @@ type WorkspaceClientProps = {
   initialView?: WorkspaceView
 }
 
-function SidebarIcon({ name }: { name: 'recent' | 'archive' | 'signout' }) {
+function SidebarIcon({ name }: { name: 'recent' | 'archive' | 'signout' | 'admin' }) {
+  if (name === 'admin') {
+    return (
+      <svg aria-hidden="true" className="sidebar-action-icon" fill="none" viewBox="0 0 24 24">
+        <path d="M12 3l7 3v5c0 4.4-2.9 8.3-7 10-4.1-1.7-7-5.6-7-10V6l7-3Z" />
+        <path d="m9 12 2 2 4-4" />
+      </svg>
+    )
+  }
+
   if (name === 'archive') {
     return (
       <svg aria-hidden="true" className="sidebar-action-icon" fill="none" viewBox="0 0 24 24">
@@ -96,7 +108,7 @@ function restorePlanWeeks(plan: OnboardingPlan, count: 2 | 4) {
   ;(plan.weeks || []).slice(0, count).forEach((week, weekIndex) => {
     restoredWeeks[weekIndex].title = week.title || ''
     restoredWeeks[weekIndex].goal = week.goal || ''
-    week.days.slice(0, DPW).forEach((day, dayIndex) => {
+    ;(week.days || []).slice(0, DPW).forEach((day, dayIndex) => {
       restoredWeeks[weekIndex].days[dayIndex] = {
         ...restoredWeeks[weekIndex].days[dayIndex],
         title: day.title || '',
@@ -106,6 +118,62 @@ function restorePlanWeeks(plan: OnboardingPlan, count: 2 | 4) {
     })
   })
   return restoredWeeks
+}
+
+const sampleWeeks: PlanWeek[] = [
+  {
+    title: 'Orientation & Sprint Workflow Foundation',
+    goal: 'Settle in, understand the product, and learn the sprint structure end-to-end',
+    days: [
+      ['HR & IT System Access', ['Complete HR and IT setup to obtain necessary credentials', 'Secure active access to JIRA, SharePoint, MS Teams, and Confluence', 'Discuss role expectations and team norms', 'Meet with Senior Manager IT for context on PMO direction and leadership expectations'], 'System access ready and clear understanding of success metrics'],
+      ['Sprint Workflow Review', ['Read the Sprint Execution Workflow document thoroughly from cover to cover', 'Walk through the active sprint on JIRA with the Project Manager to understand board layout', 'Review JIRA fields including dev/SQA dates, grooming flags, and story points', 'Attend the Enwage team daily standup as a passive observer'], 'Ability to explain the 15-day sprint cycle and identify healthy JIRA tickets'],
+      ['Reporting Fundamentals', ['Review the Planning Report and Demo Report from the previous sprint on SharePoint', 'Learn the broader PMO scope and how the Scrum Master contributes to organizational goals', 'Study the SharePoint repository structure for SOPs and PMO documentation', 'Shadow the Project Manager during departmental coordination meetings'], 'Understanding of PMO deliverables and documentation standards'],
+      ['Sprint Initiation Observation', ['Observe the Sprint Planning session including scope lock and team commitments', 'Shadow the drafting of the Sprint Planning Report for stakeholders', 'Learn about the start of the regression track for the previous sprint cycle', 'Observe the daily standup and note how the team transitions to new tasks'], 'Witnessed the formal initiation of a new 15-day sprint cycle'],
+      ['Development Tracking', ['Observe the closure of the regression track', 'Note how regression bugs are reported, prioritized, and assigned to developers', 'Review Confluence decision logs and technical debt information', 'Attend daily standup and track the movement of dev tickets in JIRA'], 'Learned how regression progress is monitored and closed by the PMO'],
+    ].map((day, index) => toPlanDay(index + 1, day)),
+  },
+  {
+    title: 'Deep Dive Shadowing',
+    goal: 'Follow the Project Manager through a complete sprint to understand every PMO touchpoint',
+    days: [
+      ['Resource Prioritization', ['Observe how development resources are re-prioritized for regression bug fixing', 'Perform a supervised JIRA audit to identify missing dates or assignees', 'Monitor daily standup specifically for early identification of blockers', "Review the current sprint's JIRA hygiene status with the Project Manager"], 'Identified JIRA hygiene gaps under direct supervision'],
+      ['Grooming Introduction', ['Shadow the Project Manager during Grooming Session 1', 'Note which stakeholders attend and how the backlog is refined', 'Draft practice notes regarding key commitments and risks noted in the session', 'Attend standup and verify if blockers raised are being addressed'], 'Understanding of backlog grooming and initial risk identification'],
+      ['Release Readiness', ['Learn release readiness checks during the release finalization stage', 'Draft a practice summary of one Risk Report cycle based on active sprint data', 'Understand what triggers a risk flag and how it is communicated to leadership', 'Attend standup and cross-reference JIRA ticket statuses'], 'Knowledge of release finalization and risk reporting triggers'],
+      ['UAT Smoke', ['Observe the UAT Smoke session and second Grooming Session', 'Review how UAT findings are initially documented by the SQA lead', 'Draft notes from all grooming sessions attended for PM review', 'Attend daily standup to track progress against the sprint midpoint'], 'Understanding of the UAT smoke process and second grooming iteration'],
+      ['Production Verification', ['Observe the SQA team during production verification of the previous release', 'See how production findings are logged and communicated', 'Perform a second supervised JIRA audit and share findings with the PM', 'Shadow the Project Manager in updating the departmental risk log'], 'Exposure to production environment validation and reporting'],
+    ].map((day, index) => toPlanDay(index + 6, day)),
+  },
+  {
+    title: 'Hands-On Practice',
+    goal: 'Take responsibility for ceremonies and PMO outputs with Project Manager coaching',
+    days: [
+      ['Checkpoint Management', ['Run the daily standup independently with the Project Manager observing', 'Conduct an independent JIRA hygiene audit and flag gaps to the team', 'Monitor the dev completion checkpoint and track QA bucket movement', 'Update story statuses in JIRA based on standup outcomes'], 'Independent standup facilitation and completion of solo JIRA audit'],
+      ['Backlog Shaping', ['Co-facilitate Grooming Session 3 and update the JIRA grooming field to Yes', 'Draft the Risk Report and review it with the Project Manager before sharing', 'Lead the standup and ensure all blockers are logged in JIRA', 'Verify that groomed stories have sufficient acceptance criteria'], 'Grooming session facilitated and professional risk report drafted'],
+      ['Quality Deadlines', ['Track progress on the last primary QA day and ensure staging iteration deadlines are met', 'Run the daily standup independently and facilitate blocker resolution', 'Conduct a JIRA audit focusing on missing dev/SQA dates', 'Communicate identified hygiene gaps to the relevant team members'], 'Team updated on JIRA hygiene and QA progress toward staging'],
+      ['Staging Closure', ["Co-facilitate Grooming Session 4 and finalize next sprint's backlog refinement", 'Observe and support the staging wrap-up process with SQA', 'Run the daily standup and update the PM on sprint health', 'Draft the final Risk Report for the week'], 'Final grooming session complete and staging status clearly documented'],
+      ['UAT Coordination', ['Track UAT findings and coordinate resolutions with SQA and Dev leads', 'Run the daily standup solo and ensure UAT blockers are prioritized', 'Begin compiling sprint statistics and inputs for the Day 14 Demo Report', 'Review UAT outcomes with the Project Manager for stakeholder communication'], 'UAT findings documented and sprint statistics prepared for lock'],
+    ].map((day, index) => toPlanDay(index + 11, day)),
+  },
+  {
+    title: 'Independent Sprint Driver',
+    goal: 'Own the full sprint cycle including ceremonies, targets, and reporting',
+    days: [
+      ['Sprint Lock', ['Lead the Sprint Lock Day process independently', 'Perform a comprehensive JIRA audit and compile final sprint statistics', 'Prepare the Demo Report including completed vs. planned scope and velocity', 'Facilitate the final standup of the active sprint cycle'], 'Sprint statistics and demo report finalized for stakeholder presentation'],
+      ['Sprint Closure', ['Lead the Sprint Demo session independently for stakeholders', 'Coordinate and conduct the Bug Bash execution', 'Officially close the sprint in JIRA and handle any necessary spillovers', 'Send the Demo/Closure report to all stakeholders'], 'Sprint officially closed and results communicated independently'],
+      ['Independent Planning', ['Lead the Sprint Planning session independently for the new cycle', 'Define sprint targets collaboratively with the Product Manager and Dev team', 'Lock the sprint scope and send the Sprint Planning Report to stakeholders', 'Initiate the regression track for the previous release'], 'New sprint cycle successfully planned and targets locked independently'],
+      ['Execution Oversight', ['Drive the daily standup solo and ensure the team is aligned on Day 2 tasks', 'Resolve or escalate blockers identified during the standup on the same day', 'Maintain the daily JIRA audit log to ensure data hygiene from the start', 'Coordinate with the Technical Project Manager on early dependencies'], 'Execution track initiated with proactive blocker resolution'],
+      ['Risk Visibility', ['Produce and send the Risk Report independently highlighting at-risk stories', 'Coordinate the closure of the regression cycle with the SQA Lead', 'Perform a JIRA audit and proactively chase missing dates or assignees', 'Lead the daily standup and track dev progress against the Planning Report'], 'Risk visibility established and regression track closed on schedule'],
+    ].map((day, index) => toPlanDay(index + 16, day)),
+  },
+]
+
+function toPlanDay(day: number, data: unknown[]) {
+  return {
+    ...emptyDay(day),
+    title: limitText(String(data[0] ?? ''), DAY_TITLE_MAX),
+    tasks: limitTasks(data[1]),
+    outcome: limitText(String(data[2] ?? ''), DAY_OUTCOME_MAX),
+  }
 }
 
 function limitText(value: unknown, max: number) {
@@ -251,7 +319,13 @@ function parseNotebookPlan(rawValue: string): ImportResult['plan'] {
 function nextWeekdayIso() {
   const date = new Date()
   while ([0, 6].includes(date.getDay())) date.setDate(date.getDate() + 1)
-  return date.toISOString().split('T')[0]
+  // The weekday is picked in local time, so the date has to be serialized from
+  // local parts too. toISOString() converts to UTC first, which shifts the day
+  // for users far enough from UTC and can hand back the Saturday or Sunday the
+  // loop above just skipped. workdays() reads this value back as local midnight.
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
 }
 
 function workdays(startStr: string, count: number) {
@@ -320,13 +394,25 @@ export default function WorkspaceClient({
   const [historyStatus, setHistoryStatus] = useState('')
   const [wizardOpen, setWizardOpen] = useState(initialView === 'new' || editingOnLoad)
   const [creationMode, setCreationMode] = useState<CreationMode | null>(editingOnLoad ? 'manual' : null)
-  const [wizardStep, setWizardStep] = useState(editingOnLoad ? 1 : 0)
+  // Editing opens straight on Weeks & Days, the step that carries the save
+  // button. Landing on Duration made the plan look unsaveable until the person
+  // guessed that Next twice was required.
+  const [wizardStep, setWizardStep] = useState(editingOnLoad ? 3 : 0)
   const [durationChosen, setDurationChosen] = useState(editingOnLoad)
   const [isGenerating, setIsGenerating] = useState(false)
   const [openPlanMenuId, setOpenPlanMenuId] = useState<string | null>(null)
   const [deleteCandidate, setDeleteCandidate] = useState<SavedOnboardingPlan | null>(null)
   const [planActionBusy, setPlanActionBusy] = useState(false)
   const [displayName, setDisplayName] = useState('')
+  const [isAdmin, setIsAdmin] = useState(false)
+  const wizardErrorRef = useRef<HTMLDivElement | null>(null)
+
+  // The wizard body scrolls, so a validation message can land off-screen on a
+  // phone. Bring it into view whenever it changes.
+  useEffect(() => {
+    if (!error) return
+    wizardErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [error])
 
   useEffect(() => {
     let active = true
@@ -343,6 +429,7 @@ export default function WorkspaceClient({
       const ownerId = sessionResult.session.user.id
       setHistoryOwnerId(ownerId)
       setDisplayName(getUserDisplayName(sessionResult.session.user))
+      setIsAdmin(Boolean(sessionResult.session.user.is_admin))
 
       const response = await apiFetch('/api/plans?limit=8', { cache: 'no-store' })
       const result = await response.json().catch(() => null) as { plans?: SavedOnboardingPlan[] } | null
@@ -398,11 +485,17 @@ export default function WorkspaceClient({
     }
   }, [creationMode, durationChosen, nWeeks, role, startDate, weeks])
 
-  const wizardSteps = creationMode === 'import'
-    ? ['Method', 'Import Data', 'Review & Generate']
-    : ['Method', 'Duration', 'Role Information', 'Weeks & Days']
+  // Editing has no Method step: the plan already exists, so the progress rail
+  // starts at Duration and step numbers shift by one.
+  const wizardSteps = editingOnLoad
+    ? ['Duration', 'Role Information', 'Weeks & Days']
+    : creationMode === 'import'
+      ? ['Method', 'Import Data', 'Review & Generate']
+      : ['Method', 'Duration', 'Role Information', 'Weeks & Days']
 
-  const activeWizardStep = creationMode === 'import' && wizardStep === 3 ? 2 : wizardStep
+  const activeWizardStep = editingOnLoad
+    ? Math.max(0, wizardStep - 1)
+    : creationMode === 'import' && wizardStep === 3 ? 2 : wizardStep
 
   function setDuration(next: 2 | 4) {
     setDurationChosen(true)
@@ -474,7 +567,31 @@ export default function WorkspaceClient({
     })
   }
 
+  function fillDemoData() {
+    setRole('Scrum Master Intern')
+    setReports('Project Manager')
+    setCollab('PMO Team')
+    setStartDate('2026-06-22')
+    setWeeks(sampleWeeks.slice(0, nWeeks).map((week) => ({ ...week, days: week.days.map((day) => ({ ...day })) })))
+    setNotice('Sample plan filled. Review it before generating.')
+    setError('')
+  }
+
   function resetAll() {
+    // While editing, "Clear" blanking a real saved plan is never what the
+    // person means, so it reverts the form to the stored version instead.
+    if (editingOnLoad && initialPlanData) {
+      setRole(initialPlanData.role || '')
+      setStartDate(initialPlanData.startDate || nextWeekdayIso())
+      setReports(initialPlanData.reportsTo || initialPlanData.reports || '')
+      setCollab(initialPlanData.collaboratesWith || initialPlanData.collab || '')
+      setNWeeks(initialWeekCount)
+      setWeeks(restorePlanWeeks(initialPlanData, initialWeekCount))
+      setError('')
+      setNotice('Reverted to the saved plan.')
+      return
+    }
+
     setRole('')
     setReports('')
     setCollab('')
@@ -500,6 +617,11 @@ export default function WorkspaceClient({
     setWizardOpen(false)
     setError('')
     setImportStatus(null)
+    // Cancelling an edit returns to the plan being edited, not the workspace.
+    if (editingPlanId) {
+      router.push(`/plans/${encodeURIComponent(editingPlanId)}`)
+      return
+    }
     if (initialView !== 'workspace') router.push('/workspace')
   }
 
@@ -651,12 +773,19 @@ export default function WorkspaceClient({
     event.preventDefault()
     const plan = collect()
     if (!plan.role) {
+      // Send the person to the step that owns the field, otherwise the message
+      // points at something they cannot see. The import flow has no role step,
+      // so it stays where it is.
+      if (creationMode === 'manual') setWizardStep(2)
       setError('Please enter the Job Title / Role.')
       return
     }
     const missing = plan.weeks?.flatMap((week) => week.days).find((day) => !day.title)
     if (missing) {
-      setError(`Please fill in the title for Day ${missing.g || missing.day}.`)
+      const missingDay = missing.g || missing.day || 1
+      setOpenWeeks((current) => new Set(current).add(Math.floor((missingDay - 1) / DPW)))
+      setOpenDays((current) => new Set(current).add(missingDay))
+      setError(`Please fill in the title for Day ${missingDay}.`)
       return
     }
 
@@ -754,7 +883,7 @@ export default function WorkspaceClient({
           </button>
 
           <div className="side-brand">
-            <div className="side-logo" title="OakBoard"><img src={oakboardLogo} alt="" height={40} width={40} /></div>
+            <div className="side-logo" title="OakBoard"><Image src={oakboardLogo} alt="" height={40} width={40} /></div>
             <div>
               <strong>OakBoard</strong>
               <span>Onboarding Plans</span>
@@ -828,6 +957,18 @@ export default function WorkspaceClient({
           </div>
 
           <div className="side-footer">
+            {isAdmin && (
+              <button
+                aria-label="Open admin console"
+                className="side-footer-item admin"
+                onClick={() => router.push('/admin')}
+                title="Admin console"
+                type="button"
+              >
+                <SidebarIcon name="admin" />
+                <span>Admin</span>
+              </button>
+            )}
             <button
               aria-label="Open archived plans"
               aria-pressed={archiveView}
@@ -867,10 +1008,10 @@ export default function WorkspaceClient({
             <form className="fo plan-wizard" onSubmit={handleSubmit}>
               <div className="plan-wizard-head">
                 <div>
-                  <span className="plan-wizard-eyebrow">Create onboarding plan</span>
+                  <span className="plan-wizard-eyebrow">{editingOnLoad ? `Edit onboarding plan${role ? ` — ${role}` : ''}` : 'Create onboarding plan'}</span>
                   <h2>{wizardStep === 0 ? 'How would you like to start?' : wizardSteps[activeWizardStep]}</h2>
                 </div>
-                <button aria-label="Close plan builder" className="plan-wizard-close" onClick={closeWizard} type="button"><Icon name="close" /></button>
+                <button aria-label={editingOnLoad ? 'Close plan editor' : 'Close plan builder'} className="plan-wizard-close" onClick={closeWizard} type="button"><Icon name="close" /></button>
               </div>
 
               <div className="plan-progress" aria-label={`Plan ${completion.percent}% complete`}>
@@ -1025,7 +1166,7 @@ export default function WorkspaceClient({
 
                 )}
 
-                {error && <div className="err on">{error}</div>}
+                {error && <div className="err on" ref={wizardErrorRef} role="alert">{error}</div>}
                 {!error && notice && <p className="plan-editor-note">{notice}</p>}
               </div>
 
@@ -1034,13 +1175,10 @@ export default function WorkspaceClient({
 
                 {creationMode === 'manual' && wizardStep === 1 && (
                   <>
-                    <Button onClick={() => { setCreationMode(null); setWizardStep(0); setError('') }} type="button" variant="secondary">Back</Button>
+                    {editingOnLoad
+                      ? <Button onClick={closeWizard} type="button" variant="secondary">Cancel</Button>
+                      : <Button onClick={() => { setCreationMode(null); setWizardStep(0); setError('') }} type="button" variant="secondary">Back</Button>}
                     <Button onClick={goToRoleStep} type="button" variant="primary">Next</Button>
-                    {editingPlanId && (
-                      <Button disabled={isGenerating} icon="check" type="submit" variant="primary">
-                        {isGenerating ? 'Saving…' : 'Save Changes'}
-                      </Button>
-                    )}
                   </>
                 )}
 
@@ -1048,11 +1186,6 @@ export default function WorkspaceClient({
                   <>
                     <Button onClick={() => { setWizardStep(1); setError('') }} type="button" variant="secondary">Back</Button>
                     <Button onClick={goToPlanStep} type="button" variant="primary">Next</Button>
-                    {editingPlanId && (
-                      <Button disabled={isGenerating} icon="check" type="submit" variant="primary">
-                        {isGenerating ? 'Saving…' : 'Save Changes'}
-                      </Button>
-                    )}
                   </>
                 )}
 
@@ -1067,12 +1200,13 @@ export default function WorkspaceClient({
                   <>
                     <div className="plan-wizard-tools">
                       <Button onClick={() => { setWizardStep(creationMode === 'import' ? 1 : 2); setNotice(''); setError('') }} type="button" variant="secondary">Back</Button>
-                      <Button onClick={resetAll} type="button" variant="secondary">Clear</Button>
+                      {creationMode === 'manual' && !editingOnLoad && <Button icon="check" onClick={fillDemoData} type="button" variant="soft">Fill Sample</Button>}
+                      <Button onClick={resetAll} type="button" variant="secondary">{editingOnLoad ? 'Revert' : 'Clear'}</Button>
                     </div>
-                    <Button disabled={isGenerating} icon={editingPlanId ? 'check' : 'plus'} type="submit" variant="primary">
-                      {isGenerating
-                        ? editingPlanId ? 'Saving…' : 'Generating…'
-                        : editingPlanId ? 'Save Changes' : 'Generate Plan'}
+                    <Button disabled={isGenerating} icon={editingOnLoad ? 'check' : 'plus'} type="submit" variant="primary">
+                      {editingOnLoad
+                        ? (isGenerating ? 'Saving…' : 'Save Changes')
+                        : (isGenerating ? 'Generating…' : 'Generate Plan')}
                     </Button>
                   </>
                 )}

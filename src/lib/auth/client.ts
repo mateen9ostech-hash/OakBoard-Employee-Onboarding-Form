@@ -5,6 +5,8 @@ export type AuthUser = {
   email?: string
   email_confirmed_at?: string | null
   last_sign_in_at?: string | null
+  is_admin?: boolean
+  must_change_password?: boolean
   user_metadata: {
     full_name?: string
     name?: string
@@ -164,6 +166,19 @@ export function confirmPasswordReset(token: string, password: string) {
   })
 }
 
+export async function changePassword(currentPassword: string, password: string) {
+  const csrf = readCookie('oakboard_csrf')
+  const result = await authRequest<{ ok: boolean; user: AuthUser }>('change-password', {
+    method: 'POST',
+    headers: csrf ? { 'X-CSRF-Token': csrf } : undefined,
+    body: JSON.stringify({ current_password: currentPassword, password }),
+  })
+  // The cached session still carries the old must_change_password value, so
+  // drop it and let the next getValidSession() read the cleared flag.
+  if (!result.error) cacheSession(null)
+  return result
+}
+
 export async function signOut() {
   const csrf = readCookie('oakboard_csrf')
   await authRequest<{ ok: boolean }>('signout', {
@@ -173,6 +188,8 @@ export async function signOut() {
   cacheSession(null)
   localStorage.removeItem('obf_plan_data')
   sessionStorage.removeItem('obf_plan_data')
+  // Clears the retired sign-in cache for accounts that still have it stored.
+  localStorage.removeItem('obf_session_cache')
 }
 
 export function readCookie(name: string) {

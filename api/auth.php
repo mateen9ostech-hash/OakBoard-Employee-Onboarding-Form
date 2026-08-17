@@ -6,7 +6,11 @@ const OAKBOARD_SESSION_COOKIE = 'oakboard_session';
 const OAKBOARD_CSRF_COOKIE = 'oakboard_csrf';
 const OAKBOARD_REGULAR_SESSION_SECONDS = 43_200;
 const OAKBOARD_REMEMBERED_SESSION_SECONDS = 2_592_000;
-const OAKBOARD_OTP_SECONDS = 600;
+// Kept generous because Mailgun delivery to the work domain can lag by several
+// minutes; a shorter window expired codes before they arrived. The six-digit
+// code is still protected by the five-attempt limit and by only one code being
+// live at a time.
+const OAKBOARD_OTP_SECONDS = 1_800;
 const OAKBOARD_RESET_SECONDS = 1_800;
 
 function ensure_auth_schema(): void
@@ -92,6 +96,32 @@ function clear_auth_cookies(): void
     set_auth_cookie(OAKBOARD_CSRF_COOKIE, '', time() - 3600, false);
 }
 
+function configured_super_admin_email(): string
+{
+    return mb_strtolower(trim((string) (app_config()['super_admin_email'] ?? '')));
+}
+
+function is_root_admin(array $user): bool
+{
+    // The account named in the private config file. It is always an
+    // administrator and is protected from lock, demotion, and deletion so
+    // administrator access to the console can never be lost.
+    $configured = configured_super_admin_email();
+    return $configured !== '' && mb_strtolower(trim((string) ($user['email'] ?? ''))) === $configured;
+}
+
+function is_admin_user(array $user): bool
+{
+    return is_root_admin($user) || ($user['role'] ?? 'member') === 'admin';
+}
+
+function require_admin(array $user): void
+{
+    if (!is_admin_user($user)) {
+        json_response(['error' => 'Administrator access is required.', 'code' => 'forbidden'], 403);
+    }
+}
+
 function public_user(array $user): array
 {
     return [
@@ -102,7 +132,53 @@ function public_user(array $user): array
         ],
         'email_confirmed_at' => $user['email_verified_at'] ?? null,
         'last_sign_in_at' => $user['last_sign_in_at'] ?? null,
+        'is_admin' => is_admin_user($user),
+        'must_change_password' => (int) ($user['must_change_password'] ?? 0) === 1,
     ];
+}
+
+function change_password(array $body): array
+{
+    $user = authenticated_user();
+    require_csrf($user);
+
+    $current = is_string($body['current_password'] ?? null) ? $body['current_password'] : '';
+    $next = validate_password($body['password'] ?? null);
+
+    $lookup = database()->prepare('SELECT password_hash FROM app_users WHERE id = :id LIMIT 1');
+    $lookup->execute(['id' => $user['id']]);
+    $hash = $lookup->fetchColumn();
+
+    if (!is_string($hash) || $current === '' || !password_verify($current, $hash)) {
+        json_response(['error' => 'The current password is incorrect.', 'code' => 'invalid_current_password'], 403);
+    }
+    if ($next === null) {
+        json_response(['error' => 'The new password must be at least 8 characters.', 'code' => 'invalid_password'], 422);
+    }
+    if (password_verify($next, $hash)) {
+        json_response(['error' => 'Choose a password you have not used here before.', 'code' => 'password_reused'], 422);
+    }
+
+    $passwordHash = password_hash($next, PASSWORD_DEFAULT);
+    if (!is_string($passwordHash)) {
+        throw new RuntimeException('Password hashing failed.');
+    }
+
+    $db = database();
+    $db->prepare(
+        'UPDATE app_users SET password_hash = :password_hash, must_change_password = 0,
+         failed_login_count = 0, locked_until = NULL WHERE id = :id'
+    )->execute(['password_hash' => $passwordHash, 'id' => $user['id']]);
+
+    // Every other session was created against the old password, so drop them
+    // and keep only the one making this request.
+    $db->prepare(
+        'UPDATE auth_sessions SET revoked_at = UTC_TIMESTAMP(3)
+         WHERE user_id = :user_id AND id <> :session_id AND revoked_at IS NULL'
+    )->execute(['user_id' => $user['id'], 'session_id' => $user['session_id']]);
+
+    $user['must_change_password'] = 0;
+    return ['ok' => true, 'user' => public_user($user)];
 }
 
 function create_auth_session(array $user, bool $remember): array
@@ -142,7 +218,8 @@ function authenticated_user(): array
     }
 
     $statement = database()->prepare(
-        'SELECT u.id, u.email, u.full_name, u.email_verified_at, u.last_sign_in_at,
+        'SELECT u.id, u.email, u.full_name, u.role, u.must_change_password,
+                u.email_verified_at, u.last_sign_in_at,
                 s.id AS session_id, s.csrf_hash, s.expires_at
          FROM auth_sessions s
          INNER JOIN app_users u ON u.id = s.user_id
@@ -323,14 +400,14 @@ function verify_email_code(array $body): array
     }
 
     $statement = database()->prepare(
-        'SELECT t.*, u.email, u.full_name, u.email_verified_at, u.last_sign_in_at
+        'SELECT t.*, u.email, u.full_name, u.role, u.email_verified_at, u.last_sign_in_at
          FROM auth_tokens t INNER JOIN app_users u ON u.id = t.user_id
          WHERE u.email = :email AND t.purpose = \'email_verification\' AND t.used_at IS NULL
          ORDER BY t.created_at DESC LIMIT 1'
     );
     $statement->execute(['email' => $email]);
     $token = $statement->fetch();
-    if (!$token || strtotime((string) $token['expires_at']) < time() || (int) $token['attempts'] >= 5) {
+    if (!$token || utc_strtotime($token['expires_at']) < time() || (int) $token['attempts'] >= 5) {
         json_response(['error' => 'That code is invalid or has expired. Request a new one.', 'code' => 'otp_expired'], 400);
     }
     if (!hash_equals((string) $token['token_hash'], token_digest($code))) {
@@ -366,6 +443,13 @@ function signin_user(array $body): array
     $statement = database()->prepare('SELECT * FROM app_users WHERE email = :email LIMIT 1');
     $statement->execute(['email' => $email]);
     $user = $statement->fetch();
+    // The lockout has to be enforced before the password is verified. A wrong
+    // password returns 401 below, so checking afterwards meant a locked account
+    // still accepted unlimited guesses and the lock only ever fired once the
+    // correct password was finally supplied.
+    if ($user && is_string($user['locked_until'] ?? null) && utc_strtotime($user['locked_until']) > time()) {
+        json_response(['error' => 'Too many sign-in attempts. Please wait 15 minutes and try again.', 'code' => 'account_locked'], 429);
+    }
     if (!$user || !is_string($user['password_hash'] ?? null) || !password_verify($password, $user['password_hash'])) {
         if ($user) {
             $failed = (int) ($user['failed_login_count'] ?? 0) + 1;
@@ -375,9 +459,6 @@ function signin_user(array $body): array
             )->execute(['failed' => $failed >= 5 ? 0 : $failed, 'locked_until' => $lockedUntil, 'id' => $user['id']]);
         }
         json_response(['error' => 'Incorrect email or password. If you are new to OakBoard, create an account.', 'code' => 'invalid_credentials'], 401);
-    }
-    if (is_string($user['locked_until'] ?? null) && strtotime($user['locked_until']) > time()) {
-        json_response(['error' => 'Too many sign-in attempts. Please wait 15 minutes and try again.', 'code' => 'account_locked'], 429);
     }
     if ($user['email_verified_at'] === null) {
         json_response(['error' => 'Please verify your work email before signing in.', 'code' => 'email_not_verified'], 403);
@@ -397,7 +478,7 @@ function current_auth_session(): array
     return [
         'session' => [
             'user' => public_user($user),
-            'expires_at' => strtotime((string) $user['expires_at']),
+            'expires_at' => utc_strtotime($user['expires_at']),
         ],
     ];
 }
@@ -448,14 +529,14 @@ function confirm_password_reset(array $body): array
         json_response(['error' => 'The reset link is invalid, or the password is too short.', 'code' => 'invalid_reset'], 422);
     }
     $statement = database()->prepare(
-        'SELECT t.*, u.email, u.full_name, u.email_verified_at, u.last_sign_in_at
+        'SELECT t.*, u.email, u.full_name, u.role, u.email_verified_at, u.last_sign_in_at
          FROM auth_tokens t INNER JOIN app_users u ON u.id = t.user_id
          WHERE t.token_hash = :token_hash AND t.purpose = \'password_reset\' AND t.used_at IS NULL
          LIMIT 1'
     );
     $statement->execute(['token_hash' => token_digest($token)]);
     $record = $statement->fetch();
-    if (!$record || strtotime((string) $record['expires_at']) < time()) {
+    if (!$record || utc_strtotime($record['expires_at']) < time()) {
         json_response(['error' => 'This password reset link is invalid or has expired.', 'code' => 'reset_expired'], 400);
     }
     $passwordHash = password_hash($password, PASSWORD_DEFAULT);
@@ -463,8 +544,12 @@ function confirm_password_reset(array $body): array
         throw new RuntimeException('Password hashing failed.');
     }
     $db = database();
+    // Clearing must_change_password matters here too: an administrator-created
+    // account that goes through "Forgot password" instead of the forced change
+    // would otherwise still be flagged and get sent straight back to it.
     $db->prepare(
-        'UPDATE app_users SET password_hash = :password_hash, failed_login_count = 0, locked_until = NULL,
+        'UPDATE app_users SET password_hash = :password_hash, must_change_password = 0,
+         failed_login_count = 0, locked_until = NULL,
          last_sign_in_at = UTC_TIMESTAMP(3) WHERE id = :id'
     )->execute(['password_hash' => $passwordHash, 'id' => $record['user_id']]);
     $db->prepare('UPDATE auth_tokens SET used_at = UTC_TIMESTAMP(3) WHERE id = :id')

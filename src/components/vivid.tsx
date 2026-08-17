@@ -1,3 +1,5 @@
+'use client'
+
 import { createElement, useEffect, type ButtonHTMLAttributes, type ReactNode } from 'react'
 
 let vividRegistered = false

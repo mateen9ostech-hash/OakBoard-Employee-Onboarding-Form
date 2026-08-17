@@ -11,6 +11,8 @@ const HomePage = lazy(() => import('@/pages/home'))
 const PrivacyPage = lazy(() => import('@/pages/privacy-policy'))
 const TermsPage = lazy(() => import('@/pages/terms-of-service'))
 const WorkspaceClient = lazy(() => import('@/components/workspace-client'))
+const AdminPage = lazy(() => import('@/pages/admin'))
+const ChangePasswordPage = lazy(() => import('@/pages/change-password'))
 
 const publicMetadata: Record<string, { title: string; description: string }> = {
   '/': {
@@ -39,8 +41,18 @@ function RouteMetadata() {
   const location = useLocation()
 
   useEffect(() => {
+    // publicMetadata only supplies nicer titles and descriptions. It no longer
+    // affects indexing: OakBoard is a private internal tool, so every route is
+    // noindex,nofollow.
+    const privateTitle = location.pathname.startsWith('/plans/')
+      ? 'Onboarding Plan | OakBoard'
+      : location.pathname === '/admin'
+        ? 'Admin Console | OakBoard'
+        : location.pathname === '/change-password'
+          ? 'Choose a Password | OakBoard'
+          : 'Workspace | OakBoard'
     const metadata = publicMetadata[location.pathname] || {
-      title: location.pathname.startsWith('/plans/') ? 'Onboarding Plan | OakBoard' : 'Workspace | OakBoard',
+      title: privateTitle,
       description: 'Create and manage employee onboarding plans in OakBoard.',
     }
     document.title = metadata.title
@@ -59,7 +71,7 @@ function RouteMetadata() {
       robots.name = 'robots'
       document.head.appendChild(robots)
     }
-    robots.content = publicMetadata[location.pathname] ? 'index,follow' : 'noindex,nofollow'
+    robots.content = 'noindex,nofollow'
   }, [location.pathname])
 
   return null
@@ -70,17 +82,25 @@ function PageState({ children }: { children: ReactNode }) {
 }
 
 function RequireAuth({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<'checking' | 'allowed' | 'denied'>('checking')
+  const [status, setStatus] = useState<'checking' | 'allowed' | 'denied' | 'must-change-password'>('checking')
 
   useEffect(() => {
     let active = true
     void getValidSession().then((result) => {
-      if (active) setStatus(result.ok ? 'allowed' : 'denied')
+      if (!active) return
+      if (!result.ok) {
+        setStatus('denied')
+        return
+      }
+      // Single gate for every protected route: an account created with a
+      // temporary password sets its own before anything else opens.
+      setStatus(result.session.user.must_change_password ? 'must-change-password' : 'allowed')
     })
     return () => { active = false }
   }, [])
 
   if (status === 'denied') return <Navigate replace to="/sign-in" />
+  if (status === 'must-change-password') return <Navigate replace to="/change-password" />
   if (status === 'checking') {
     return <PageState><span className="auth-loader__spinner" aria-hidden="true" /><p>Opening your workspace...</p></PageState>
   }
@@ -148,7 +168,12 @@ export default function App() {
         <Route path="/privacy-policy" element={<PrivacyPage />} />
         <Route path="/terms-of-service" element={<TermsPage />} />
         <Route path="/sign-in" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<Navigate replace to="/sign-in" />} />
         <Route path="/workspace" element={<Protected><WorkspaceClient key="workspace" /></Protected>} />
+        <Route path="/admin" element={<Protected><AdminPage /></Protected>} />
+        {/* Deliberately outside Protected: RequireAuth redirects here, so
+            wrapping it would loop. The page does its own session check. */}
+        <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/plans/new" element={<Protected><WorkspaceClient key="new-plan" initialView="new" /></Protected>} />
         <Route path="/plans/archived" element={<Protected><ArchivedPlansRoute /></Protected>} />
         <Route path="/plans/:planId" element={<Protected><PlanRoute /></Protected>} />

@@ -14,8 +14,7 @@ function phpFiles(directory) {
   })
 }
 
-const roots = ['api', 'docker']
-const files = roots.flatMap((directory) => phpFiles(join(process.cwd(), directory)))
+const files = phpFiles(join(process.cwd(), 'api'))
 for (const file of files) {
   parser.parseCode(readFileSync(file, 'utf8'), file)
 }

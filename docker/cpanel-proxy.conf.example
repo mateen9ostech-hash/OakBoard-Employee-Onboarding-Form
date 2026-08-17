@@ -1,8 +1,0 @@
-# Add this only to the onboarding.9ostech.com SSL virtual-host include.
-# Never add it to a global Apache include or another website.
-
-ProxyPreserveHost On
-RequestHeader set X-Forwarded-Proto "https"
-
-ProxyPass        / http://127.0.0.1:8180/ connectiontimeout=5 timeout=90 retry=0
-ProxyPassReverse / http://127.0.0.1:8180/

@@ -1,7 +1,10 @@
+'use client'
+
 import { useEffect, useMemo, useState } from 'react'
 import { toPng } from 'html-to-image'
 import { jsPDF } from 'jspdf'
 import oakboardLogo from '@/assets/oakboard-logo.svg'
+import Image from '@/components/app-image'
 import { Button, Modal, PageToolbar, StatusBanner, TextField } from '@/components/ui'
 import { apiFetch } from '@/lib/api/client'
 import { getValidSession } from '@/lib/auth/client'
@@ -111,10 +114,12 @@ function DayCard({ day }: { day: PlanDay }) {
         <span className="pdc-topic-txt">{title || 'Day title'}</span>
       </div>
       <div className="pdc-tasks-area">
-        <img className="pdc-icon" src="/task-icon.svg" alt="" height={16} width={16} />
+        <Image className="pdc-icon" src="/task-icon.svg" alt="" height={16} width={16} unoptimized />
         <div className="pdc-tasks-list">
-          {tasks.map((task) => (
-            <div className="pdc-task" key={task}>
+          {tasks.map((task, taskIndex) => (
+            // Keyed by position: two identical task strings in one day would
+            // otherwise collide on the same React key.
+            <div className="pdc-task" key={`${dayNumber}-${taskIndex}`}>
               <span className="ptb">•</span>
               <span className="ptt">{task}</span>
             </div>
@@ -151,7 +156,7 @@ function PlanPage({
       <div className="plan-frame">
         <div className="ph">
           <div className="ph-logo">
-            <img src={oakboardLogo} alt="Oak Street Technologies" height={80} width={80} />
+            <Image src={oakboardLogo} alt="Oak Street Technologies" height={80} width={80} unoptimized />
           </div>
           <div className="ph-right">
             <div className="ph-title">{planName} Onboarding Plan</div>
@@ -201,6 +206,7 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
   const [emailError, setEmailError] = useState('')
   const [emailNotice, setEmailNotice] = useState('')
   const [sendingEmail, setSendingEmail] = useState(false)
+  const [senderEmail, setSenderEmail] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [planActionBusy, setPlanActionBusy] = useState<'archive' | 'delete' | null>(null)
   const [planActionError, setPlanActionError] = useState('')
@@ -301,7 +307,7 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
 
   function buildEmailText(note: string) {
     const noteBlock = note ? `\n\nNote:\n${note}` : ''
-    return `Hello,\n\nThe ${nWeeks}-week onboarding plan for ${role || 'the selected role'} is attached as a PDF.${noteBlock}\n\nRegards,\nOak Street Technologies`
+    return `Hello,\n\nThe ${nWeeks}-week onboarding plan for ${role || 'the selected role'} is attached as a PDF.${noteBlock}\n\nRegards,\nOakBoard`
   }
 
   function openEmailModal() {
@@ -316,6 +322,14 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
         setEmailTo(result.session.user.email)
       }
     })
+    // The sender comes from the server's Mailgun configuration, so it is read
+    // rather than assumed. The summary row stays hidden if it cannot be read.
+    void apiFetch('/api/email/sender', { cache: 'no-store' })
+      .then(async (response) => {
+        const result = await response.json().catch(() => null) as { from_email?: string } | null
+        setSenderEmail(response.ok && result?.from_email ? result.from_email : '')
+      })
+      .catch(() => setSenderEmail(''))
   }
 
   function editPlan() {
@@ -446,7 +460,7 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
       >
         <div className="email-summary">
           <strong>Plan:</strong> {nWeeks}-Week Onboarding · {role || '—'}<br />
-          <strong>From:</strong> onboarding@osdevlabs.com<br />
+          {senderEmail && <><strong>From:</strong> {senderEmail}<br /></>}
           <strong>Attachment:</strong> {filename}
         </div>
         {emailError && <StatusBanner tone="error">{emailError}</StatusBanner>}

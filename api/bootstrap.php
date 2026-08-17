@@ -24,12 +24,24 @@ function oakboard_config(): array
     }
 
     $configuredPath = getenv('OAKBOARD_CONFIG_FILE') ?: '';
-    $candidates = $configuredPath !== ''
-        ? [$configuredPath]
-        : [
-            dirname(__DIR__, 4) . DIRECTORY_SEPARATOR . 'oakboard-config.php',
-            dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'oakboard-config.php',
-        ];
+    $candidates = [];
+    if ($configuredPath !== '') {
+        $candidates[] = $configuredPath;
+    } else {
+        // Walk upward from the document root so the private config file is found
+        // regardless of how deeply the site is nested on cPanel. This works for a
+        // subdomain doc root at any depth (e.g. .../onboarding.example.com/dist/api,
+        // or files uploaded straight to .../onboarding.example.com/api). Place
+        // oakboard-config.php at or above the document root, ideally in the home
+        // directory so it is never web-served.
+        $directory = dirname(__DIR__);
+        $previous = '';
+        while ($directory !== $previous) {
+            $candidates[] = $directory . DIRECTORY_SEPARATOR . 'oakboard-config.php';
+            $previous = $directory;
+            $directory = dirname($directory);
+        }
+    }
     $path = '';
     foreach ($candidates as $candidate) {
         if (is_file($candidate)) {
@@ -113,6 +125,17 @@ function valid_uuid(string $value): bool
     return preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $value) === 1;
 }
 
+function utc_strtotime(mixed $value): int
+{
+    // Every OakBoard DATETIME column holds UTC: PHP writes them with gmdate()
+    // and MySQL defaults run under the connection time_zone of '+00:00'. A bare
+    // datetime string has no zone designator, so strtotime() would read it in
+    // the server's local timezone and shift the result on any cPanel host whose
+    // date.timezone is regional. Pin the zone so expiries stay correct.
+    $timestamp = strtotime((string) $value . ' UTC');
+    return $timestamp === false ? 0 : $timestamp;
+}
+
 function normalized_plan(mixed $value): ?array
 {
     if (!is_array($value)) {
@@ -142,7 +165,7 @@ function saved_plan(array $row): array
         'name' => $row['title'] ?: $decoded['role'],
         'role' => $row['role'] ?: 'Untitled role',
         'nWeeks' => $weeks,
-        'updatedAt' => gmdate('c', strtotime((string) $row['updated_at'])),
+        'updatedAt' => gmdate('c', utc_strtotime($row['updated_at'])),
         'plan' => $decoded,
     ];
 }

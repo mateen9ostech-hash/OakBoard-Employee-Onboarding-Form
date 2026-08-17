@@ -1,5 +1,7 @@
+'use client'
+
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import Link from '@/components/app-link'
 import { BrandLogo } from '@/components/ui'
 import {
   confirmPasswordReset,
@@ -27,6 +29,14 @@ const PENDING_SIGNUP_EMAIL_KEY = 'oakboard_pending_signup_email'
 
 function isOrgEmail(email: string) {
   return email.trim().toLowerCase().endsWith(orgDomain)
+}
+
+// A temporary password has to be replaced before anything else opens.
+// Otherwise administrators land on the console and everyone else on their
+// workspace; the console's toolbar links back, so nothing becomes unreachable.
+function landingPath(user?: { is_admin?: boolean; must_change_password?: boolean }) {
+  if (user?.must_change_password) return '/change-password'
+  return user?.is_admin ? '/admin' : '/workspace'
 }
 
 function getPasswordScore(password: string) {
@@ -234,7 +244,7 @@ export default function LoginPage() {
     let active = true
     getValidSession().then((result) => {
       if (active && result.ok) {
-        router.replace('/workspace')
+        router.replace(landingPath(result.session.user))
       }
     })
     return () => {
@@ -300,17 +310,11 @@ export default function LoginPage() {
       } else {
         localStorage.removeItem(REMEMBER_EMAIL_KEY)
       }
-      localStorage.setItem(
-        'obf_session_cache',
-        JSON.stringify({
-          timestamp: Date.now(),
-          email: data?.session?.user?.email || data?.user?.email || signinEmail,
-        }),
-      )
     } catch (error) {
-      console.error('Unable to cache local session:', error)
+      console.error('Unable to store the remembered email:', error)
     }
-    window.setTimeout(() => router.replace('/workspace'), 700)
+    const target = landingPath(data?.session?.user)
+    window.setTimeout(() => router.replace(target), 700)
   }
 
   async function handleSignUp(event?: FormEvent<HTMLFormElement>) {
@@ -384,19 +388,9 @@ export default function LoginPage() {
     }
 
     sessionStorage.removeItem(PENDING_SIGNUP_EMAIL_KEY)
-    try {
-      localStorage.setItem(
-        'obf_session_cache',
-        JSON.stringify({
-          timestamp: Date.now(),
-          email: data.session.user.email || pendingEmail,
-        }),
-      )
-    } catch (cacheError) {
-      console.error('Unable to cache verified session:', cacheError)
-    }
     setVerificationOk('Email verified. Opening your workspace...')
-    window.setTimeout(() => router.replace('/workspace'), 500)
+    const verifiedTarget = landingPath(data.session.user)
+    window.setTimeout(() => router.replace(verifiedTarget), 500)
   }
 
   async function handleResendVerificationCode() {
@@ -467,7 +461,8 @@ export default function LoginPage() {
       return
     }
     setSigninOk('Password updated. Opening your workspace...')
-    window.setTimeout(() => router.replace('/workspace'), 600)
+    const resetTarget = landingPath(data.session.user)
+    window.setTimeout(() => router.replace(resetTarget), 600)
   }
 
   const visualTitle =
@@ -723,7 +718,7 @@ export default function LoginPage() {
               <p className="terms-note">
                 By creating an account you agree to the
                 <br />
-                <Link to="/terms-of-service">Terms of Service</Link> &amp; <Link to="/privacy-policy">Privacy Policy</Link> of 9ostech.
+                <Link href="/terms-of-service">Terms of Service</Link> &amp; <Link href="/privacy-policy">Privacy Policy</Link> of 9ostech.
               </p>
               <p className="auth-switch-line">
                 Already registered?{' '}
@@ -879,9 +874,9 @@ export default function LoginPage() {
           <div className="auth-footer">
             <span>© 2026 9ostech</span>
             <span className="dot">•</span>
-            <Link to="/help">Help</Link>
+            <Link href="/help">Help</Link>
             <span className="dot">•</span>
-            <Link to="/privacy-policy">Privacy</Link>
+            <Link href="/privacy-policy">Privacy</Link>
           </div>
         </div>
         <aside className="auth-visual" aria-hidden="true">

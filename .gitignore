@@ -5,7 +5,6 @@ database/mysql/private/
 .env.*
 !.env.example
 !.env.production
-.docker.env
 .vercel
 
 # Dependencies and generated builds
@@ -18,7 +17,6 @@ out/
 
 # Logs
 logs/
-tmp/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -36,3 +34,7 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Upload package (generated, do not commit)
+oakboard-dist-upload.zip
+*.zip

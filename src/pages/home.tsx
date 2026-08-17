@@ -1,6 +1,15 @@
-import { Link } from 'react-router-dom'
+import Link from '@/components/app-link'
+import type { PageMetadata as Metadata } from '@/types/metadata'
 import { PublicInfoShell } from '@/components/public-info-shell'
 import { Icon } from '@/components/ui'
+
+export const metadata: Metadata = {
+  title: 'Employee Onboarding Plan Builder',
+  description: 'Create structured 2-week and 4-week employee onboarding plans, manage role-specific activities, and export polished PDFs with OakBoard.',
+  alternates: {
+    canonical: '/',
+  },
+}
 
 const features = [
   ['01', 'Guided plan creation', 'Build role-specific onboarding plans through clear duration, role, week, and daily activity steps.'],
@@ -8,20 +17,6 @@ const features = [
   ['03', 'Private plan history', 'Save, revisit, edit, archive, restore, and permanently delete plans associated with your own account.'],
   ['04', 'Share-ready output', 'Review the final plan, download a polished PDF, or send the PDF through OakBoard email delivery.'],
 ]
-
-const structuredData = {
-  '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  name: 'OakBoard',
-  applicationCategory: 'BusinessApplication',
-  operatingSystem: 'Web',
-  description: 'Employee onboarding plan builder for creating structured 2-week and 4-week role-specific onboarding plans.',
-  publisher: {
-    '@type': 'Organization',
-    name: 'Oak Street Technologies',
-    url: 'https://9ostech.com/',
-  },
-}
 
 export default function HomePage() {
   return (
@@ -31,11 +26,6 @@ export default function HomePage() {
       title="Build clear onboarding plans that are ready to share."
       description="OakBoard turns role expectations, weekly goals, daily activities, and expected outcomes into a consistent onboarding plan and polished PDF."
     >
-      <script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }}
-        type="application/ld+json"
-      />
-
       <section className="info-section" aria-labelledby="oakboard-capabilities">
         <div className="info-section__heading">
           <span>OakBoard capabilities</span>
@@ -60,8 +50,8 @@ export default function HomePage() {
           <p>Sign in with an approved Oak Street Technologies work account to create, manage, and export onboarding plans securely.</p>
         </div>
         <div className="support-panel__actions">
-          <Link className="support-primary" to="/sign-in">Sign in to OakBoard</Link>
-          <Link to="/help">View the user guide</Link>
+          <Link className="support-primary" href="/sign-in">Sign in to OakBoard</Link>
+          <Link href="/help">View the user guide</Link>
         </div>
       </section>
     </PublicInfoShell>
