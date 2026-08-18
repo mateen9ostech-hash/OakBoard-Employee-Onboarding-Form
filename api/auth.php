@@ -25,11 +25,11 @@ function app_config(): array
 {
     $config = oakboard_config()['app'] ?? null;
     if (!is_array($config)) {
-        throw new RuntimeException('OakBoard application configuration is missing.');
+        throw new RuntimeException('OST Workforce Onboarding application configuration is missing.');
     }
     $secret = (string) (oakboard_config()['security']['session_secret'] ?? $config['session_secret'] ?? '');
     if (strlen($secret) < 32) {
-        throw new RuntimeException('OakBoard session secret must contain at least 32 characters.');
+        throw new RuntimeException('OST Workforce Onboarding session secret must contain at least 32 characters.');
     }
     return $config;
 }
@@ -357,7 +357,7 @@ function signup_user(array $body): array
     try {
         send_verification_email($email, $code);
     } catch (Throwable $error) {
-        error_log('OakBoard verification email failed: ' . $error->getMessage());
+        error_log('OST Workforce Onboarding verification email failed: ' . $error->getMessage());
         json_response(['error' => 'Verification email could not be sent. Check Mailgun domain settings and try again.', 'code' => 'email_delivery_failed'], 502);
     }
 
@@ -437,7 +437,7 @@ function signin_user(array $body): array
     $password = validate_password($body['password'] ?? null);
     $remember = ($body['remember'] ?? false) === true;
     if ($email === null || $password === null) {
-        json_response(['error' => 'Incorrect email or password. If you are new to OakBoard, create an account.', 'code' => 'invalid_credentials'], 401);
+        json_response(['error' => 'Incorrect email or password. If you are new to OST Workforce Onboarding, create an account.', 'code' => 'invalid_credentials'], 401);
     }
 
     $statement = database()->prepare('SELECT * FROM app_users WHERE email = :email LIMIT 1');
@@ -458,7 +458,7 @@ function signin_user(array $body): array
                 'UPDATE app_users SET failed_login_count = :failed, locked_until = :locked_until WHERE id = :id'
             )->execute(['failed' => $failed >= 5 ? 0 : $failed, 'locked_until' => $lockedUntil, 'id' => $user['id']]);
         }
-        json_response(['error' => 'Incorrect email or password. If you are new to OakBoard, create an account.', 'code' => 'invalid_credentials'], 401);
+        json_response(['error' => 'Incorrect email or password. If you are new to OST Workforce Onboarding, create an account.', 'code' => 'invalid_credentials'], 401);
     }
     if ($user['email_verified_at'] === null) {
         json_response(['error' => 'Please verify your work email before signing in.', 'code' => 'email_not_verified'], 403);
@@ -512,7 +512,7 @@ function request_password_reset(array $body): array
             try {
                 send_password_reset_email($email, $resetUrl);
             } catch (Throwable $error) {
-                error_log('OakBoard password reset email failed: ' . $error->getMessage());
+                error_log('OST Workforce Onboarding password reset email failed: ' . $error->getMessage());
             }
         }
     }

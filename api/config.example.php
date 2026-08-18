@@ -29,7 +29,7 @@ return [
         'domain' => 'osdevlabs.com',
         'region' => 'us',
         'from_email' => 'onboarding@osdevlabs.com',
-        'from_name' => 'OakBoard',
+        'from_name' => 'OST Workforce Onboarding',
         'reply_to' => 'support@9ostech.com',
     ],
 ];

@@ -60,7 +60,7 @@ function formatAuthError(failure: string | AuthFailure) {
   const code = typeof failure === 'string' ? '' : failure.code || ''
   const lower = message.toLowerCase()
   if (code === 'email_address_not_authorized') {
-    return 'Verification email cannot be sent to this address yet. Contact OakBoard support.'
+    return 'Verification email cannot be sent to this address yet. Contact OST Workforce Onboarding support.'
   }
   if (code === 'over_email_send_rate_limit') {
     return 'The verification email limit has been reached. Please wait before trying again.'
@@ -69,20 +69,20 @@ function formatAuthError(failure: string | AuthFailure) {
     return 'This email is already registered. Try signing in instead.'
   }
   if (code === 'email_provider_disabled') {
-    return 'New email accounts are currently disabled. Contact OakBoard support.'
+    return 'New email accounts are currently disabled. Contact OST Workforce Onboarding support.'
   }
   if (lower.includes('email not confirmed')) {
     return 'Please confirm your email first — check your inbox.'
   }
   if (lower.includes('invalid login') || lower.includes('invalid')) {
-    return "Incorrect email or password. If you're new to OakBoard, create an account."
+    return "Incorrect email or password. If you're new to OST Workforce Onboarding, create an account."
   }
   if (lower.includes('already registered')) {
     return 'This email is already registered. Try signing in instead.'
   }
   if (!message || message === '{}' || message === '[]' || message === '[object Object]') {
     const diagnostic = code || (typeof failure === 'string' ? '' : failure.status ? `HTTP ${failure.status}` : '')
-    return `Account request failed${diagnostic ? ` (${diagnostic})` : ''}. Please contact OakBoard support.`
+    return `Account request failed${diagnostic ? ` (${diagnostic})` : ''}. Please contact OST Workforce Onboarding support.`
   }
   return message
 }
@@ -344,7 +344,7 @@ export default function LoginPage() {
     setBusy(null)
 
     if (error) {
-      console.error('OakBoard signup failed', {
+      console.error('OST Workforce Onboarding signup failed', {
         code: error.code,
         message: error.message,
         status: error.status,
@@ -467,12 +467,12 @@ export default function LoginPage() {
 
   const visualTitle =
     tab === 'signup'
-      ? 'Create your OakBoard account'
+      ? 'Create your OST Workforce Onboarding account'
       : tab === 'pending'
         ? 'Verify your work email'
         : tab === 'reset'
           ? 'Choose a new password'
-        : 'Welcome Back to OakBoard'
+        : 'Welcome Back to OST Workforce Onboarding'
   const visualSubtitle =
     tab === 'signup'
       ? 'Create a secure work account to start building onboarding plans.'
@@ -492,7 +492,7 @@ export default function LoginPage() {
 
   return (
     <main className="auth-wrap">
-      <section className="auth-card" aria-label="OakBoard authentication">
+      <section className="auth-card" aria-label="OST Workforce Onboarding authentication">
         <div className="auth-form-side">
           <BrandLogo />
           {tab === 'signin' && (
@@ -521,6 +521,11 @@ export default function LoginPage() {
                     onChange={(event) => {
                       clearErrors()
                       setSigninEmail(event.target.value)
+                      const remembered = localStorage.getItem(REMEMBER_EMAIL_KEY)
+                      if (remembered && remembered.toLowerCase() !== event.target.value.trim().toLowerCase()) {
+                        localStorage.removeItem(REMEMBER_EMAIL_KEY)
+                        setRememberMe(false)
+                      }
                     }}
                     placeholder="yourname@9ostech.com"
                     type="email"
@@ -555,7 +560,11 @@ export default function LoginPage() {
 
               <div className="forgot-row">
                 <label className="remember-me" title="Keep me signed in on this device for up to 30 days">
-                  <input checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} type="checkbox" />
+                  <input checked={rememberMe} onChange={(event) => {
+                    const checked = event.target.checked
+                    setRememberMe(checked)
+                    if (!checked) localStorage.removeItem(REMEMBER_EMAIL_KEY)
+                  }} type="checkbox" />
                   <span>Remember Me</span>
                 </label>
                 <button className="link-btn" disabled={busy === 'forgot'} onClick={handleForgotPassword} type="button">

@@ -10,8 +10,10 @@ import { getValidSession, signOut } from '@/lib/auth/client'
 import { useAppRouter } from '@/lib/router'
 import {
   type OnboardingPlan,
+  type PlanDurationWeeks,
   type PlanWeek,
   type SavedOnboardingPlan,
+  normalizePlanDuration,
   writeStoredPlan,
 } from '@/types/plan'
 
@@ -25,7 +27,10 @@ type WorkspaceClientProps = {
   initialView?: WorkspaceView
 }
 
-function SidebarIcon({ name }: { name: 'recent' | 'archive' | 'signout' | 'admin' }) {
+function SidebarIcon({ name }: { name: 'recent' | 'archive' | 'signout' | 'admin' | 'profile' }) {
+  if (name === 'profile') {
+    return <svg aria-hidden="true" className="sidebar-action-icon" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21c.8-4.2 3.5-6 8-6s7.2 1.8 8 6" /></svg>
+  }
   if (name === 'admin') {
     return (
       <svg aria-hidden="true" className="sidebar-action-icon" fill="none" viewBox="0 0 24 24">
@@ -96,14 +101,14 @@ const emptyDay = (day: number) => ({
   outcome: '',
 })
 
-const makeWeeks = (count: 2 | 4): PlanWeek[] =>
+const makeWeeks = (count: PlanDurationWeeks): PlanWeek[] =>
   Array.from({ length: count }, (_, weekIndex) => ({
     title: '',
     goal: '',
     days: Array.from({ length: DPW }, (_, dayIndex) => emptyDay(weekIndex * DPW + dayIndex + 1)),
   }))
 
-function restorePlanWeeks(plan: OnboardingPlan, count: 2 | 4) {
+function restorePlanWeeks(plan: OnboardingPlan, count: PlanDurationWeeks) {
   const restoredWeeks = makeWeeks(count)
   ;(plan.weeks || []).slice(0, count).forEach((week, weekIndex) => {
     restoredWeeks[weekIndex].title = week.title || ''
@@ -118,62 +123,6 @@ function restorePlanWeeks(plan: OnboardingPlan, count: 2 | 4) {
     })
   })
   return restoredWeeks
-}
-
-const sampleWeeks: PlanWeek[] = [
-  {
-    title: 'Orientation & Sprint Workflow Foundation',
-    goal: 'Settle in, understand the product, and learn the sprint structure end-to-end',
-    days: [
-      ['HR & IT System Access', ['Complete HR and IT setup to obtain necessary credentials', 'Secure active access to JIRA, SharePoint, MS Teams, and Confluence', 'Discuss role expectations and team norms', 'Meet with Senior Manager IT for context on PMO direction and leadership expectations'], 'System access ready and clear understanding of success metrics'],
-      ['Sprint Workflow Review', ['Read the Sprint Execution Workflow document thoroughly from cover to cover', 'Walk through the active sprint on JIRA with the Project Manager to understand board layout', 'Review JIRA fields including dev/SQA dates, grooming flags, and story points', 'Attend the Enwage team daily standup as a passive observer'], 'Ability to explain the 15-day sprint cycle and identify healthy JIRA tickets'],
-      ['Reporting Fundamentals', ['Review the Planning Report and Demo Report from the previous sprint on SharePoint', 'Learn the broader PMO scope and how the Scrum Master contributes to organizational goals', 'Study the SharePoint repository structure for SOPs and PMO documentation', 'Shadow the Project Manager during departmental coordination meetings'], 'Understanding of PMO deliverables and documentation standards'],
-      ['Sprint Initiation Observation', ['Observe the Sprint Planning session including scope lock and team commitments', 'Shadow the drafting of the Sprint Planning Report for stakeholders', 'Learn about the start of the regression track for the previous sprint cycle', 'Observe the daily standup and note how the team transitions to new tasks'], 'Witnessed the formal initiation of a new 15-day sprint cycle'],
-      ['Development Tracking', ['Observe the closure of the regression track', 'Note how regression bugs are reported, prioritized, and assigned to developers', 'Review Confluence decision logs and technical debt information', 'Attend daily standup and track the movement of dev tickets in JIRA'], 'Learned how regression progress is monitored and closed by the PMO'],
-    ].map((day, index) => toPlanDay(index + 1, day)),
-  },
-  {
-    title: 'Deep Dive Shadowing',
-    goal: 'Follow the Project Manager through a complete sprint to understand every PMO touchpoint',
-    days: [
-      ['Resource Prioritization', ['Observe how development resources are re-prioritized for regression bug fixing', 'Perform a supervised JIRA audit to identify missing dates or assignees', 'Monitor daily standup specifically for early identification of blockers', "Review the current sprint's JIRA hygiene status with the Project Manager"], 'Identified JIRA hygiene gaps under direct supervision'],
-      ['Grooming Introduction', ['Shadow the Project Manager during Grooming Session 1', 'Note which stakeholders attend and how the backlog is refined', 'Draft practice notes regarding key commitments and risks noted in the session', 'Attend standup and verify if blockers raised are being addressed'], 'Understanding of backlog grooming and initial risk identification'],
-      ['Release Readiness', ['Learn release readiness checks during the release finalization stage', 'Draft a practice summary of one Risk Report cycle based on active sprint data', 'Understand what triggers a risk flag and how it is communicated to leadership', 'Attend standup and cross-reference JIRA ticket statuses'], 'Knowledge of release finalization and risk reporting triggers'],
-      ['UAT Smoke', ['Observe the UAT Smoke session and second Grooming Session', 'Review how UAT findings are initially documented by the SQA lead', 'Draft notes from all grooming sessions attended for PM review', 'Attend daily standup to track progress against the sprint midpoint'], 'Understanding of the UAT smoke process and second grooming iteration'],
-      ['Production Verification', ['Observe the SQA team during production verification of the previous release', 'See how production findings are logged and communicated', 'Perform a second supervised JIRA audit and share findings with the PM', 'Shadow the Project Manager in updating the departmental risk log'], 'Exposure to production environment validation and reporting'],
-    ].map((day, index) => toPlanDay(index + 6, day)),
-  },
-  {
-    title: 'Hands-On Practice',
-    goal: 'Take responsibility for ceremonies and PMO outputs with Project Manager coaching',
-    days: [
-      ['Checkpoint Management', ['Run the daily standup independently with the Project Manager observing', 'Conduct an independent JIRA hygiene audit and flag gaps to the team', 'Monitor the dev completion checkpoint and track QA bucket movement', 'Update story statuses in JIRA based on standup outcomes'], 'Independent standup facilitation and completion of solo JIRA audit'],
-      ['Backlog Shaping', ['Co-facilitate Grooming Session 3 and update the JIRA grooming field to Yes', 'Draft the Risk Report and review it with the Project Manager before sharing', 'Lead the standup and ensure all blockers are logged in JIRA', 'Verify that groomed stories have sufficient acceptance criteria'], 'Grooming session facilitated and professional risk report drafted'],
-      ['Quality Deadlines', ['Track progress on the last primary QA day and ensure staging iteration deadlines are met', 'Run the daily standup independently and facilitate blocker resolution', 'Conduct a JIRA audit focusing on missing dev/SQA dates', 'Communicate identified hygiene gaps to the relevant team members'], 'Team updated on JIRA hygiene and QA progress toward staging'],
-      ['Staging Closure', ["Co-facilitate Grooming Session 4 and finalize next sprint's backlog refinement", 'Observe and support the staging wrap-up process with SQA', 'Run the daily standup and update the PM on sprint health', 'Draft the final Risk Report for the week'], 'Final grooming session complete and staging status clearly documented'],
-      ['UAT Coordination', ['Track UAT findings and coordinate resolutions with SQA and Dev leads', 'Run the daily standup solo and ensure UAT blockers are prioritized', 'Begin compiling sprint statistics and inputs for the Day 14 Demo Report', 'Review UAT outcomes with the Project Manager for stakeholder communication'], 'UAT findings documented and sprint statistics prepared for lock'],
-    ].map((day, index) => toPlanDay(index + 11, day)),
-  },
-  {
-    title: 'Independent Sprint Driver',
-    goal: 'Own the full sprint cycle including ceremonies, targets, and reporting',
-    days: [
-      ['Sprint Lock', ['Lead the Sprint Lock Day process independently', 'Perform a comprehensive JIRA audit and compile final sprint statistics', 'Prepare the Demo Report including completed vs. planned scope and velocity', 'Facilitate the final standup of the active sprint cycle'], 'Sprint statistics and demo report finalized for stakeholder presentation'],
-      ['Sprint Closure', ['Lead the Sprint Demo session independently for stakeholders', 'Coordinate and conduct the Bug Bash execution', 'Officially close the sprint in JIRA and handle any necessary spillovers', 'Send the Demo/Closure report to all stakeholders'], 'Sprint officially closed and results communicated independently'],
-      ['Independent Planning', ['Lead the Sprint Planning session independently for the new cycle', 'Define sprint targets collaboratively with the Product Manager and Dev team', 'Lock the sprint scope and send the Sprint Planning Report to stakeholders', 'Initiate the regression track for the previous release'], 'New sprint cycle successfully planned and targets locked independently'],
-      ['Execution Oversight', ['Drive the daily standup solo and ensure the team is aligned on Day 2 tasks', 'Resolve or escalate blockers identified during the standup on the same day', 'Maintain the daily JIRA audit log to ensure data hygiene from the start', 'Coordinate with the Technical Project Manager on early dependencies'], 'Execution track initiated with proactive blocker resolution'],
-      ['Risk Visibility', ['Produce and send the Risk Report independently highlighting at-risk stories', 'Coordinate the closure of the regression cycle with the SQA Lead', 'Perform a JIRA audit and proactively chase missing dates or assignees', 'Lead the daily standup and track dev progress against the Planning Report'], 'Risk visibility established and regression track closed on schedule'],
-    ].map((day, index) => toPlanDay(index + 16, day)),
-  },
-]
-
-function toPlanDay(day: number, data: unknown[]) {
-  return {
-    ...emptyDay(day),
-    title: limitText(String(data[0] ?? ''), DAY_TITLE_MAX),
-    tasks: limitTasks(data[1]),
-    outcome: limitText(String(data[2] ?? ''), DAY_OUTCOME_MAX),
-  }
 }
 
 function limitText(value: unknown, max: number) {
@@ -306,7 +255,7 @@ function parseNotebookPlan(rawValue: string): ImportResult['plan'] {
   }
 
   const parsedDayCount = weeks.reduce((total, week) => total + (week.days?.length || 0), 0)
-  const requestedWeeks = weeks.length >= 4 || parsedDayCount > DPW * 2 ? 4 : 2
+  const requestedWeeks = normalizePlanDuration(Math.max(weeks.length, Math.ceil(parsedDayCount / DPW)))
   return {
     role: fallbackRole(source),
     reports: fallbackReports(source),
@@ -370,15 +319,18 @@ export default function WorkspaceClient({
 }: WorkspaceClientProps) {
   const router = useAppRouter()
   const initialPlanData = initialPlan?.plan || null
-  const initialWeekCount: 2 | 4 = Number(initialPlanData?.nWeeks) === 4 ? 4 : 2
+  const initialWeekCount = normalizePlanDuration(initialPlanData?.nWeeks)
   const editingOnLoad = initialView === 'edit' && Boolean(initialPlanData)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
+  // Start every workspace visit expanded. Collapsing remains available for the
+  // current view, but users should never land on an unexplained icon-only nav.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const editingPlanId = editingOnLoad ? initialPlan?.id || null : null
   const [role, setRole] = useState(editingOnLoad ? initialPlanData?.role || '' : '')
   const [startDate, setStartDate] = useState(editingOnLoad ? initialPlanData?.startDate || nextWeekdayIso() : nextWeekdayIso())
   const [reports, setReports] = useState(editingOnLoad ? initialPlanData?.reportsTo || initialPlanData?.reports || '' : '')
   const [collab, setCollab] = useState(editingOnLoad ? initialPlanData?.collaboratesWith || initialPlanData?.collab || '' : '')
-  const [nWeeks, setNWeeks] = useState<2 | 4>(editingOnLoad ? initialWeekCount : 2)
+  const [nWeeks, setNWeeks] = useState<PlanDurationWeeks>(editingOnLoad ? initialWeekCount : 2)
+  const [customDuration, setCustomDuration] = useState(editingOnLoad && ![2, 4].includes(initialWeekCount))
   const [weeks, setWeeks] = useState<PlanWeek[]>(() => editingOnLoad && initialPlanData ? restorePlanWeeks(initialPlanData, initialWeekCount) : makeWeeks(2))
   const [openWeeks, setOpenWeeks] = useState(() => new Set(editingOnLoad ? Array.from({ length: initialWeekCount }, (_, index) => index) : [0]))
   const [openDays, setOpenDays] = useState(() => new Set<number>())
@@ -405,6 +357,7 @@ export default function WorkspaceClient({
   const [planActionBusy, setPlanActionBusy] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [isAdmin, setIsAdmin] = useState(false)
+  const [profileAvatar, setProfileAvatar] = useState<string | null>(null)
   const wizardErrorRef = useRef<HTMLDivElement | null>(null)
 
   // The wizard body scrolls, so a validation message can land off-screen on a
@@ -431,10 +384,17 @@ export default function WorkspaceClient({
       setDisplayName(getUserDisplayName(sessionResult.session.user))
       setIsAdmin(Boolean(sessionResult.session.user.is_admin))
 
-      const response = await apiFetch('/api/plans?limit=8', { cache: 'no-store' })
+      const [response, profileResponse] = await Promise.all([
+        apiFetch('/api/plans?limit=8', { cache: 'no-store' }),
+        apiFetch('/api/profile', { cache: 'no-store' }).catch(() => null),
+      ])
       const result = await response.json().catch(() => null) as { plans?: SavedOnboardingPlan[] } | null
+      const profileResult = profileResponse?.ok
+        ? await profileResponse.json().catch(() => null) as { profile?: { avatar?: string | null } } | null
+        : null
 
       if (!active) return
+      setProfileAvatar(profileResult?.profile?.avatar || null)
       if (!response.ok || !result?.plans) {
         setSavedPlans([])
         setHistoryStatus('Recent plans could not be loaded from the database.')
@@ -497,7 +457,8 @@ export default function WorkspaceClient({
     ? Math.max(0, wizardStep - 1)
     : creationMode === 'import' && wizardStep === 3 ? 2 : wizardStep
 
-  function setDuration(next: 2 | 4) {
+  function setDuration(nextValue: PlanDurationWeeks) {
+    const next = normalizePlanDuration(nextValue)
     setDurationChosen(true)
     setNWeeks(next)
     setWeeks((current) => {
@@ -567,16 +528,6 @@ export default function WorkspaceClient({
     })
   }
 
-  function fillDemoData() {
-    setRole('Scrum Master Intern')
-    setReports('Project Manager')
-    setCollab('PMO Team')
-    setStartDate('2026-06-22')
-    setWeeks(sampleWeeks.slice(0, nWeeks).map((week) => ({ ...week, days: week.days.map((day) => ({ ...day })) })))
-    setNotice('Sample plan filled. Review it before generating.')
-    setError('')
-  }
-
   function resetAll() {
     // While editing, "Clear" blanking a real saved plan is never what the
     // person means, so it reverts the form to the stored version instead.
@@ -606,6 +557,7 @@ export default function WorkspaceClient({
   }
 
   function chooseCreationMode(mode: CreationMode) {
+    if (mode === 'import' && !isAdmin) return
     setCreationMode(mode)
     setWizardStep(1)
     setError('')
@@ -627,7 +579,7 @@ export default function WorkspaceClient({
 
   function goToRoleStep() {
     if (!durationChosen) {
-      setError('Choose a 2-week or 4-week plan to continue.')
+      setError('Choose a plan duration between 1 and 8 weeks to continue.')
       return
     }
     setError('')
@@ -796,28 +748,33 @@ export default function WorkspaceClient({
       return
     }
 
-    const endpoint = editingPlanId ? `/api/plans/${encodeURIComponent(editingPlanId)}` : '/api/plans'
-    const response = await apiFetch(endpoint, {
-      method: editingPlanId ? 'PATCH' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan }),
-    })
-    const result = await response.json().catch(() => null) as { plan?: SavedOnboardingPlan } | null
+    try {
+      const endpoint = editingPlanId ? `/api/plans/${encodeURIComponent(editingPlanId)}` : '/api/plans'
+      const response = await apiFetch(endpoint, {
+        method: editingPlanId ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      })
+      const result = await response.json().catch(() => null) as { plan?: SavedOnboardingPlan; error?: string } | null
 
-    if (!response.ok || !result?.plan) {
-      setError('Your plan could not be saved to the database. Please try again.')
+      if (!response.ok || !result?.plan) {
+        setError(result?.error || 'Your plan could not be saved to the database. Please try again.')
+        setIsGenerating(false)
+        return
+      }
+
+      const savedPlan = result.plan
+      setSavedPlans((current) => [savedPlan, ...current.filter((saved) => saved.id !== savedPlan.id)].slice(0, 8))
+      writeStoredPlan({ ...plan, id: savedPlan.id })
+      router.push(`/plans/${savedPlan.id}`)
+    } catch {
+      setError('The local API could not be reached. Please retry after the server is running.')
       setIsGenerating(false)
-      return
     }
-
-    const savedPlan = result.plan
-    setSavedPlans((current) => [savedPlan, ...current.filter((saved) => saved.id !== savedPlan.id)].slice(0, 8))
-    writeStoredPlan({ ...plan, id: savedPlan.id })
-    router.push(`/plans/${savedPlan.id}`)
   }
 
   function applyImportedPlan(plan: ImportResult['plan']) {
-    const importedWeeks = Number(plan.nWeeks) === 4 ? 4 : 2
+    const importedWeeks = normalizePlanDuration(plan.nWeeks)
     const source = importText
     setDuration(importedWeeks)
     setRole(limitText(isMissingValue(plan.role) ? fallbackRole(source) : plan.role, 80))
@@ -866,7 +823,7 @@ export default function WorkspaceClient({
   return (
     <main className={`form-page ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <div className="fill-shell">
-        <aside className="recent-sidebar" aria-label="OakBoard sidebar" id="oakboard-sidebar">
+        <aside className="recent-sidebar" aria-label="OST Workforce Onboarding sidebar" id="oakboard-sidebar">
           <button
             aria-controls="oakboard-sidebar"
             aria-expanded={!sidebarCollapsed}
@@ -883,9 +840,9 @@ export default function WorkspaceClient({
           </button>
 
           <div className="side-brand">
-            <div className="side-logo" title="OakBoard"><Image src={oakboardLogo} alt="" height={40} width={40} /></div>
+            <div className="side-logo" title="OST Workforce Onboarding"><Image src={oakboardLogo} alt="" height={40} width={40} /></div>
             <div>
-              <strong>OakBoard</strong>
+              <strong>OST Workforce Onboarding</strong>
               <span>Onboarding Plans</span>
             </div>
           </div>
@@ -957,6 +914,23 @@ export default function WorkspaceClient({
           </div>
 
           <div className="side-footer">
+            <button aria-label="Open profile" className="side-footer-item" onClick={() => router.push('/profile')} title="My profile" type="button">
+              {profileAvatar
+                ? <img alt="" aria-hidden="true" className="sidebar-profile-avatar" src={profileAvatar} />
+                : <SidebarIcon name="profile" />}
+              <span>My profile</span>
+            </button>
+            <button
+              aria-label="Open archived plans"
+              aria-pressed={archiveView}
+              className={`side-footer-item archive ${archiveView ? 'active' : ''}`}
+              onClick={() => router.push('/plans/archived')}
+              title="Archive"
+              type="button"
+            >
+              <SidebarIcon name="archive" />
+              <span>Archive</span>
+            </button>
             {isAdmin && (
               <button
                 aria-label="Open admin console"
@@ -969,17 +943,6 @@ export default function WorkspaceClient({
                 <span>Admin</span>
               </button>
             )}
-            <button
-              aria-label="Open archived plans"
-              aria-pressed={archiveView}
-              className={`side-footer-item archive ${archiveView ? 'active' : ''}`}
-              onClick={() => router.push('/plans/archived')}
-              title="Archive"
-              type="button"
-            >
-              <SidebarIcon name="archive" />
-              <span>Archive</span>
-            </button>
             <button aria-label="Sign out" className="side-footer-item danger" onClick={handleSignOut} title="Sign out" type="button">
               <SidebarIcon name="signout" />
               <span>Sign out</span>
@@ -1035,11 +998,11 @@ export default function WorkspaceClient({
                       <span><strong>Fill Manually</strong><small>Build the plan step by step with guided fields.</small></span>
                       <span className="creation-method-arrow"><Icon name="arrow-right" /></span>
                     </button>
-                    <button onClick={() => chooseCreationMode('import')} type="button">
+                    {isAdmin && <button onClick={() => chooseCreationMode('import')} type="button">
                       <span className="creation-method-icon"><Icon name="arrow-down" /></span>
                       <span><strong>Import Data</strong><small>Paste structured NotebookLM data and review the filled plan.</small></span>
                       <span className="creation-method-arrow"><Icon name="arrow-right" /></span>
-                    </button>
+                    </button>}
                   </section>
                 )}
 
@@ -1049,12 +1012,35 @@ export default function WorkspaceClient({
           <div className="sec-h"><div className="sec-ic"><Icon name="plus" /></div><span className="sec-t">Plan Duration</span></div>
           <div className="sec-b">
             <div className="dur-row">
-              {[2, 4].map((value) => (
-                <button className={`dur-opt ${durationChosen && nWeeks === value ? 'sel' : ''}`} key={value} onClick={() => setDuration(value as 2 | 4)} type="button">
+              {([2, 4] as PlanDurationWeeks[]).map((value) => (
+                <button className={`dur-opt ${durationChosen && !customDuration && nWeeks === value ? 'sel' : ''}`} key={value} onClick={() => { setCustomDuration(false); setDuration(value) }} type="button">
                   <span className="dur-rd"><span className="dur-dot" /></span>
                   <span className="dur-txt"><strong>{value}-Week Plan</strong><span>{value * 5} working days</span></span>
                 </button>
               ))}
+              {customDuration ? (
+                <label className="dur-opt dur-opt-custom sel">
+                  <span className="dur-rd"><span className="dur-dot" /></span>
+                  <span className="dur-txt"><strong>Custom duration</strong><span>Choose 1 to 8 weeks</span></span>
+                  <span className="dur-custom-control">
+                    <input
+                      aria-label="Custom plan duration in weeks"
+                      autoFocus
+                      max="8"
+                      min="1"
+                      onChange={(event) => setDuration(normalizePlanDuration(event.target.value))}
+                      type="number"
+                      value={nWeeks}
+                    />
+                    <span>weeks</span>
+                  </span>
+                </label>
+              ) : (
+                <button className="dur-opt" onClick={() => { setCustomDuration(true); setDuration(nWeeks) }} type="button">
+                  <span className="dur-rd"><span className="dur-dot" /></span>
+                  <span className="dur-txt"><strong>Custom duration</strong><span>Choose 1 to 8 weeks</span></span>
+                </button>
+              )}
             </div>
           </div>
         </section>
@@ -1067,7 +1053,7 @@ export default function WorkspaceClient({
                       <span className="creation-method-icon"><Icon name="arrow-down" /></span>
                       <div>
                         <h3 id="wizard-import-title">Import your plan data</h3>
-                        <p>Paste the structured NotebookLM output. OakBoard will detect the duration and fill role, week, task, and outcome fields.</p>
+                        <p>Paste the structured NotebookLM output. OST Workforce Onboarding will detect the duration and fill role, week, task, and outcome fields.</p>
                       </div>
                     </div>
                     <div className="import-field">
@@ -1200,7 +1186,6 @@ export default function WorkspaceClient({
                   <>
                     <div className="plan-wizard-tools">
                       <Button onClick={() => { setWizardStep(creationMode === 'import' ? 1 : 2); setNotice(''); setError('') }} type="button" variant="secondary">Back</Button>
-                      {creationMode === 'manual' && !editingOnLoad && <Button icon="check" onClick={fillDemoData} type="button" variant="soft">Fill Sample</Button>}
                       <Button onClick={resetAll} type="button" variant="secondary">{editingOnLoad ? 'Revert' : 'Clear'}</Button>
                     </div>
                     <Button disabled={isGenerating} icon={editingOnLoad ? 'check' : 'plus'} type="submit" variant="primary">

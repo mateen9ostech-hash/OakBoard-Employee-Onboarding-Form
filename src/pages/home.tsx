@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui'
 
 export const metadata: Metadata = {
   title: 'Employee Onboarding Plan Builder',
-  description: 'Create structured 2-week and 4-week employee onboarding plans, manage role-specific activities, and export polished PDFs with OakBoard.',
+  description: 'Create structured 1-to-8-week employee onboarding plans, manage role-specific activities, and export polished PDFs with OST Workforce Onboarding.',
   alternates: {
     canonical: '/',
   },
@@ -13,9 +13,9 @@ export const metadata: Metadata = {
 
 const features = [
   ['01', 'Guided plan creation', 'Build role-specific onboarding plans through clear duration, role, week, and daily activity steps.'],
-  ['02', 'Two flexible durations', 'Choose a focused 2-week plan or a complete 4-week onboarding journey with working-day scheduling.'],
+  ['02', 'Flexible duration', 'Choose a quick 2-week or 4-week plan, or set any custom duration from 1 to 8 weeks.'],
   ['03', 'Private plan history', 'Save, revisit, edit, archive, restore, and permanently delete plans associated with your own account.'],
-  ['04', 'Share-ready output', 'Review the final plan, download a polished PDF, or send the PDF through OakBoard email delivery.'],
+  ['04', 'Share-ready output', 'Review the final plan, download a polished PDF, or send the PDF through OST Workforce Onboarding email delivery.'],
 ]
 
 export default function HomePage() {
@@ -24,11 +24,11 @@ export default function HomePage() {
       current="home"
       eyebrow="Employee onboarding, structured"
       title="Build clear onboarding plans that are ready to share."
-      description="OakBoard turns role expectations, weekly goals, daily activities, and expected outcomes into a consistent onboarding plan and polished PDF."
+      description="OST Workforce Onboarding turns role expectations, weekly goals, daily activities, and expected outcomes into a consistent onboarding plan and polished PDF."
     >
       <section className="info-section" aria-labelledby="oakboard-capabilities">
         <div className="info-section__heading">
-          <span>OakBoard capabilities</span>
+          <span>OST Workforce Onboarding capabilities</span>
           <h2 id="oakboard-capabilities">From role details to a complete onboarding document</h2>
         </div>
         <div className="help-step-grid">
@@ -50,7 +50,7 @@ export default function HomePage() {
           <p>Sign in with an approved Oak Street Technologies work account to create, manage, and export onboarding plans securely.</p>
         </div>
         <div className="support-panel__actions">
-          <Link className="support-primary" href="/sign-in">Sign in to OakBoard</Link>
+          <Link className="support-primary" href="/sign-in">Sign in to OST Workforce Onboarding</Link>
           <Link href="/help">View the user guide</Link>
         </div>
       </section>

@@ -1,6 +1,6 @@
--- OakBoard migration: forced password change on first sign-in
+-- OST Workforce Onboarding migration: forced password change on first sign-in
 --
--- Run this once against an existing OakBoard database BEFORE deploying the
+-- Run this once against an existing OST Workforce Onboarding database BEFORE deploying the
 -- release that adds it. A fresh install created from schema.sql already
 -- contains the column and does not need this file.
 --

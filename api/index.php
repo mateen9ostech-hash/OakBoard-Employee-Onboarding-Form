@@ -3,14 +3,14 @@
 declare(strict_types=1);
 
 // Fail with a clear message instead of a blank/500 page when the cPanel domain
-// is set to an unsupported PHP version. OakBoard's PHP uses 8.1 syntax, so an
+// is set to an unsupported PHP version. OST Workforce Onboarding's PHP uses 8.1 syntax, so an
 // older interpreter would otherwise abort while parsing bootstrap.php. This
 // check runs before that file is loaded, so keep it free of 8.1-only syntax.
 if (PHP_VERSION_ID < 80100) {
     http_response_code(500);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([
-        'error' => 'OakBoard requires PHP 8.1 or newer. In cPanel open MultiPHP Manager and set this domain to PHP 8.1, 8.2, or 8.3, then reload.',
+        'error' => 'OST Workforce Onboarding requires PHP 8.1 or newer. In cPanel open MultiPHP Manager and set this domain to PHP 8.1, 8.2, or 8.3, then reload.',
         'php_version' => PHP_VERSION,
     ]);
     exit;
@@ -20,6 +20,7 @@ require __DIR__ . '/bootstrap.php';
 require __DIR__ . '/mailgun.php';
 require __DIR__ . '/auth.php';
 require __DIR__ . '/admin.php';
+require __DIR__ . '/profile.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
     http_response_code(204);
@@ -124,6 +125,16 @@ try {
         json_response(['error' => 'Administrator route not found.'], 404);
     }
 
+    if (($segments[0] ?? '') === 'profile') {
+        if ($method === 'GET') {
+            json_response(get_profile((string) $user['id']));
+        }
+        if ($method === 'PATCH') {
+            json_response(update_profile((string) $user['id'], request_json()));
+        }
+        json_response(['error' => 'Profile method not allowed.'], 405);
+    }
+
     // Lets the plan editor show the address the PDF will actually be sent from
     // instead of a hard-coded one. Sits behind authenticated_user() so the
     // configured sender is never exposed anonymously.
@@ -190,7 +201,7 @@ try {
         } catch (InvalidArgumentException $error) {
             json_response(['error' => $error->getMessage()], 422);
         } catch (Throwable $error) {
-            error_log('OakBoard plan email failed: ' . $error->getMessage());
+            error_log('OST Workforce Onboarding plan email failed: ' . $error->getMessage());
             try {
                 database()->prepare(
                     'INSERT INTO onboarding_email_logs
@@ -205,7 +216,7 @@ try {
                     'error' => mb_substr($error->getMessage(), 0, 1_000),
                 ]);
             } catch (Throwable $logError) {
-                error_log('OakBoard email log failure: ' . $logError->getMessage());
+                error_log('OST Workforce Onboarding email log failure: ' . $logError->getMessage());
             }
             json_response(['error' => 'Email could not be sent. Check Mailgun domain verification and try again.'], 502);
         }
@@ -370,6 +381,6 @@ try {
 
     json_response(['error' => 'Method not allowed.'], 405);
 } catch (Throwable $error) {
-    error_log('OakBoard API failure: ' . $error->getMessage());
-    json_response(['error' => 'OakBoard could not complete this request.'], 500);
+    error_log('OST Workforce Onboarding API failure: ' . $error->getMessage());
+    json_response(['error' => 'OST Workforce Onboarding could not complete this request.'], 500);
 }

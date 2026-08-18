@@ -1,6 +1,6 @@
--- OakBoard migration: administrator role on app_users
+-- OST Workforce Onboarding migration: administrator role on app_users
 --
--- Run this once against an existing OakBoard database BEFORE deploying the
+-- Run this once against an existing OST Workforce Onboarding database BEFORE deploying the
 -- release that adds the admin console. A fresh install created from
 -- schema.sql already contains the column and does not need this file.
 --

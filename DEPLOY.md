@@ -1,10 +1,10 @@
-# OakBoard cPanel Deployment (Quick Guide)
+# OST Workforce Onboarding cPanel Deployment (Quick Guide)
 
-This is the short, do-this-and-it-works guide for deploying OakBoard on cPanel.
+This is the short, do-this-and-it-works guide for deploying OST Workforce Onboarding on cPanel.
 For the full team handoff (auto `git pull` deploy, rollback, acceptance tests)
 see [`TEAMLEAD-CPANEL-GUIDE.md`](TEAMLEAD-CPANEL-GUIDE.md).
 
-OakBoard is a **built React SPA + same-origin PHP 8 API**. Production always
+OST Workforce Onboarding is a **built React SPA + same-origin PHP 8 API**. Production always
 serves the **built `dist/` output**, never the source files.
 
 ---
@@ -44,7 +44,7 @@ can also be created from the contents of `dist/`.
 
 ## B. One-time server setup
 
-1. **Database** — cPanel → phpMyAdmin → select the OakBoard database → import
+1. **Database** — cPanel → phpMyAdmin → select the OST Workforce Onboarding database → import
    `database/mysql/schema.sql`.
 2. **Private config** — copy `api/config.example.php`, fill in the real MySQL,
    Mailgun, app URL, and a `session_secret` of **32+ characters**. Save it as
@@ -56,7 +56,7 @@ can also be created from the contents of `dist/`.
    Recommended `app` values:
    ```php
    'app' => [
-       'url' => 'https://onboarding.9ostech.com',
+       'url' => 'https://onboardingplan.9ostech.com',
        'allowed_email_domain' => '9ostech.com',
        // Bootstrap super administrator for the admin console. This account can
        // never be locked, demoted, or deleted from the UI, so admin access
@@ -72,7 +72,7 @@ can also be created from the contents of `dist/`.
 ## C. Upload the built files
 
 1. cPanel → **File Manager** → open the subdomain's **document root**
-   (e.g. `.../onboarding.9ostech.com`).
+   (e.g. `.../onboardingplan.9ostech.com`).
 2. File Manager → **Settings** → tick **Show Hidden Files (dotfiles)** so
    `.htaccess` is visible.
 3. Upload `oakboard-dist-upload.zip` here and **Extract** it.
@@ -85,8 +85,8 @@ can also be created from the contents of `dist/`.
 ## D. Verify
 
 ```bash
-curl -I  https://onboarding.9ostech.com/sign-in
-curl -i  https://onboarding.9ostech.com/api/auth/session
+curl -I  https://onboardingplan.9ostech.com/sign-in
+curl -i  https://onboardingplan.9ostech.com/api/auth/session
 ```
 
 Expected:
@@ -97,7 +97,7 @@ Expected:
 - `index.html`, `package.json`, `/src`, and the SQL schema are **not** public.
 
 Then test end to end: signup + 6-digit email code, sign in, recovery email,
-sign out, create/edit/preview/archive/restore/delete a plan, 2-week and 4-week
+sign out, create/edit/preview/archive/restore/delete a plan, 1-, 2-, 4-, and 8-week
 PDF download, and emailing a plan PDF.
 
 ## E. Admin console
@@ -143,6 +143,8 @@ An **existing** database is upgraded by running the files in
 | --- | --- | --- |
 | `2026-07-28-add-user-role.sql` | Admin console | `app_users.role` |
 | `2026-07-29-add-must-change-password.sql` | Forced password change | `app_users.must_change_password` |
+| `2026-08-17-expand-plan-duration.sql` | 1–8 week plans | Expands duration checks to 1–8 |
+| `2026-08-17-user-profiles.sql` | Self-service profiles | Profile details and profile image |
 
 > **Order matters.** Run the migration **before** uploading the new `dist/`.
 > The API reads `app_users.role` on every authenticated request, so uploading

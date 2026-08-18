@@ -1,6 +1,6 @@
-# OakBoard MySQL Database
+# OST Workforce Onboarding MySQL Database
 
-This directory contains OakBoard's complete cPanel MySQL schema. The first deployment has no legacy users or plans to import.
+This directory contains OST Workforce Onboarding's complete cPanel MySQL schema. The first deployment has no legacy users or plans to import.
 
 ## Requirements
 
@@ -29,8 +29,10 @@ needs them.
 | --- | --- |
 | `2026-07-28-add-user-role.sql` | Admin console. Adds `app_users.role`. |
 | `2026-07-29-add-must-change-password.sql` | Forced password change for administrator-created accounts. Adds `app_users.must_change_password`. |
+| `2026-08-17-expand-plan-duration.sql` | Allows onboarding plans and imports from 1 through 8 weeks. |
+| `2026-08-17-user-profiles.sql` | Adds name, role, department, phone, timezone, and profile-image fields. |
 
-The admin console reads `app_users.role` on every authenticated request, so run
-this migration **before** deploying that release or every API call will fail.
+The application reads these columns at runtime, so apply every migration required
+by the release **before** deploying its frontend and PHP API.
 
 Never add real credentials to Git, screenshots, chat messages, `.env` files, or the public document root.

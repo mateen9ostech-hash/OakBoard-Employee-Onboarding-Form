@@ -51,12 +51,12 @@ function oakboard_config(): array
     }
 
     if ($path === '') {
-        throw new RuntimeException('OakBoard server configuration is missing.');
+        throw new RuntimeException('OST Workforce Onboarding server configuration is missing.');
     }
 
     $loaded = require $path;
     if (!is_array($loaded) || !isset($loaded['mysql'], $loaded['app'])) {
-        throw new RuntimeException('OakBoard server configuration is invalid.');
+        throw new RuntimeException('OST Workforce Onboarding server configuration is invalid.');
     }
 
     $config = $loaded;
@@ -77,8 +77,12 @@ function database(): PDO
         }
     }
 
-    $host = $mysql['host'];
-    $port = (int) ($mysql['port'] ?? 3306);
+    // Local developers may point the same private config at a remote MySQL
+    // host without editing the production file, where localhost must remain.
+    $hostOverride = trim((string) (getenv('OAKBOARD_DB_HOST') ?: ''));
+    $portOverride = trim((string) (getenv('OAKBOARD_DB_PORT') ?: ''));
+    $host = $hostOverride !== '' ? $hostOverride : $mysql['host'];
+    $port = $portOverride !== '' ? (int) $portOverride : (int) ($mysql['port'] ?? 3306);
     $databaseName = $mysql['database'];
     $dsn = "mysql:host={$host};port={$port};dbname={$databaseName};charset=utf8mb4";
 
@@ -127,7 +131,7 @@ function valid_uuid(string $value): bool
 
 function utc_strtotime(mixed $value): int
 {
-    // Every OakBoard DATETIME column holds UTC: PHP writes them with gmdate()
+    // Every OST Workforce Onboarding DATETIME column holds UTC: PHP writes them with gmdate()
     // and MySQL defaults run under the connection time_zone of '+00:00'. A bare
     // datetime string has no zone designator, so strtotime() would read it in
     // the server's local timezone and shift the result on any cPanel host whose
@@ -143,7 +147,7 @@ function normalized_plan(mixed $value): ?array
     }
     $role = isset($value['role']) && is_string($value['role']) ? trim($value['role']) : '';
     $weeks = (int) ($value['nWeeks'] ?? 0);
-    if ($role === '' || !in_array($weeks, [2, 4], true)) {
+    if ($role === '' || $weeks < 1 || $weeks > 8) {
         return null;
     }
     $value['role'] = mb_substr($role, 0, 160);
@@ -157,7 +161,7 @@ function saved_plan(array $row): array
     if (!is_array($decoded)) {
         throw new RuntimeException('Stored plan JSON is invalid.');
     }
-    $weeks = (int) $row['duration_weeks'] === 4 ? 4 : 2;
+    $weeks = min(8, max(1, (int) $row['duration_weeks']));
     $decoded['id'] = $row['id'];
     $decoded['nWeeks'] = $weeks;
     return [

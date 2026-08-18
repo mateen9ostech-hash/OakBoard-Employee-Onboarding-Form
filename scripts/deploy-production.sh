@@ -12,11 +12,11 @@ if [[ -x /opt/cpanel/ea-nodejs22/bin/npm ]]; then
 fi
 
 if ! command -v npm >/dev/null 2>&1; then
-  echo "OakBoard deployment failed: npm is not available." >&2
+  echo "OST Workforce Onboarding deployment failed: npm is not available." >&2
   exit 1
 fi
 
-echo "Building OakBoard production files in ${DIST_ROOT}"
+echo "Building OST Workforce Onboarding production files in ${DIST_ROOT}"
 if [[ "${OAKBOARD_SKIP_INSTALL:-0}" != "1" ]]; then
   npm ci --no-audit --no-fund
 else
@@ -33,18 +33,20 @@ required_files=(
   "${DIST_ROOT}/api/auth.php"
   "${DIST_ROOT}/api/bootstrap.php"
   "${DIST_ROOT}/api/mailgun.php"
+  "${DIST_ROOT}/api/profile.php"
+  "${DIST_ROOT}/api/profile/index.php"
 )
 
 for required_file in "${required_files[@]}"; do
   if [[ ! -f "${required_file}" ]]; then
-    echo "OakBoard deployment failed: missing ${required_file}" >&2
+    echo "OST Workforce Onboarding deployment failed: missing ${required_file}" >&2
     exit 1
   fi
 done
 
 if grep -q '/src/main.tsx' "${DIST_ROOT}/index.html"; then
-  echo "OakBoard deployment failed: dist/index.html is a development entry file." >&2
+  echo "OST Workforce Onboarding deployment failed: dist/index.html is a development entry file." >&2
   exit 1
 fi
 
-echo "OakBoard deployment ready. The subdomain document root must be ${DIST_ROOT}"
+echo "OST Workforce Onboarding deployment ready. The subdomain document root must be ${DIST_ROOT}"

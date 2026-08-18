@@ -1,10 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Button, Icon, Modal, PageToolbar, StatusBanner } from '@/components/ui'
-import { apiFetch } from '@/lib/api/client'
-import { getValidSession } from '@/lib/auth/client'
+import { useEffect, useMemo, useState } from 'react'
+import { Archive, Eye, Trash01 } from '@untitledui/icons'
+import oakboardLogo from '@/assets/oakboard-logo.svg'
+import Image from '@/components/app-image'
+import { FeaturedIcon } from '@/components/foundations/featured-icon/featured-icon'
+import { Button, ButtonGroup, ButtonGroupItem, Icon, Modal, StatusBanner } from '@/components/ui'
+import { apiFetch as baseApiFetch } from '@/lib/api/client'
+import { getValidSession, signOut } from '@/lib/auth/client'
 import { useAppRouter } from '@/lib/router'
+import type { PlanDurationWeeks } from '@/types/plan'
 
 type AdminUser = {
   id: string
@@ -34,7 +39,7 @@ type AdminPlan = {
   id: string
   title: string
   role: string
-  nWeeks: 2 | 4
+  nWeeks: PlanDurationWeeks
   reportsTo: string
   collaboratesWith: string
   isArchived: boolean
@@ -77,7 +82,7 @@ type Overview = Record<string, number>
 
 type DailyPoint = { day: string; signups: number; logins: number; plans: number }
 type RecentSignin = { email: string; fullName: string; at: string | null }
-type RecentPlan = { id: string; role: string; nWeeks: 2 | 4; email: string; fullName: string; at: string | null }
+type RecentPlan = { id: string; role: string; nWeeks: PlanDurationWeeks; email: string; fullName: string; at: string | null }
 
 type AdminTab = 'overview' | 'users' | 'plans'
 type PlanScope = 'all' | 'active' | 'archived'
@@ -102,6 +107,7 @@ const STAT_GROUPS: Array<{ heading: string; items: Array<[string, string]> }> = 
       ['archived_plans', 'Archived'],
       ['two_week_plans', '2-week plans'],
       ['four_week_plans', '4-week plans'],
+      ['custom_duration_plans', 'Custom duration'],
       ['plans_7d', 'Created (7d)'],
     ],
   },
@@ -208,9 +214,40 @@ async function readJson<T>(response: Response): Promise<T | null> {
   return await response.json().catch(() => null) as T | null
 }
 
+const ADMIN_REQUEST_TIMEOUT_MS = 15_000
+
+/**
+ * Admin screens aggregate more data than the member workspace. Bound every
+ * request so a slow database or interrupted connection becomes a visible
+ * error instead of leaving the console in a permanent loading state.
+ */
+async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), ADMIN_REQUEST_TIMEOUT_MS)
+  const abort = () => controller.abort()
+  init.signal?.addEventListener('abort', abort, { once: true })
+
+  try {
+    return await baseApiFetch(input, { ...init, signal: controller.signal })
+  } catch (error) {
+    const message = error instanceof DOMException && error.name === 'AbortError'
+      ? 'The admin request timed out. Please try again.'
+      : 'The admin server could not be reached. Please try again.'
+    return new Response(JSON.stringify({ error: message }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  } finally {
+    window.clearTimeout(timeout)
+    init.signal?.removeEventListener('abort', abort)
+  }
+}
+
 export default function AdminPage() {
   const router = useAppRouter()
   const [access, setAccess] = useState<'checking' | 'granted' | 'denied'>('checking')
+  const [adminIdentity, setAdminIdentity] = useState({ fullName: '', email: '' })
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [tab, setTab] = useState<AdminTab>('overview')
   const [overview, setOverview] = useState<Overview | null>(null)
   const [daily, setDaily] = useState<DailyPoint[]>([])
@@ -235,6 +272,18 @@ export default function AdminPage() {
   const [createForm, setCreateForm] = useState({ full_name: '', email: '', password: '', role: 'member' })
   const [createError, setCreateError] = useState('')
 
+  const normalizedSearch = activeSearch.toLocaleLowerCase()
+  const filteredUsers = useMemo(() => {
+    if (!users || !normalizedSearch) return users
+    return users.filter((user) => [user.fullName, user.email, user.role]
+      .some((value) => value.toLocaleLowerCase().includes(normalizedSearch)))
+  }, [normalizedSearch, users])
+  const filteredPlans = useMemo(() => {
+    if (!plans || !normalizedSearch) return plans
+    return plans.filter((plan) => [plan.role, plan.title, plan.owner?.email || '', plan.owner?.fullName || '']
+      .some((value) => value.toLocaleLowerCase().includes(normalizedSearch)))
+  }, [normalizedSearch, plans])
+
   useEffect(() => {
     let active = true
     void getValidSession().then((result) => {
@@ -243,12 +292,19 @@ export default function AdminPage() {
         router.replace('/sign-in')
         return
       }
+      setAdminIdentity({
+        fullName: result.session.user.user_metadata.full_name
+          || result.session.user.user_metadata.name
+          || result.session.user.email
+          || 'Administrator',
+        email: result.session.user.email || '',
+      })
       setAccess(result.session.user.is_admin ? 'granted' : 'denied')
     })
     return () => { active = false }
   }, [router])
 
-  // Debounce the search field so typing does not fire a request per keystroke.
+  // Debounce local filtering so typing remains responsive for larger lists.
   useEffect(() => {
     const timer = window.setTimeout(() => setActiveSearch(search.trim()), 300)
     return () => window.clearTimeout(timer)
@@ -267,10 +323,11 @@ export default function AdminPage() {
         daily?: DailyPoint[]
         recentSignins?: RecentSignin[]
         recentPlans?: RecentPlan[]
+        error?: string
       }>(response)
       if (!active) return
       if (!response.ok || !result?.overview) {
-        setError('The admin summary could not be loaded.')
+        setError(result?.error || 'The admin summary could not be loaded.')
         return
       }
       setOverview(result.overview)
@@ -289,33 +346,40 @@ export default function AdminPage() {
 
     async function loadRows() {
       if (tab === 'overview') return
+      setError('')
       if (tab === 'users') {
-        const query = activeSearch ? `?search=${encodeURIComponent(activeSearch)}` : ''
-        const response = await apiFetch(`/api/admin/users${query}`, { cache: 'no-store' })
-        const result = await readJson<{ users?: AdminUser[] }>(response)
+        setUsers(null)
+        const response = await apiFetch('/api/admin/users?limit=100', { cache: 'no-store' })
+        const result = await readJson<{ users?: AdminUser[]; error?: string }>(response)
         if (!active) return
         if (response.ok && result?.users) setUsers(result.users)
-        else { setUsers([]); setError('The user list could not be loaded.') }
+        else { setUsers([]); setError(result?.error || 'The user list could not be loaded.') }
         return
       }
 
+      setPlans(null)
       const params = new URLSearchParams({ scope })
-      if (activeSearch) params.set('search', activeSearch)
+      params.set('limit', '100')
       const response = await apiFetch(`/api/admin/plans?${params.toString()}`, { cache: 'no-store' })
-      const result = await readJson<{ plans?: AdminPlan[] }>(response)
+      const result = await readJson<{ plans?: AdminPlan[]; error?: string }>(response)
       if (!active) return
       if (response.ok && result?.plans) setPlans(result.plans)
-      else { setPlans([]); setError('The plan list could not be loaded.') }
+      else { setPlans([]); setError(result?.error || 'The plan list could not be loaded.') }
     }
 
     void loadRows()
     return () => { active = false }
-  }, [access, activeSearch, refreshToken, scope, tab])
+  }, [access, refreshToken, scope, tab])
 
   function refreshAll() {
     setNotice('')
     setError('')
     setRefreshToken((current) => current + 1)
+  }
+
+  async function handleSignOut() {
+    await signOut()
+    router.replace('/sign-in')
   }
 
   function openCreateUser() {
@@ -464,7 +528,7 @@ export default function AdminPage() {
         <div className="admin-denied__card">
           <div className="admin-denied__icon" aria-hidden="true"><Icon name="warning" /></div>
           <h1>Administrator access required</h1>
-          <p>This account is not an OakBoard administrator. Ask a super administrator to grant access.</p>
+          <p>This account is not an OST Workforce Onboarding administrator. Ask a super administrator to grant access.</p>
           <Button icon="arrow-left" to="/workspace" variant="primary">Back to workspace</Button>
         </div>
       </main>
@@ -472,24 +536,78 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="admin-page">
-      <PageToolbar
-        backLabel="Workspace"
-        backTo="/workspace"
-        subtitle="Every account, plan, and sign-in across OakBoard"
-        title="Admin Console"
-        actions={(
-          <>
+    <main className={`admin-page${sidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <aside className="admin-sidebar" aria-label="Admin navigation">
+        <button
+          aria-label={sidebarCollapsed ? 'Expand admin navigation' : 'Collapse admin navigation'}
+          className="admin-sidebar__collapse"
+          onClick={() => setSidebarCollapsed((current) => !current)}
+          type="button"
+        >
+          <Icon name={sidebarCollapsed ? 'panel-expand' : 'panel-collapse'} />
+        </button>
+
+        <div className="admin-sidebar__brand">
+          <Image alt="Oak Street Technologies" height={38} src={oakboardLogo} width={38} />
+          <div>
+            <strong>OST Workforce</strong>
+            <span>Admin Console</span>
+          </div>
+        </div>
+
+        <nav className="admin-sidebar__nav">
+          <button
+            aria-current={tab === 'overview' ? 'page' : undefined}
+            className={tab === 'overview' ? 'is-active' : ''}
+            onClick={() => { setTab('overview'); setNotice(''); setError('') }}
+            type="button"
+          ><Icon name="info" /><span>Overview</span></button>
+          <button
+            aria-current={tab === 'users' ? 'page' : undefined}
+            className={tab === 'users' ? 'is-active' : ''}
+            onClick={() => { setTab('users'); setNotice(''); setError('') }}
+            type="button"
+          ><Icon name="user" /><span>Users</span></button>
+          <button
+            aria-current={tab === 'plans' ? 'page' : undefined}
+            className={tab === 'plans' ? 'is-active' : ''}
+            onClick={() => { setTab('plans'); setNotice(''); setError('') }}
+            type="button"
+          ><Icon name="list" /><span>Plans</span></button>
+        </nav>
+
+        <div className="admin-sidebar__footer">
+          <div className="admin-sidebar__identity">
+            <span className="admin-avatar" aria-hidden="true">{initials(adminIdentity.fullName, adminIdentity.email)}</span>
+            <div><strong>{adminIdentity.fullName}</strong><span>{adminIdentity.email}</span></div>
+          </div>
+          <button onClick={() => router.push('/workspace')} type="button"><Icon name="arrow-left" /><span>Workspace</span></button>
+          <button className="admin-sidebar__signout" onClick={() => void handleSignOut()} type="button"><Icon name="sign-out" /><span>Sign out</span></button>
+        </div>
+      </aside>
+
+      <section className="admin-shell">
+        <header className="admin-main-header">
+          <div>
+            <span className="admin-main-header__eyebrow">Admin Console</span>
+            <h1>{tab === 'overview' ? 'Overview' : tab === 'users' ? 'Users' : 'Plans'}</h1>
+            <p>
+              {tab === 'overview' && 'Accounts, plans, and sign-in activity across OST Workforce Onboarding.'}
+              {tab === 'users' && 'Manage access, account roles, verification, and user activity.'}
+              {tab === 'plans' && 'Review and manage every onboarding plan in one place.'}
+            </p>
+          </div>
+          <div className="admin-main-header__actions">
             <Button icon="plus" onClick={openCreateUser} type="button" variant="primary">Add user</Button>
             <Button icon="check" onClick={() => void refreshAll()} type="button" variant="secondary">Refresh</Button>
-          </>
-        )}
-      />
+          </div>
+        </header>
 
-      <div className="admin-body">
+        <div className="admin-body">
         {error && <StatusBanner tone="error">{error}</StatusBanner>}
         {notice && !error && <StatusBanner tone="success">{notice}</StatusBanner>}
 
+        {tab === 'overview' && <>
         <section className="admin-hero" aria-label="Key figures">
           {([
             ['total_users', 'Users', 'verified_users', 'verified'],
@@ -505,7 +623,7 @@ export default function AdminPage() {
           ))}
         </section>
 
-        <section className="admin-stats" aria-label="OakBoard summary">
+        <section className="admin-stats" aria-label="OST Workforce Onboarding summary">
           {STAT_GROUPS.map((group) => (
             <article className="admin-stat-group" key={group.heading}>
               <h2>{group.heading}</h2>
@@ -520,34 +638,11 @@ export default function AdminPage() {
             </article>
           ))}
         </section>
+        </>}
 
-        <div className="admin-controls">
-          <div className="admin-tabs" role="tablist" aria-label="Admin sections">
-            <button
-              aria-selected={tab === 'overview'}
-              className={tab === 'overview' ? 'active' : ''}
-              onClick={() => { setTab('overview'); setNotice('') }}
-              role="tab"
-              type="button"
-            >Overview</button>
-            <button
-              aria-selected={tab === 'users'}
-              className={tab === 'users' ? 'active' : ''}
-              onClick={() => { setTab('users'); setNotice('') }}
-              role="tab"
-              type="button"
-            >Users {users ? `(${users.length})` : ''}</button>
-            <button
-              aria-selected={tab === 'plans'}
-              className={tab === 'plans' ? 'active' : ''}
-              onClick={() => { setTab('plans'); setNotice('') }}
-              role="tab"
-              type="button"
-            >Onboarding plans {plans ? `(${plans.length})` : ''}</button>
-          </div>
-
+        {tab !== 'overview' && <div className="admin-controls">
           <div className="admin-filters">
-            {tab !== 'overview' && tab === 'plans' && (
+            {tab === 'plans' && (
               <select
                 aria-label="Filter plans"
                 onChange={(event) => setScope(event.target.value as PlanScope)}
@@ -558,17 +653,15 @@ export default function AdminPage() {
                 <option value="archived">Archived only</option>
               </select>
             )}
-            {tab !== 'overview' && (
-              <input
-                aria-label={tab === 'users' ? 'Search users' : 'Search plans'}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={tab === 'users' ? 'Search name or email...' : 'Search role, title, or owner...'}
-                type="search"
-                value={search}
-              />
-            )}
+            <input
+              aria-label={tab === 'users' ? 'Search users' : 'Search plans'}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={tab === 'users' ? 'Search name or email...' : 'Search role, title, or owner...'}
+              type="search"
+              value={search}
+            />
           </div>
-        </div>
+        </div>}
 
         {tab === 'overview' && (
           <>
@@ -619,7 +712,7 @@ export default function AdminPage() {
                       </div>
                       <div className="admin-list__actions">
                         <span className="admin-feed__when" title={formatDateTime(entry.at)}>{relativeTime(entry.at)}</span>
-                        <button onClick={() => void openPlanPreview(entry.id)} type="button">View</button>
+                        <Button icon="info" onClick={() => void openPlanPreview(entry.id)} type="button" variant="secondary">View</Button>
                       </div>
                     </li>
                   ))}
@@ -644,9 +737,9 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {users === null && <tr><td colSpan={7} className="admin-table__empty">Loading users...</td></tr>}
-                {users?.length === 0 && <tr><td colSpan={7} className="admin-table__empty">No users match this search.</td></tr>}
-                {users?.map((user) => (
+                {filteredUsers === null && <tr><td colSpan={7} className="admin-table__empty">Loading users...</td></tr>}
+                {filteredUsers?.length === 0 && <tr><td colSpan={7} className="admin-table__empty">No users match this search.</td></tr>}
+                {filteredUsers?.map((user) => (
                   <tr key={user.id}>
                     <td>
                       <div className="admin-user-cell">
@@ -693,9 +786,9 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {plans === null && <tr><td colSpan={6} className="admin-table__empty">Loading plans...</td></tr>}
-                {plans?.length === 0 && <tr><td colSpan={6} className="admin-table__empty">No plans match this search.</td></tr>}
-                {plans?.map((plan) => (
+                {filteredPlans === null && <tr><td colSpan={6} className="admin-table__empty">Loading plans...</td></tr>}
+                {filteredPlans?.length === 0 && <tr><td colSpan={6} className="admin-table__empty">No plans match this search.</td></tr>}
+                {filteredPlans?.map((plan) => (
                   <tr key={plan.id}>
                     <td>
                       <div className="admin-user-cell">
@@ -717,11 +810,13 @@ export default function AdminPage() {
                     </td>
                     <td>{formatDateTime(plan.updatedAt)}</td>
                     <td className="admin-table__actions">
-                      <Button icon="info" onClick={() => void openPlanPreview(plan.id)} type="button" variant="secondary">View</Button>
-                      <Button disabled={busy} icon="archive" onClick={() => void togglePlanArchive(plan)} type="button" variant="soft">
-                        {plan.isArchived ? 'Restore' : 'Archive'}
-                      </Button>
-                      <Button disabled={busy} icon="trash" onClick={() => setConfirmAction({ kind: 'delete-plan', plan })} type="button" variant="danger">Delete</Button>
+                      <ButtonGroup ariaLabel={`Actions for ${plan.role}`}>
+                        <ButtonGroupItem icon={<FeaturedIcon color="gray" icon={Eye} size="xs" theme="outline" />} onClick={() => void openPlanPreview(plan.id)} type="button">View</ButtonGroupItem>
+                        <ButtonGroupItem disabled={busy} icon={<FeaturedIcon color="success" icon={Archive} size="xs" theme="outline" />} onClick={() => void togglePlanArchive(plan)} tone="success" type="button">
+                          {plan.isArchived ? 'Restore' : 'Archive'}
+                        </ButtonGroupItem>
+                        <ButtonGroupItem disabled={busy} icon={<FeaturedIcon color="error" icon={Trash01} size="xs" theme="outline" />} onClick={() => setConfirmAction({ kind: 'delete-plan', plan })} tone="danger" type="button">Delete</ButtonGroupItem>
+                      </ButtonGroup>
                     </td>
                   </tr>
                 ))}
@@ -729,7 +824,8 @@ export default function AdminPage() {
             </table>
           </div>
         )}
-      </div>
+        </div>
+      </section>
 
       <Modal
         icon="info"
@@ -738,7 +834,7 @@ export default function AdminPage() {
         subtitle={detail ? detail.user.email : 'Loading account...'}
         title={detail ? detail.user.fullName || 'Account detail' : 'Account detail'}
         footer={detail && (
-          <>
+          <div className="admin-user-actions">
             <Button disabled={busy} onClick={() => setDetail(null)} type="button" variant="secondary">Close</Button>
             <Button
               disabled={busy}
@@ -758,7 +854,7 @@ export default function AdminPage() {
               <Button disabled={busy} icon="plus" onClick={() => void runUserAction(detail.user.id, 'promote', 'Administrator access granted.')} type="button" variant="secondary">Make admin</Button>
             )}
             <Button disabled={busy || detail.user.isRootAdmin} icon="trash" onClick={() => setConfirmAction({ kind: 'delete-user', user: detail.user })} type="button" variant="danger">Delete user</Button>
-          </>
+          </div>
         )}
       >
         {detailLoading && <p>Loading account...</p>}
@@ -782,10 +878,14 @@ export default function AdminPage() {
               <div><span>Password</span><strong>{detail.user.mustChangePassword ? 'Temporary — must change' : 'Set by the user'}</strong></div>
             </div>
 
-            <h4>Onboarding plans ({detail.plans.length})</h4>
-            {detail.plans.length === 0 && <p className="admin-muted">This user has not created any plans.</p>}
-            {detail.plans.length > 0 && (
-              <ul className="admin-list">
+            <section className="admin-detail__section">
+              <div className="admin-detail__section-head">
+                <h4>Onboarding plans</h4>
+                <span>{detail.plans.length}</span>
+              </div>
+              {detail.plans.length === 0 && <p className="admin-detail__empty">This user has not created any plans.</p>}
+              {detail.plans.length > 0 && (
+                <ul className="admin-list">
                 {detail.plans.map((plan) => (
                   <li key={plan.id}>
                     <div>
@@ -796,17 +896,22 @@ export default function AdminPage() {
                       <span className={`admin-badge ${plan.isArchived ? 'admin-badge--pending' : 'admin-badge--ok'}`}>
                         {plan.isArchived ? 'Archived' : 'Active'}
                       </span>
-                      <button onClick={() => void openPlanPreview(plan.id)} type="button">View</button>
+                      <Button icon="info" onClick={() => void openPlanPreview(plan.id)} type="button" variant="secondary">View</Button>
                     </div>
                   </li>
                 ))}
-              </ul>
-            )}
+                </ul>
+              )}
+            </section>
 
-            <h4>Sign-in history ({detail.sessions.length} most recent)</h4>
-            {detail.sessions.length === 0 && <p className="admin-muted">This user has never signed in.</p>}
-            {detail.sessions.length > 0 && (
-              <ul className="admin-list">
+            <section className="admin-detail__section">
+              <div className="admin-detail__section-head">
+                <h4>Sign-in history</h4>
+                <span>{detail.sessions.length} recent</span>
+              </div>
+              {detail.sessions.length === 0 && <p className="admin-detail__empty">This user has never signed in.</p>}
+              {detail.sessions.length > 0 && (
+                <ul className="admin-list">
                 {detail.sessions.map((session) => (
                   <li key={session.id}>
                     <div>
@@ -818,13 +923,18 @@ export default function AdminPage() {
                     </span>
                   </li>
                 ))}
-              </ul>
-            )}
+                </ul>
+              )}
+            </section>
 
-            <h4>Plan emails ({detail.emails.length} most recent)</h4>
-            {detail.emails.length === 0 && <p className="admin-muted">This user has not emailed any plans.</p>}
-            {detail.emails.length > 0 && (
-              <ul className="admin-list">
+            <section className="admin-detail__section">
+              <div className="admin-detail__section-head">
+                <h4>Plan emails</h4>
+                <span>{detail.emails.length} recent</span>
+              </div>
+              {detail.emails.length === 0 && <p className="admin-detail__empty">This user has not emailed any plans.</p>}
+              {detail.emails.length > 0 && (
+                <ul className="admin-list">
                 {detail.emails.map((log) => (
                   <li key={log.id}>
                     <div>
@@ -836,8 +946,9 @@ export default function AdminPage() {
                     </span>
                   </li>
                 ))}
-              </ul>
-            )}
+                </ul>
+              )}
+            </section>
           </div>
         )}
       </Modal>
@@ -948,7 +1059,7 @@ export default function AdminPage() {
 
           <StatusBanner tone="info">
             This password is temporary and is shown in plain text so you can copy it now.
-            OakBoard does not email it — share it with the person directly. They must
+            OST Workforce Onboarding does not email it — share it with the person directly. They must
             replace it the first time they sign in.
           </StatusBanner>
         </div>

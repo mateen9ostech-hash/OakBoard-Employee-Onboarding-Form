@@ -3,18 +3,18 @@ import { PublicInfoShell } from '@/components/public-info-shell'
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
-  description: 'Terms governing authorized use of the OakBoard employee onboarding plan application.',
+  description: 'Terms governing authorized use of the OST Workforce Onboarding employee onboarding plan application.',
   alternates: {
     canonical: '/terms-of-service',
   },
 }
 
 const sections = [
-  ['Authorized use', 'OakBoard is provided for approved Oak Street Technologies business users. You must use your own authorized account and keep account credentials confidential.'],
-  ['Appropriate content', 'Use OakBoard for legitimate onboarding work. Do not enter unnecessary sensitive personal information, unlawful material, or content that you are not authorized to process.'],
+  ['Authorized use', 'OST Workforce Onboarding is provided for approved Oak Street Technologies business users. You must use your own authorized account and keep account credentials confidential.'],
+  ['Appropriate content', 'Use OST Workforce Onboarding for legitimate onboarding work. Do not enter unnecessary sensitive personal information, unlawful material, or content that you are not authorized to process.'],
   ['Plan responsibility', 'You are responsible for reviewing role details, dates, tasks, outcomes, recipients, and generated PDF content before using or sharing an onboarding plan.'],
-  ['Availability and changes', 'Features, integrations, limits, and availability may change as OakBoard evolves. Maintenance or third-party service interruptions can temporarily affect access, storage, or email delivery.'],
-  ['Data and security', 'Use of OakBoard is also governed by the Privacy Policy and applicable company security, retention, and acceptable-use requirements. Sign out when using a shared device.'],
+  ['Availability and changes', 'Features, integrations, limits, and availability may change as OST Workforce Onboarding evolves. Maintenance or third-party service interruptions can temporarily affect access, storage, or email delivery.'],
+  ['Data and security', 'Use of OST Workforce Onboarding is also governed by the Privacy Policy and applicable company security, retention, and acceptable-use requirements. Sign out when using a shared device.'],
   ['Support', 'For access, plan, privacy, or service questions, contact Oak Street Technologies support at support@9ostech.com.'],
 ]
 
@@ -22,9 +22,9 @@ export default function TermsOfServicePage() {
   return (
     <PublicInfoShell
       current="terms"
-      eyebrow="OakBoard terms"
+      eyebrow="OST Workforce Onboarding terms"
       title="Clear expectations for responsible use."
-      description="These terms describe the conditions for accessing and using OakBoard as an internal employee onboarding planning service."
+      description="These terms describe the conditions for accessing and using OST Workforce Onboarding as an internal employee onboarding planning service."
     >
       <div className="privacy-meta">
         <div><span>Effective date</span><strong>July 22, 2026</strong></div>

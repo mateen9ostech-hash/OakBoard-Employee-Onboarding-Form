@@ -1,6 +1,17 @@
-# OakBoard Employee Onboarding Plans
+# OST Workforce Onboarding
 
-OakBoard creates, stores, previews, exports, and emails role-specific onboarding plans.
+OST Workforce Onboarding creates, stores, previews, exports, and emails role-specific onboarding plans from 1 to 8 weeks.
+
+## Current product capabilities
+
+- Member and administrator authentication with email verification.
+- User-owned plan history, editing, preview, archive, delete, PDF export, and email delivery.
+- Quick 2-week and 4-week plans plus custom 1-to-8-week duration.
+- Administrator-only structured data import.
+- Administrator overview, user management, and plan management.
+- Self-service user profile details and profile image.
+
+Existing production installations must run the SQL files in `database/mysql/migrations/` once before deploying this version. Private configuration and secrets remain outside Git and are not replaced by a pull or build.
 
 ## Production architecture
 
@@ -12,7 +23,7 @@ React + TypeScript SPA
 ```
 
 There is no Supabase, PostgreSQL, Next.js, Passenger, Node server, or `nextjs.conf`
-dependency in production. Authentication is owned by OakBoard. Password hashes,
+dependency in production. Authentication is owned by OST Workforce Onboarding. Password hashes,
 OTPs, reset tokens, sessions, plans, and email logs are stored in MySQL. Every plan
 query is scoped to the authenticated owner.
 
@@ -28,7 +39,7 @@ Production:
 - Apache with `.htaccess` and `mod_rewrite`.
 - PHP 8.1+ with PDO MySQL, cURL, mbstring, JSON, and OpenSSL.
 - MySQL 8.0+ or MariaDB 10.6+ with InnoDB and `utf8mb4`.
-- HTTPS for `onboarding.9ostech.com`.
+- HTTPS for `onboardingplan.9ostech.com`.
 
 ## New computer setup
 

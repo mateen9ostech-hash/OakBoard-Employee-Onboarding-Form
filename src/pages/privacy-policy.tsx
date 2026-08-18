@@ -3,7 +3,7 @@ import { PublicInfoShell } from '@/components/public-info-shell'
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
-  description: 'Learn how OakBoard handles account, onboarding plan, and service data.',
+  description: 'Learn how OST Workforce Onboarding handles account, onboarding plan, and service data.',
   alternates: {
     canonical: '/privacy-policy',
   },
@@ -13,9 +13,9 @@ export default function PrivacyPage() {
   return (
     <PublicInfoShell
       current="privacy"
-      eyebrow="OakBoard privacy"
+      eyebrow="OST Workforce Onboarding privacy"
       title="Your work data, clearly explained."
-      description="This notice describes the information OakBoard uses to authenticate employees, save onboarding plans, and deliver the files you choose to share."
+      description="This notice describes the information OST Workforce Onboarding uses to authenticate employees, save onboarding plans, and deliver the files you choose to share."
     >
       <div className="privacy-meta">
         <div><span>Effective date</span><strong>July 22, 2026</strong></div>
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
             <li>Access is limited to approved work accounts.</li>
             <li>Your plans are associated with your signed-in user ID.</li>
             <li>Other users do not receive access to your plan history through the app.</li>
-            <li>OakBoard does not include advertising or marketing trackers.</li>
+            <li>OST Workforce Onboarding does not include advertising or marketing trackers.</li>
             <li>You can archive or permanently delete plans from the app.</li>
           </ul>
         </aside>
@@ -41,7 +41,7 @@ export default function PrivacyPage() {
             <span>01</span>
             <div>
               <h2>Scope</h2>
-              <p>This privacy notice applies to the OakBoard Employee Onboarding Plan application operated for Oak Street Technologies. It covers account registration, authentication, plan creation and storage, PDF generation, and user-requested email delivery.</p>
+              <p>This privacy notice applies to the OST Workforce Onboarding Employee Onboarding Plan application operated for Oak Street Technologies. It covers account registration, authentication, plan creation and storage, PDF generation, and user-requested email delivery.</p>
             </div>
           </section>
 
@@ -49,7 +49,7 @@ export default function PrivacyPage() {
             <span>02</span>
             <div>
               <h2>Information we process</h2>
-              <p>OakBoard processes your work email address, name, authentication and session data, and the onboarding content you enter or import. Plan content may include role titles, reporting relationships, collaborators, dates, weekly goals, daily activities, and expected outcomes.</p>
+              <p>OST Workforce Onboarding processes your work email address, name, authentication and session data, and the onboarding content you enter or import. Plan content may include role titles, reporting relationships, collaborators, dates, weekly goals, daily activities, and expected outcomes.</p>
             </div>
           </section>
 
@@ -65,7 +65,7 @@ export default function PrivacyPage() {
             <span>04</span>
             <div>
               <h2>Storage and service providers</h2>
-              <p>OakBoard&apos;s cPanel environment hosts the application and stores account, session, and owner-scoped plan records in MySQL. Mailgun processes recipient and message information when OakBoard sends verification codes, password-reset messages, or a PDF you explicitly request. These systems process data only as needed to operate the service.</p>
+              <p>OST Workforce Onboarding&apos;s cPanel environment hosts the application and stores account, session, and owner-scoped plan records in MySQL. Mailgun processes recipient and message information when OST Workforce Onboarding sends verification codes, password-reset messages, or a PDF you explicitly request. These systems process data only as needed to operate the service.</p>
             </div>
           </section>
 
@@ -73,7 +73,7 @@ export default function PrivacyPage() {
             <span>05</span>
             <div>
               <h2>Cookies and browser storage</h2>
-              <p>OakBoard uses essential authentication cookies and limited browser storage for session preference, remembered email choice, pending signup verification, and short-lived interface state. These technologies support sign-in and application continuity; they are not used for targeted advertising.</p>
+              <p>OST Workforce Onboarding uses essential authentication cookies and limited browser storage for session preference, remembered email choice, pending signup verification, and short-lived interface state. These technologies support sign-in and application continuity; they are not used for targeted advertising.</p>
             </div>
           </section>
 
@@ -89,7 +89,7 @@ export default function PrivacyPage() {
             <span>07</span>
             <div>
               <h2>Security and appropriate use</h2>
-              <p>OakBoard restricts access through work-email verification, authenticated sessions, server-side checks, and database policies. No online service can guarantee absolute security. Use accurate business information, avoid adding unnecessary sensitive personal data, and sign out on shared devices.</p>
+              <p>OST Workforce Onboarding restricts access through work-email verification, authenticated sessions, server-side checks, and database policies. No online service can guarantee absolute security. Use accurate business information, avoid adding unnecessary sensitive personal data, and sign out on shared devices.</p>
             </div>
           </section>
 
@@ -97,7 +97,7 @@ export default function PrivacyPage() {
             <span>08</span>
             <div>
               <h2>Updates and contact</h2>
-              <p>This notice may be updated when OakBoard&apos;s features, providers, or company practices change. The effective date above will be revised when material updates are published. For privacy or support questions, email <a href="mailto:support@9ostech.com">support@9ostech.com</a> or call <a href="tel:+18776250091">+1 877-625-0091</a>.</p>
+              <p>This notice may be updated when OST Workforce Onboarding&apos;s features, providers, or company practices change. The effective date above will be revised when material updates are published. For privacy or support questions, email <a href="mailto:support@9ostech.com">support@9ostech.com</a> or call <a href="tel:+18776250091">+1 877-625-0091</a>.</p>
             </div>
           </section>
         </article>

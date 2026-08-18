@@ -15,6 +15,13 @@ export type PlanWeek = {
   days: PlanDay[]
 }
 
+export type PlanDurationWeeks = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
+
+export function normalizePlanDuration(value: unknown): PlanDurationWeeks {
+  const weeks = Math.trunc(Number(value))
+  return Math.min(8, Math.max(1, Number.isFinite(weeks) ? weeks : 2)) as PlanDurationWeeks
+}
+
 export type OnboardingPlan = {
   id?: string
   company?: string
@@ -23,7 +30,7 @@ export type OnboardingPlan = {
   reportsTo: string
   collab?: string
   collaboratesWith: string
-  nWeeks: 2 | 4
+  nWeeks: PlanDurationWeeks
   startDate?: string
   weeks?: PlanWeek[]
   days?: PlanDay[]
@@ -35,7 +42,7 @@ export type SavedOnboardingPlan = {
   id: string
   name: string
   role: string
-  nWeeks: 2 | 4
+  nWeeks: PlanDurationWeeks
   updatedAt: string
   plan: OnboardingPlan
 }

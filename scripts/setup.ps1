@@ -25,7 +25,7 @@ if ($NodeVersion -notmatch '^\d+\.\d+\.\d+$') {
 $Package = Get-Content -LiteralPath $PackageFile -Raw | ConvertFrom-Json
 $RequiredNpmVersion = ([string]$Package.packageManager -split '@')[-1]
 $NodeFolderName = "node-v$NodeVersion-win-x64"
-$InstallParent = Join-Path $env:LOCALAPPDATA 'Programs\OakBoard'
+$InstallParent = Join-Path $env:LOCALAPPDATA 'Programs\OSTWorkforceOnboarding'
 $InstallRoot = Join-Path $InstallParent $NodeFolderName
 $NodeExe = Join-Path $InstallRoot 'node.exe'
 $NpmCmd = Join-Path $InstallRoot 'npm.cmd'
@@ -118,5 +118,5 @@ finally {
     Pop-Location
 }
 
-Write-Host 'OakBoard setup completed successfully.' -ForegroundColor Green
+Write-Host 'OST Workforce Onboarding setup completed successfully.' -ForegroundColor Green
 Write-Host 'Create .env.local from .env.example before starting the app.' -ForegroundColor Yellow

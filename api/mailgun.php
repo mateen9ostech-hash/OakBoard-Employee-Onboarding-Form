@@ -88,7 +88,7 @@ function email_shell(string $title, string $content): string
         . '<div style="overflow:hidden;border:1px solid #c9d8cc;border-radius:18px;background:#ffffff;box-shadow:0 16px 44px rgba(5,39,19,.12);">'
         . '<div style="padding:28px 32px;text-align:center;background:#102b1d;border-bottom:1px solid #2f6544;">'
         . $logo
-        . '<div style="font-size:24px;font-weight:700;color:#ffffff;">OakBoard</div>'
+        . '<div style="font-size:24px;font-weight:700;color:#ffffff;">OST Workforce Onboarding</div>'
         . '<div style="margin-top:5px;font-size:13px;color:#b9d4c2;">Oak Street Technologies onboarding plans</div>'
         . '</div>'
         . '<div style="padding:32px;">'
@@ -98,7 +98,7 @@ function email_shell(string $title, string $content): string
         . $content
         . '</div>'
         . '<div style="padding:16px 32px;border-top:1px solid #dfe8e1;text-align:center;font-size:12px;color:#66756b;">'
-        . '© 2026 Oak Street Technologies · OakBoard'
+        . '© 2026 Oak Street Technologies · OST Workforce Onboarding'
         . '</div></div></div></body></html>';
 }
 
@@ -140,11 +140,11 @@ function mailgun_send(array $message): array
     // Tracking is the important one. With open or click tracking enabled
     // Mailgun rewrites every link in the message through its own tracking host
     // and appends a pixel, so the mail a recipient receives is not the mail
-    // OakBoard wrote. Google and Microsoft treat a redirect host that is not
+    // OST Workforce Onboarding wrote. Google and Microsoft treat a redirect host that is not
     // covered by the sending domain's authentication as a reason to greylist,
     // and a greylisted message is retried minutes later rather than rejected.
     // That is the usual explanation for a six-digit code that turns up long
-    // after it was requested. OakBoard needs no engagement analytics on a
+    // after it was requested. OST Workforce Onboarding needs no engagement analytics on a
     // verification code, so tracking stays off and the message goes out as
     // written.
     $fields['o:tracking'] = 'no';
@@ -170,7 +170,7 @@ function mailgun_send(array $message): array
     $temporaryAttachment = null;
     $attachment = $message['attachment'] ?? null;
     if (is_array($attachment)) {
-        $filename = preg_replace('/[^A-Za-z0-9._-]/', '-', basename((string) ($attachment['filename'] ?? 'OakBoard-plan.pdf')));
+        $filename = preg_replace('/[^A-Za-z0-9._-]/', '-', basename((string) ($attachment['filename'] ?? 'OST Workforce Onboarding-plan.pdf')));
         $encoded = preg_replace('/\s+/', '', (string) ($attachment['content'] ?? ''));
         $binary = base64_decode($encoded, true);
         if ($filename === '' || $binary === false || strlen($binary) > 8_000_000 || !str_starts_with($binary, '%PDF-')) {
@@ -204,7 +204,7 @@ function mailgun_send(array $message): array
         // Shared cPanel hosts routinely advertise IPv6 without routing it. cURL
         // then spends its connect budget on an AAAA address that never answers
         // before falling back to IPv4, which adds seconds to every send and, on
-        // a slow request, can burn the timeout entirely. OakBoard only needs one
+        // a slow request, can burn the timeout entirely. OST Workforce Onboarding only needs one
         // working path to the API, so ask for the one the host actually has.
         CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
         CURLOPT_HTTPHEADER => ['Accept: application/json', 'Expect:'],
@@ -220,7 +220,7 @@ function mailgun_send(array $message): array
     }
 
     if ($response === false) {
-        error_log('OakBoard Mailgun transport failure after ' . $sendSeconds . 's: ' . $curlError);
+        error_log('OST Workforce Onboarding Mailgun transport failure after ' . $sendSeconds . 's: ' . $curlError);
         throw new RuntimeException('Email delivery service is temporarily unavailable.');
     }
 
@@ -229,7 +229,7 @@ function mailgun_send(array $message): array
         $providerMessage = is_array($decoded) && is_string($decoded['message'] ?? null)
             ? $decoded['message']
             : 'HTTP ' . $status;
-        error_log('OakBoard Mailgun rejection: ' . mb_substr($providerMessage, 0, 500));
+        error_log('OST Workforce Onboarding Mailgun rejection: ' . mb_substr($providerMessage, 0, 500));
         throw new RuntimeException('Mailgun rejected the email request. Check domain verification and sender settings.');
     }
 
@@ -237,7 +237,7 @@ function mailgun_send(array $message): array
     // slower is the handoff, not the mailbox provider, and it is worth being
     // able to tell those two apart when someone reports a late email.
     if ($sendSeconds >= 3.0) {
-        error_log('OakBoard Mailgun handoff was slow: ' . $sendSeconds . 's for ' . ($fields['o:tag'] ?? 'untagged'));
+        error_log('OST Workforce Onboarding Mailgun handoff was slow: ' . $sendSeconds . 's for ' . ($fields['o:tag'] ?? 'untagged'));
     }
 
     return [
@@ -250,7 +250,7 @@ function send_verification_email(string $email, string $code): array
 {
     $safeCode = htmlspecialchars($code, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $content = '<p style="margin:0 0 18px;font-size:15px;line-height:1.7;color:#45534a;">'
-        . 'Enter this six-digit verification code in OakBoard to activate your work account.</p>'
+        . 'Enter this six-digit verification code in OST Workforce Onboarding to activate your work account.</p>'
         . '<div style="margin:22px 0;padding:20px;border:1px solid #9fd2ad;border-radius:12px;background:#eefaf1;text-align:center;'
         . 'font-family:Consolas,monospace;font-size:34px;font-weight:700;letter-spacing:9px;color:#176b31;">'
         . $safeCode . '</div>'
@@ -262,8 +262,8 @@ function send_verification_email(string $email, string $code): array
 
     return mailgun_send([
         'to' => $email,
-        'subject' => 'OakBoard verification code ' . $code,
-        'text' => "Your OakBoard verification code is {$code}. It expires in 30 minutes.",
+        'subject' => 'OST Workforce Onboarding verification code ' . $code,
+        'text' => "Your OST Workforce Onboarding verification code is {$code}. It expires in 30 minutes.",
         'html' => email_shell('Verify your work email', $content),
         'tag' => 'verification',
     ]);
@@ -273,7 +273,7 @@ function send_password_reset_email(string $email, string $resetUrl): array
 {
     $safeUrl = htmlspecialchars($resetUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $content = '<p style="margin:0 0 22px;font-size:15px;line-height:1.7;color:#45534a;">'
-        . 'We received a request to reset your OakBoard password.</p>'
+        . 'We received a request to reset your OST Workforce Onboarding password.</p>'
         . '<p style="margin:0 0 24px;"><a href="' . $safeUrl . '" '
         . 'style="display:inline-block;padding:13px 22px;border-radius:9px;background:#2f7d3d;color:#ffffff;'
         . 'font-size:14px;font-weight:600;text-decoration:none;">Reset password</a></p>'
@@ -282,8 +282,8 @@ function send_password_reset_email(string $email, string $resetUrl): array
 
     return mailgun_send([
         'to' => $email,
-        'subject' => 'Reset your OakBoard password',
-        'text' => "Reset your OakBoard password using this link (valid for 30 minutes): {$resetUrl}",
+        'subject' => 'Reset your OST Workforce Onboarding password',
+        'text' => "Reset your OST Workforce Onboarding password using this link (valid for 30 minutes): {$resetUrl}",
         'html' => email_shell('Reset your password', $content),
         'tag' => 'password-reset',
     ]);

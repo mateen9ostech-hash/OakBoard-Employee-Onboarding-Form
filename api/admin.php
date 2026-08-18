@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-// OakBoard administrator console.
+// OST Workforce Onboarding administrator console.
 //
 // Every function here runs only after require_admin() has accepted the caller,
 // so these are the one place in the API where queries are deliberately not
-// scoped to a single owner. Activity is derived from the tables OakBoard
+// scoped to a single owner. Activity is derived from the tables OST Workforce Onboarding
 // already writes (app_users, auth_sessions, onboarding_plans,
 // onboarding_email_logs) rather than a separate audit log.
 
@@ -66,7 +66,7 @@ function admin_public_plan(array $row, bool $includeContent = false): array
         'id' => (string) $row['id'],
         'title' => (string) ($row['title'] ?? ''),
         'role' => ($row['role'] ?? '') !== '' ? (string) $row['role'] : 'Untitled role',
-        'nWeeks' => (int) ($row['duration_weeks'] ?? 2) === 4 ? 4 : 2,
+        'nWeeks' => min(8, max(1, (int) ($row['duration_weeks'] ?? 2))),
         'reportsTo' => (string) ($row['reports_to'] ?? ''),
         'collaboratesWith' => (string) ($row['collaborates_with'] ?? ''),
         'isArchived' => ($row['archived_at'] ?? null) !== null,
@@ -104,6 +104,7 @@ function admin_overview(): array
             (SELECT COUNT(*) FROM onboarding_plans WHERE archived_at IS NOT NULL) AS archived_plans,
             (SELECT COUNT(*) FROM onboarding_plans WHERE duration_weeks = 2) AS two_week_plans,
             (SELECT COUNT(*) FROM onboarding_plans WHERE duration_weeks = 4) AS four_week_plans,
+            (SELECT COUNT(*) FROM onboarding_plans WHERE duration_weeks NOT IN (2, 4)) AS custom_duration_plans,
             (SELECT COUNT(*) FROM onboarding_plans WHERE created_at > DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 7 DAY)) AS plans_7d,
             (SELECT COUNT(*) FROM auth_sessions WHERE revoked_at IS NULL AND expires_at > UTC_TIMESTAMP(3)) AS active_sessions,
             (SELECT COUNT(*) FROM auth_sessions) AS total_logins,
@@ -179,7 +180,7 @@ function admin_activity(int $days = 14): array
         'recentPlans' => array_map(static fn (array $row) => [
             'id' => (string) $row['id'],
             'role' => ($row['role'] ?? '') !== '' ? (string) $row['role'] : 'Untitled role',
-            'nWeeks' => (int) $row['duration_weeks'] === 4 ? 4 : 2,
+            'nWeeks' => min(8, max(1, (int) $row['duration_weeks'])),
             'email' => (string) $row['email'],
             'fullName' => (string) ($row['full_name'] ?? ''),
             'at' => admin_timestamp($row['created_at']),
@@ -192,8 +193,10 @@ function admin_user_rows(string $search = '', int $limit = 50): array
     $where = '';
     $parameters = [];
     if ($search !== '') {
-        $where = 'WHERE u.email LIKE :search OR u.full_name LIKE :search';
-        $parameters['search'] = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $search) . '%';
+        $where = 'WHERE u.email LIKE :search_email OR u.full_name LIKE :search_name';
+        $searchValue = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $search) . '%';
+        $parameters['search_email'] = $searchValue;
+        $parameters['search_name'] = $searchValue;
     }
 
     $statement = database()->prepare(
@@ -285,8 +288,12 @@ function admin_plan_rows(string $search = '', string $scope = 'all', int $limit 
     $conditions = [];
     $parameters = [];
     if ($search !== '') {
-        $conditions[] = '(p.role LIKE :search OR p.title LIKE :search OR u.email LIKE :search OR u.full_name LIKE :search)';
-        $parameters['search'] = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $search) . '%';
+        $conditions[] = '(p.role LIKE :search_role OR p.title LIKE :search_title OR u.email LIKE :search_email OR u.full_name LIKE :search_name)';
+        $searchValue = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $search) . '%';
+        $parameters['search_role'] = $searchValue;
+        $parameters['search_title'] = $searchValue;
+        $parameters['search_email'] = $searchValue;
+        $parameters['search_name'] = $searchValue;
     }
     if ($scope === 'active') {
         $conditions[] = 'p.archived_at IS NULL';
@@ -356,7 +363,7 @@ function admin_create_user(array $body): array
     $lookup = $db->prepare('SELECT id FROM app_users WHERE email = :email LIMIT 1');
     $lookup->execute(['email' => $email]);
     if ($lookup->fetchColumn() !== false) {
-        json_response(['error' => 'That email already has an OakBoard account.', 'code' => 'email_exists'], 409);
+        json_response(['error' => 'That email already has an OST Workforce Onboarding account.', 'code' => 'email_exists'], 409);
     }
 
     $passwordHash = password_hash($password, PASSWORD_DEFAULT);

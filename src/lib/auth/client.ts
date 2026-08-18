@@ -66,7 +66,7 @@ async function authRequest<T>(path: string, init: RequestInit = {}): Promise<Aut
         data: null,
         error: {
           code: payload?.code,
-          message: payload?.error || 'OakBoard could not complete this account request.',
+          message: payload?.error || 'OST Workforce Onboarding could not complete this account request.',
           status: response.status,
         },
       }
@@ -77,7 +77,7 @@ async function authRequest<T>(path: string, init: RequestInit = {}): Promise<Aut
       data: null,
       error: {
         code: 'network_error',
-        message: caught instanceof Error ? caught.message : 'The OakBoard server could not be reached.',
+        message: caught instanceof Error ? caught.message : 'The OST Workforce Onboarding server could not be reached.',
       },
     }
   }

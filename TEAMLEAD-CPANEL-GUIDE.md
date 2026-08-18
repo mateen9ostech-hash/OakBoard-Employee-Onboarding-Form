@@ -1,22 +1,25 @@
-# OakBoard cPanel Production Handoff
+# OST Workforce Onboarding cPanel Production Handoff
 
 This is the only production deployment guide. It applies to:
 
 ```text
 Repository: mateen9ostech-hash/OakBoard-Employee-Onboarding-Form
 Branch: main
-Domain: https://onboarding.9ostech.com
-Checkout: /home/ostech/public_html/onboarding.9ostech.com
-Document root: /home/ostech/public_html/onboarding.9ostech.com/dist
+Domain: https://onboardingplan.9ostech.com
+Checkout: keep the existing working cPanel Git checkout (do not move it)
+Document root: <existing checkout>/dist
 Private config: /home/ostech/oakboard-config.php
 ```
 
-The change is isolated to the OakBoard subdomain. Do not edit a global Apache
+The change is isolated to the OST Workforce Onboarding subdomain. Do not edit a global Apache
 include, another virtual host, or another website.
 
 ## 1. One-time database and private configuration
 
-1. Import `database/mysql/schema.sql` into the OakBoard MySQL database.
+1. For a fresh database, import `database/mysql/schema.sql`. For the existing
+   production database, run these migrations once in filename order before deployment:
+   - `database/mysql/migrations/2026-08-17-expand-plan-duration.sql`
+   - `database/mysql/migrations/2026-08-17-user-profiles.sql`
 2. Copy `api/config.example.php` to `/home/ostech/oakboard-config.php`.
 3. Add the real MySQL, Mailgun, application, and session-secret values privately.
 4. Restrict the file:
@@ -33,7 +36,7 @@ Recommended application values:
 
 ```php
 'app' => [
-    'url' => 'https://onboarding.9ostech.com',
+    'url' => 'https://onboardingplan.9ostech.com',
     'allowed_email_domain' => '9ostech.com',
 ],
 ```
@@ -43,10 +46,12 @@ an address authorized by that Mailgun domain.
 
 ## 2. One-time Git and automatic deployment setup
 
-Run:
+Set `APP_ROOT` to the existing working Git checkout. Do not move the checkout or
+change another website's document root. Then run:
 
 ```bash
-cd /home/ostech/public_html/onboarding.9ostech.com
+APP_ROOT="/path/to/the/existing/working/checkout"
+cd "$APP_ROOT"
 git status --short
 git fetch origin
 git switch main
@@ -60,21 +65,21 @@ If `git switch` or `git pull` reports local changes, stop and inspect them. Do n
 run `git reset --hard`. Generated files previously copied from `dist/` can be
 backed up and removed only after confirming they are not source changes.
 
-In cPanel **Domains**, edit only `onboarding.9ostech.com` and set its document
+In cPanel **Domains**, edit only `onboardingplan.9ostech.com` and set its document
 root to:
 
 ```text
-/home/ostech/public_html/onboarding.9ostech.com/dist
+<existing working checkout>/dist
 ```
 
 Remove the obsolete Next.js reverse-proxy include for this subdomain only.
-OakBoard no longer uses `nextjs.conf`, Passenger, Application Manager, PM2, or a
+OST Workforce Onboarding no longer uses `nextjs.conf`, Passenger, Application Manager, PM2, or a
 persistent Node server.
 
 ## 3. Every future deployment
 
 ```bash
-cd /home/ostech/public_html/onboarding.9ostech.com
+cd "/path/to/the/existing/working/checkout"
 git pull --ff-only origin main
 ```
 
@@ -89,8 +94,8 @@ Do not run `cp -a dist/. .`. The subdomain serves `dist/` directly.
 ## 4. Verify after deployment
 
 ```bash
-curl -I https://onboarding.9ostech.com/sign-in
-curl -i https://onboarding.9ostech.com/api/auth/session
+curl -I https://onboardingplan.9ostech.com/sign-in
+curl -i https://onboardingplan.9ostech.com/api/auth/session
 ```
 
 Expected results:
@@ -105,7 +110,7 @@ Then test:
 - sign in, recovery email, and sign out;
 - two separate users for strict plan isolation;
 - create, edit, preview, archive, restore, and permanent delete;
-- two-week and four-week PDF download;
+- 1-, 2-, 4-, and 8-week PDF download;
 - authenticated PDF email attachment;
 - refreshed deep links and mobile layout.
 
@@ -113,7 +118,7 @@ Then test:
 
 If signup succeeds but no verification email arrives:
 
-1. Open `https://onboarding.9ostech.com/api/auth/session`.
+1. Open `https://onboardingplan.9ostech.com/api/auth/session`.
 2. If it returns HTML or 404, the `dist/api` PHP application is not being served;
    recheck the document root and rebuild.
 3. Confirm PHP cURL is enabled.
@@ -122,7 +127,7 @@ If signup succeeds but no verification email arrives:
 5. Check Mailgun Events and `email_logs` in MySQL.
 
 The earlier observed production failure was not a Mailgun delivery rejection:
-the public `/api` path returned the React application/404, so OakBoard never
+the public `/api` path returned the React application/404, so OST Workforce Onboarding never
 reached the Mailgun request code.
 
 ## 6. Deployment troubleshooting
@@ -144,4 +149,4 @@ Do not restore the old Next.js proxy to fix a React/PHP deployment.
 
 Back up the currently working `dist/` before the first cutover. If acceptance
 fails, restore only that backup and the previous document root for
-`onboarding.9ostech.com`. Do not change other sites.
+`onboardingplan.9ostech.com`. Do not change other sites.

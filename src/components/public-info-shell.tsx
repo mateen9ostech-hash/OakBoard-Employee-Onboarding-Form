@@ -19,7 +19,7 @@ export function PublicInfoShell({
     <main className="info-page">
       <div className="info-page__glow" aria-hidden="true" />
       <header className="info-header">
-        <Link className="info-brand-link" href="/" aria-label="OakBoard home">
+        <Link className="info-brand-link" href="/" aria-label="OST Workforce Onboarding home">
           <BrandLogo />
         </Link>
         <nav className="info-nav" aria-label="Support and policy navigation">

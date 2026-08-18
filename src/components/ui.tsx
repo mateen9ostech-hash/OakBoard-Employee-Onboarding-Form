@@ -23,7 +23,9 @@ type IconName =
   | 'pencil'
   | 'plus'
   | 'print'
+  | 'sign-out'
   | 'trash'
+  | 'user'
   | 'warning'
 
 type ButtonVariant = 'primary' | 'secondary' | 'soft' | 'ghost' | 'danger'
@@ -86,8 +88,12 @@ export function Icon({ name, className = '' }: { name: IconName; className?: str
       return <svg {...common} strokeWidth="1.7"><path d="M8 3v10M3 8h10" /></svg>
     case 'print':
       return <svg {...common} strokeWidth="1.6"><path d="M4 6V2h8v4" /><path d="M4 12H2.8A1.8 1.8 0 0 1 1 10.2V7.8A1.8 1.8 0 0 1 2.8 6h10.4A1.8 1.8 0 0 1 15 7.8v2.4a1.8 1.8 0 0 1-1.8 1.8H12" /><path d="M4 10h8v4H4z" /></svg>
+    case 'sign-out':
+      return <svg {...common} strokeWidth="1.6"><path d="M6.5 2.5H3v11h3.5" /><path d="M9.5 5 12.5 8l-3 3M6 8h6.5" /></svg>
     case 'trash':
       return <svg {...common} strokeWidth="1.5"><path d="M3.2 4.5h9.6M6 4.5V2.7h4v1.8M4.3 4.5l.6 9h6.2l.6-9M6.7 7v3.8M9.3 7v3.8" /></svg>
+    case 'user':
+      return <svg {...common} strokeWidth="1.6"><circle cx="8" cy="5.2" r="2.4" /><path d="M3.5 13c.5-2.4 2-3.7 4.5-3.7s4 1.3 4.5 3.7" /></svg>
     case 'warning':
       return <svg {...common} strokeWidth="1.7"><path d="M8 2.4 14 13H2L8 2.4Z" /><path d="M8 6.2v3.1M8 11.2h.01" /></svg>
   }
@@ -157,6 +163,36 @@ export function Button(props: ButtonAsButton | ButtonAsLink) {
       iconTrailing={!icon && Boolean(trailingIcon)}
       label={label}
     />
+  )
+}
+
+export function ButtonGroup({
+  ariaLabel,
+  children,
+  className = '',
+}: {
+  ariaLabel: string
+  children: ReactNode
+  className?: string
+}) {
+  return <div aria-label={ariaLabel} className={`ob-button-group ${className}`.trim()} role="group">{children}</div>
+}
+
+export function ButtonGroupItem({
+  children,
+  className = '',
+  icon,
+  tone = 'neutral',
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  icon?: ReactNode
+  tone?: 'neutral' | 'success' | 'danger'
+}) {
+  return (
+    <button {...props} className={`ob-button-group__item ob-button-group__item--${tone} ${className}`.trim()}>
+      {icon}
+      <span>{children}</span>
+    </button>
   )
 }
 
@@ -256,7 +292,7 @@ export function TextField({
   )
 }
 
-export function BrandLogo({ label = 'OakBoard' }: { label?: string }) {
+export function BrandLogo({ label = 'OST Workforce Onboarding' }: { label?: string }) {
   return (
     <div className="ob-brand">
       <span className="ob-brand__mark">

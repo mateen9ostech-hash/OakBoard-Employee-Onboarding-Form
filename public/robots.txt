@@ -1,4 +1,4 @@
-# OakBoard is a private internal tool for Oak Street Technologies staff.
+# OST Workforce Onboarding is a private internal tool for Oak Street Technologies staff.
 # It is deliberately kept out of search engines entirely.
 User-agent: *
 Disallow: /

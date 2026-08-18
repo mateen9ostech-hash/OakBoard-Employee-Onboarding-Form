@@ -9,7 +9,7 @@ import { Button, Modal, PageToolbar, StatusBanner, TextField } from '@/component
 import { apiFetch } from '@/lib/api/client'
 import { getValidSession } from '@/lib/auth/client'
 import { useAppRouter } from '@/lib/router'
-import { type OnboardingPlan, type PlanDay, type PlanWeek, readStoredPlan } from '@/types/plan'
+import { normalizePlanDuration, type OnboardingPlan, type PlanDay, type PlanDurationWeeks, type PlanWeek, readStoredPlan } from '@/types/plan'
 
 const DAY_TITLE_MAX = 90
 const DAY_TASK_MAX = 90
@@ -147,9 +147,9 @@ function PlanPage({
   role: string
   reports: string
   collab: string
-  nWeeks: 2 | 4
+  nWeeks: PlanDurationWeeks
 }) {
-  const planName = nWeeks === 4 ? 'Four-Week' : 'Two-Week'
+  const planName = `${nWeeks}-Week`
 
   return (
     <section className="plan-doc-react" aria-label={`${planName} onboarding plan page ${pageIndex + 1}`}>
@@ -237,12 +237,12 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
             days: (plan.days || []).slice(5, 10),
           },
         ]
-  const nWeeks = Number(plan.nWeeks) === 4 ? 4 : 2
-  const pageGroups = nWeeks === 4 ? [weeks.slice(0, 2), weeks.slice(2, 4)] : [weeks.slice(0, 2)]
+  const nWeeks = normalizePlanDuration(plan.nWeeks)
+  const pageGroups = Array.from({ length: Math.ceil(weeks.length / 2) }, (_, index) => weeks.slice(index * 2, index * 2 + 2))
   const role = plan.role || ''
   const reports = plan.reports || plan.reportsTo || ''
   const collab = plan.collab || plan.collaboratesWith || ''
-  const filename = `OakBoard-${nWeeks}-Week-Onboarding-Plan.pdf`
+  const filename = `OST-Workforce-Onboarding-${nWeeks}-Week-Plan.pdf`
 
   async function buildPdfAttachment() {
     const pages = Array.from(document.querySelectorAll<HTMLElement>('.plan-doc-react'))
@@ -307,7 +307,7 @@ export default function GenerateFormClient({ initialPlan = null, initialPlanId =
 
   function buildEmailText(note: string) {
     const noteBlock = note ? `\n\nNote:\n${note}` : ''
-    return `Hello,\n\nThe ${nWeeks}-week onboarding plan for ${role || 'the selected role'} is attached as a PDF.${noteBlock}\n\nRegards,\nOakBoard`
+    return `Hello,\n\nThe ${nWeeks}-week onboarding plan for ${role || 'the selected role'} is attached as a PDF.${noteBlock}\n\nRegards,\nOST Workforce Onboarding`
   }
 
   function openEmailModal() {

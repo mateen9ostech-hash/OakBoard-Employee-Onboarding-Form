@@ -9,7 +9,7 @@ import './styles/globals.css'
 
 const root = document.getElementById('root')
 
-if (!root) throw new Error('OakBoard root element is missing.')
+if (!root) throw new Error('OST Workforce Onboarding root element is missing.')
 
 document.documentElement.classList.add('vvd-root')
 

@@ -62,7 +62,7 @@ export default function ChangePasswordPage() {
       return
     }
 
-    setNotice('Password updated. Opening OakBoard...')
+    setNotice('Password updated. Opening OST Workforce Onboarding...')
     const target = data.user.is_admin ? '/admin' : '/workspace'
     window.setTimeout(() => router.replace(target), 600)
   }

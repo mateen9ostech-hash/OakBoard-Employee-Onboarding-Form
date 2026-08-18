@@ -4,7 +4,7 @@ import { Icon } from '@/components/ui'
 
 export const metadata: Metadata = {
   title: 'Help',
-  description: 'Get help creating, managing, exporting, and sharing onboarding plans in OakBoard.',
+  description: 'Get help creating, managing, exporting, and sharing onboarding plans in OST Workforce Onboarding.',
   alternates: {
     canonical: '/help',
   },
@@ -14,7 +14,7 @@ const steps = [
   {
     number: '01',
     title: 'Create and verify your account',
-    copy: 'Register with your @9ostech.com work email, enter the 6-digit code from your inbox, and OakBoard will sign you in automatically.',
+    copy: 'Register with your @9ostech.com work email, enter the 6-digit code from your inbox, and OST Workforce Onboarding will sign you in automatically.',
   },
   {
     number: '02',
@@ -29,14 +29,14 @@ const steps = [
   {
     number: '04',
     title: 'Review and share',
-    copy: 'Generate the preview, download the polished PDF, or send the plan as a PDF attachment from OakBoard.',
+    copy: 'Generate the preview, download the polished PDF, or send the plan as a PDF attachment from OST Workforce Onboarding.',
   },
 ]
 
 const faqs = [
   {
     question: 'I did not receive the signup code. What should I do?',
-    answer: 'Check your spam or junk folder, confirm that the address ends in @9ostech.com, and request a new code after the countdown finishes. If it still does not arrive, contact support. OakBoard verification messages are delivered through Mailgun.',
+    answer: 'Check your spam or junk folder, confirm that the address ends in @9ostech.com, and request a new code after the countdown finishes. If it still does not arrive, contact support. OST Workforce Onboarding verification messages are delivered through Mailgun.',
   },
   {
     question: 'Where are my recent plans?',
@@ -60,7 +60,7 @@ export default function HelpPage() {
   return (
     <PublicInfoShell
       current="help"
-      eyebrow="OakBoard support"
+      eyebrow="OST Workforce Onboarding support"
       title="Build better onboarding plans, faster."
       description="A quick guide to creating, reviewing, and sharing role-specific onboarding plans, plus direct support when you need a hand."
     >
@@ -85,7 +85,7 @@ export default function HelpPage() {
         <div>
           <span>Oak Street Technologies support</span>
           <h2 id="contact-support">Still need help?</h2>
-          <p>Oak Street Technologies provides technology and business support across its global offices. For OakBoard access, OTP, plan, PDF, or email-delivery issues, contact the support team.</p>
+          <p>Oak Street Technologies provides technology and business support across its global offices. For OST Workforce Onboarding access, OTP, plan, PDF, or email-delivery issues, contact the support team.</p>
         </div>
         <div className="support-panel__actions">
           <a className="support-primary" href="mailto:support@9ostech.com">Email support</a>
