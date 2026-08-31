@@ -51,7 +51,12 @@ function limitTasks(tasks: unknown) {
 
 function formatDate(date: unknown) {
   if (!date) return ''
-  const parsed = date instanceof Date ? date : new Date(String(date))
+  const raw = String(date)
+  const parsed = date instanceof Date
+    ? date
+    : /^\d{4}-\d{2}-\d{2}$/.test(raw)
+      ? new Date(`${raw}T00:00:00`)
+      : new Date(raw)
   if (Number.isNaN(parsed.getTime())) return String(date)
   return parsed.toLocaleDateString('en-GB', {
     day: '2-digit',

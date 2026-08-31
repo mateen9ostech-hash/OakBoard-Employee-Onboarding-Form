@@ -14,3 +14,11 @@
 - Deploying or publishing.
 - Adding, exposing, or changing secrets.
 - Using paid services.
+
+## Onboarding schedule rule
+
+- Use `api/holiday-calendar.json` as the source of truth for company holidays.
+- No onboarding day may fall on Saturday, Sunday, or a configured holiday.
+- Tentative lunar holidays stay blocked until the official calendar is updated.
+- Before reporting a scheduling change complete, verify frontend and PHP output
+  for a date range that crosses at least one configured holiday.

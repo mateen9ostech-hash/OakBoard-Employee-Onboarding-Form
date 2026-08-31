@@ -140,6 +140,56 @@ function utc_strtotime(mixed $value): int
     return $timestamp === false ? 0 : $timestamp;
 }
 
+function onboarding_holiday_dates(): array
+{
+    static $dates = null;
+    if (is_array($dates)) {
+        return $dates;
+    }
+
+    $path = __DIR__ . '/holiday-calendar.json';
+    $calendar = is_file($path) ? json_decode((string) file_get_contents($path), true) : null;
+    if (!is_array($calendar) || !isset($calendar['holidays']) || !is_array($calendar['holidays'])) {
+        throw new RuntimeException('The onboarding holiday calendar is unavailable.');
+    }
+
+    $dates = [];
+    foreach ($calendar['holidays'] as $holiday) {
+        $start = DateTimeImmutable::createFromFormat('!Y-m-d', (string) ($holiday['start'] ?? ''));
+        $end = DateTimeImmutable::createFromFormat('!Y-m-d', (string) ($holiday['end'] ?? ''));
+        if (!$start || !$end || $end < $start) {
+            throw new RuntimeException('The onboarding holiday calendar contains an invalid date range.');
+        }
+
+        for ($date = $start; $date <= $end; $date = $date->modify('+1 day')) {
+            $dates[$date->format('Y-m-d')] = true;
+        }
+    }
+
+    return $dates;
+}
+
+function onboarding_workdays(string $startDate, int $count): ?array
+{
+    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $startDate);
+    if (!$date || $date->format('Y-m-d') !== $startDate) {
+        return null;
+    }
+
+    $holidays = onboarding_holiday_dates();
+    $dates = [];
+    while (count($dates) < $count) {
+        $key = $date->format('Y-m-d');
+        $weekday = (int) $date->format('N');
+        if ($weekday < 6 && !isset($holidays[$key])) {
+            $dates[] = $key;
+        }
+        $date = $date->modify('+1 day');
+    }
+
+    return $dates;
+}
+
 function normalized_plan(mixed $value): ?array
 {
     if (!is_array($value)) {
@@ -150,8 +200,40 @@ function normalized_plan(mixed $value): ?array
     if ($role === '' || $weeks < 1 || $weeks > 8) {
         return null;
     }
+    $startDate = isset($value['startDate']) && is_string($value['startDate']) ? trim($value['startDate']) : '';
+    $planDates = onboarding_workdays($startDate, $weeks * 5);
+    if ($planDates === null || !isset($value['weeks']) || !is_array($value['weeks']) || count($value['weeks']) < $weeks) {
+        return null;
+    }
+
+    $normalizedWeeks = array_slice($value['weeks'], 0, $weeks);
+    $flatDays = [];
+    $globalDay = 0;
+    foreach ($normalizedWeeks as $weekIndex => &$week) {
+        if (!is_array($week) || !isset($week['days']) || !is_array($week['days']) || count($week['days']) < 5) {
+            return null;
+        }
+        $week['days'] = array_slice($week['days'], 0, 5);
+        foreach ($week['days'] as $dayIndex => &$day) {
+            if (!is_array($day)) {
+                return null;
+            }
+            $globalDay++;
+            $day['g'] = $globalDay;
+            $day['day'] = $globalDay;
+            $day['localD'] = $dayIndex + 1;
+            $day['date'] = $planDates[$globalDay - 1];
+            $flatDays[] = $day;
+        }
+        unset($day);
+    }
+    unset($week);
+
     $value['role'] = mb_substr($role, 0, 160);
     $value['nWeeks'] = $weeks;
+    $value['startDate'] = $startDate;
+    $value['weeks'] = $normalizedWeeks;
+    $value['days'] = $flatDays;
     return $value;
 }
 

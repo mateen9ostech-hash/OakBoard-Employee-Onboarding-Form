@@ -92,6 +92,16 @@ npm audit
 `npm run build` creates `dist/`, including the React application, route fallback
 configuration, logo, and PHP API. Production serves `dist/` directly.
 
+### Onboarding working-day calendar
+
+Plan dates are generated from `api/holiday-calendar.json`. The scheduler skips
+Saturdays, Sundays, and every configured company holiday. Tentative lunar
+holidays remain blocked until the calendar file is officially updated.
+
+The browser stores plan dates as `YYYY-MM-DD`, and the PHP API recalculates the
+same canonical dates before saving. Update the calendar file before creating
+plans for a new year, then run the validation commands above.
+
 ## Routes
 
 | URL | Purpose |

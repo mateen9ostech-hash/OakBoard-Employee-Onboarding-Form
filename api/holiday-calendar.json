@@ -1,0 +1,14 @@
+{
+  "year": 2026,
+  "weekendDays": ["Saturday", "Sunday"],
+  "holidays": [
+    { "name": "New Year", "start": "2026-01-01", "end": "2026-01-01", "tentative": false },
+    { "name": "Eid-ul-Fitr", "start": "2026-03-20", "end": "2026-03-23", "tentative": true },
+    { "name": "Eid-ul-Azha", "start": "2026-05-27", "end": "2026-05-28", "tentative": true },
+    { "name": "Ashura", "start": "2026-06-26", "end": "2026-06-26", "tentative": true },
+    { "name": "Pakistan Independence Day", "start": "2026-08-14", "end": "2026-08-14", "tentative": false },
+    { "name": "Labour Day", "start": "2026-09-07", "end": "2026-09-07", "tentative": false },
+    { "name": "Black Friday / Post Thanksgiving Day", "start": "2026-11-27", "end": "2026-11-27", "tentative": false },
+    { "name": "Christmas Day", "start": "2026-12-25", "end": "2026-12-25", "tentative": false }
+  ]
+}

@@ -8,6 +8,7 @@ import { VividButton } from '@/components/vivid'
 import { apiFetch } from '@/lib/api/client'
 import { getValidSession, signOut } from '@/lib/auth/client'
 import { useAppRouter } from '@/lib/router'
+import { nextWorkingDayIso, toLocalDateKey, workdays } from '@/lib/scheduling'
 import {
   type OnboardingPlan,
   type PlanDurationWeeks,
@@ -265,28 +266,6 @@ function parseNotebookPlan(rawValue: string): ImportResult['plan'] {
   }
 }
 
-function nextWeekdayIso() {
-  const date = new Date()
-  while ([0, 6].includes(date.getDay())) date.setDate(date.getDate() + 1)
-  // The weekday is picked in local time, so the date has to be serialized from
-  // local parts too. toISOString() converts to UTC first, which shifts the day
-  // for users far enough from UTC and can hand back the Saturday or Sunday the
-  // loop above just skipped. workdays() reads this value back as local midnight.
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${date.getFullYear()}-${month}-${day}`
-}
-
-function workdays(startStr: string, count: number) {
-  const dates: Date[] = []
-  const date = startStr ? new Date(`${startStr}T00:00:00`) : new Date()
-  while (dates.length < count) {
-    if (date.getDay() !== 0 && date.getDay() !== 6) dates.push(new Date(date))
-    date.setDate(date.getDate() + 1)
-  }
-  return dates
-}
-
 function fmtShort(date?: Date) {
   if (!date) return ''
   return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -326,7 +305,7 @@ export default function WorkspaceClient({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const editingPlanId = editingOnLoad ? initialPlan?.id || null : null
   const [role, setRole] = useState(editingOnLoad ? initialPlanData?.role || '' : '')
-  const [startDate, setStartDate] = useState(editingOnLoad ? initialPlanData?.startDate || nextWeekdayIso() : nextWeekdayIso())
+  const [startDate, setStartDate] = useState(editingOnLoad ? initialPlanData?.startDate || nextWorkingDayIso() : nextWorkingDayIso())
   const [reports, setReports] = useState(editingOnLoad ? initialPlanData?.reportsTo || initialPlanData?.reports || '' : '')
   const [collab, setCollab] = useState(editingOnLoad ? initialPlanData?.collaboratesWith || initialPlanData?.collab || '' : '')
   const [nWeeks, setNWeeks] = useState<PlanDurationWeeks>(editingOnLoad ? initialWeekCount : 2)
@@ -533,7 +512,7 @@ export default function WorkspaceClient({
     // person means, so it reverts the form to the stored version instead.
     if (editingOnLoad && initialPlanData) {
       setRole(initialPlanData.role || '')
-      setStartDate(initialPlanData.startDate || nextWeekdayIso())
+      setStartDate(initialPlanData.startDate || nextWorkingDayIso())
       setReports(initialPlanData.reportsTo || initialPlanData.reports || '')
       setCollab(initialPlanData.collaboratesWith || initialPlanData.collab || '')
       setNWeeks(initialWeekCount)
@@ -546,7 +525,7 @@ export default function WorkspaceClient({
     setRole('')
     setReports('')
     setCollab('')
-    setStartDate(nextWeekdayIso())
+    setStartDate(nextWorkingDayIso())
     setWeeks(makeWeeks(nWeeks))
     setError('')
     setNotice('')
@@ -699,7 +678,7 @@ export default function WorkspaceClient({
           g,
           localD: di + 1,
           day: g,
-          date: planDates[g - 1],
+          date: toLocalDateKey(planDates[g - 1]),
           title: limitText(day.title, DAY_TITLE_MAX),
           tasks: limitTasks(day.tasks),
           outcome: limitText(day.outcome, DAY_OUTCOME_MAX),

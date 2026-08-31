@@ -4,7 +4,7 @@ import { join } from 'node:path'
 const root = process.cwd()
 const source = join(root, 'api')
 const destination = join(root, 'dist', 'api')
-const runtimeFiles = ['.htaccess', 'admin.php', 'auth.php', 'bootstrap.php', 'index.php', 'mailgun.php', 'profile.php']
+const runtimeFiles = ['.htaccess', 'admin.php', 'auth.php', 'bootstrap.php', 'holiday-calendar.json', 'index.php', 'mailgun.php', 'profile.php']
 
 if (!existsSync(join(root, 'dist', 'index.html'))) {
   throw new Error('Vite build output is missing. Run this script after vite build.')
